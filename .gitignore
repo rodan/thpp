@@ -1,0 +1,16 @@
+*.hex
+*.swp
+*.o
+*.a
+*.s
+*.obj
+*~
+*.~cpp
+*.~ddp
+*.~h
+*.~dfm
+lodepng/benchmark
+lodepng/pngdetail
+lodepng/showpng
+lodepng/unittest
+bin
