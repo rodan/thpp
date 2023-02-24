@@ -35,6 +35,7 @@
 #include <libexif/fuji/exif-mnote-data-fuji.h>
 #include <libexif/olympus/exif-mnote-data-olympus.h>
 #include <libexif/pentax/exif-mnote-data-pentax.h>
+#include <libexif/flir/exif-mnote-data-flir.h>
 
 #include <math.h>
 #include <stdlib.h>
@@ -779,7 +780,8 @@ typedef enum {
 	EXIF_DATA_TYPE_MAKER_NOTE_PENTAX	= 3,
 	EXIF_DATA_TYPE_MAKER_NOTE_NIKON		= 4,
 	EXIF_DATA_TYPE_MAKER_NOTE_CASIO		= 5,
-	EXIF_DATA_TYPE_MAKER_NOTE_FUJI 		= 6
+	EXIF_DATA_TYPE_MAKER_NOTE_FUJI 		= 6,
+	EXIF_DATA_TYPE_MAKER_NOTE_FLIR 		= 7
 } ExifDataTypeMakerNote;
 
 /*! If MakerNote is recognized, load it.
@@ -810,6 +812,10 @@ interpret_maker_note(ExifData *data, const unsigned char *d, unsigned int ds)
 		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG,
 			"ExifData", "Fuji MakerNote variant type %d", mnoteid);
 		data->priv->md = exif_mnote_data_fuji_new (data->priv->mem);
+	} else if ((mnoteid = exif_mnote_data_flir_identify (data, e)) != 0) {
+		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG,
+			"ExifData", "Flir MakerNote variant type %d", mnoteid);
+		data->priv->md = exif_mnote_data_flir_new (data->priv->mem);
 
 	/* NOTE: Must do Pentax detection last because some of the
 	 * heuristics are pretty general. */

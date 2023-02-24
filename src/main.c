@@ -164,8 +164,8 @@ int main(int argc, char *argv[])
         }
     } else if (file_type == FT_RJPG) {
         printf("rjpg detected\n");
-        rjpg_open(in_rjpg_th, in_file);
 
+        rjpg_open(in_rjpg_th, in_file);
 
         rjpg_close(in_rjpg_th);
     } else {

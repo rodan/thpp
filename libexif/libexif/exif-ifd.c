@@ -32,6 +32,7 @@ static const struct {
 	{EXIF_IFD_1, "1"},
 	{EXIF_IFD_EXIF, "EXIF"},
 	{EXIF_IFD_GPS, "GPS"},
+	{EXIF_IFD_FLIR, "Flir"},
 	{EXIF_IFD_INTEROPERABILITY, "Interoperability"},
 	{0, NULL}
 };

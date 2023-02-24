@@ -257,6 +257,8 @@ void exif_data_log  (ExifData *data, ExifLog *log);
 	 exif_content_get_entry(d->ifd[EXIF_IFD_EXIF],t) :		\
 	 exif_content_get_entry(d->ifd[EXIF_IFD_GPS],t) ?		\
 	 exif_content_get_entry(d->ifd[EXIF_IFD_GPS],t) :		\
+	 exif_content_get_entry(d->ifd[EXIF_IFD_FLIR],t) ?		\
+	 exif_content_get_entry(d->ifd[EXIF_IFD_FLIR],t) :		\
 	 exif_content_get_entry(d->ifd[EXIF_IFD_INTEROPERABILITY],t) ?	\
 	 exif_content_get_entry(d->ifd[EXIF_IFD_INTEROPERABILITY],t) : NULL)
 

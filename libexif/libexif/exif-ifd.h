@@ -31,6 +31,7 @@ typedef enum {
 	EXIF_IFD_1,                    /*!< */
 	EXIF_IFD_EXIF,                 /*!< */
 	EXIF_IFD_GPS,                  /*!< */
+	EXIF_IFD_FLIR,                 /*!< */
 	EXIF_IFD_INTEROPERABILITY,     /*!< */
 	EXIF_IFD_COUNT                 /*!< Not a real value, just (max_value + 1). */
 } ExifIfd;

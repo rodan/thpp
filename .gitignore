@@ -14,3 +14,4 @@ lodepng/pngdetail
 lodepng/showpng
 lodepng/unittest
 bin
+po/*.po

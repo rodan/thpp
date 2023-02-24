@@ -50,22 +50,59 @@ static void show_mnote_tag(ExifData * d, unsigned tag)
     }
 }
 
+void print_buf(uint8_t * data, const uint16_t size)
+{
+    uint16_t bytes_remaining = size;
+    uint16_t bytes_to_be_printed, bytes_printed = 0;
+    uint16_t i;
+
+    while (bytes_remaining > 0) {
+
+        if (bytes_remaining > 16) {
+            bytes_to_be_printed = 16;
+        } else {
+            bytes_to_be_printed = bytes_remaining;
+        }
+
+        printf("%u: ", bytes_printed);
+
+        for (i = 0; i < bytes_to_be_printed; i++) {
+            printf("%02x", data[bytes_printed + i]);
+            if (i & 0x1) {
+                printf(" ");
+            }
+        }
+
+        printf("\n");
+        bytes_printed += bytes_to_be_printed;
+        bytes_remaining -= bytes_to_be_printed;
+    }
+}
+
 uint8_t rjpg_open(tgram_rjpg_t *thermo, char *in_file)
 {
-    ExifData *ed;
-    ExifEntry *entry;
+    ExifData *data;
+    ExifEntry *e;
     
-    ed = exif_data_new_from_file(in_file);
-    if (!ed) {
+    data = exif_data_new_from_file(in_file);
+    if (!data) {
         fprintf(stderr, "file not readable or no EXIF data in file %s\n", in_file);
         return EXIT_FAILURE;
     }
 
-    exif_data_unset_option(ed, EXIF_DATA_OPTION_IGNORE_UNKNOWN_TAGS);
-    exif_data_unset_option(ed, EXIF_DATA_OPTION_FOLLOW_SPECIFICATION);
+    //exif_data_unset_option(data, EXIF_DATA_OPTION_IGNORE_UNKNOWN_TAGS);
+    //exif_data_unset_option(data, EXIF_DATA_OPTION_FOLLOW_SPECIFICATION);
 
-    //exif_data_dump(ed);
-    show_mnote_tag(ed, 0x1);
+    exif_data_dump(data);
+    //show_mnote_tag(data, 0x1);
+
+    e = exif_data_get_entry (data, EXIF_TAG_MAKER_NOTE);
+    if (e) {
+        printf("mnote size %u\n", e->size);
+        print_buf(e->data, e->size);
+    } else {
+        fprintf(stderr, "no mnote detected\n");
+    }
 
     return EXIT_SUCCESS;
 }
