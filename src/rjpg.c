@@ -5,49 +5,30 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <arpa/inet.h>
 
-#include <libexif/exif-data.h>
+#include "lodepng.h"
 #include "tlpi_hdr.h"
 #include "rjpg.h"
 
-#define   RJPG_BUF_SIZE  2048
+#define                  RJPG_BUF_SIZE  2048
 
+#define                IFD_FLIR_OFFSET  0xb76 // root exif image file directory containing flir-related info
+#define       OFFSET_RawThermalChunkSz  (0x50 + IFD_FLIR_OFFSET)
+#define    OFFSET_RawThermalImageWidth  (0x202 + IFD_FLIR_OFFSET)
+#define   OFFSET_RawThermalImageHeight  (0x204 + IFD_FLIR_OFFSET)
+#define         OFFSET_RawThermalImage  (0x220 + IFD_FLIR_OFFSET)
+
+static const uint8_t rjpg_ifd_magic[4] = {0x46, 0x4c, 0x49, 0x52}; // 'FLIR' @b6e
 extern uint8_t vpl_data[12][768];
 
-static void trim_spaces(char *buf)
+uint16_t flip_u16(const uint16_t val)
 {
-    char *s = buf - 1;
-    for (; *buf; ++buf) {
-        if (*buf != ' ')
-            s = buf;
-    }
-    *++s = 0;                   /* nul terminate the string on the first of the final spaces */
-}
+    uint16_t ret = 0;
 
-static void show_mnote_tag(ExifData * d, unsigned tag)
-{
-    ExifMnoteData *mn = exif_data_get_mnote_data(d);
-    if (mn) {
-        int num = exif_mnote_data_count(mn);
-        int i;
+    ret = (( val & 0xff ) << 8 ) | (( val & 0xff00) >> 8); 
 
-        printf("found %d makernotes\n", num);
-        /* Loop through all MakerNote tags, searching for the desired one */
-        for (i = 0; i < num; ++i) {
-            char buf[1024];
-            if (exif_mnote_data_get_id(mn, i) == tag) {
-                if (exif_mnote_data_get_value(mn, i, buf, sizeof(buf))) {
-                    /* Don't bother printing it if it's entirely blank */
-                    trim_spaces(buf);
-                    if (*buf) {
-                        printf("%s: %s\n", exif_mnote_data_get_title(mn, i), buf);
-                    }
-                }
-            }
-        }
-    } else {
-        printf("no makernotes found\n");
-    }
+    return ret;
 }
 
 void print_buf(uint8_t * data, const uint16_t size)
@@ -79,68 +60,122 @@ void print_buf(uint8_t * data, const uint16_t size)
     }
 }
 
-uint8_t rjpg_open(tgram_rjpg_t *thermo, char *in_file)
+uint8_t rjpg_open(tgram_rjpg_t *th, char *in_file)
 {
-    ExifData *data;
-    ExifEntry *e;
+    struct stat st;     ///< stat structure that contains the input file size
+    int fd;             ///< file descriptor for dtv file
+    uint8_t *fm;        ///< dtv file contents copied to memory
+    uint8_t *buf;       ///< read buffer
+    ssize_t cnt, rcnt;  ///< read counters
+    uint16_t *utemp;
+    uint32_t *ltemp;
+    uint32_t frame_sz;
+    unsigned w, h;
+    unsigned err = 0;
+
+    // get file size
+    if (stat(in_file, &st) < 0) {
+        errExit("reading input file");
+    }    
+
+    fm = (uint8_t *) calloc(st.st_size, sizeof(uint8_t));
+    if (fm == NULL) {
+        errExit("allocating buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    // read input file
+    if ((fd = open(in_file, O_RDONLY)) < 0) {
+        errExit("opening input file");
+    }
+
+    buf = (uint8_t *) calloc(RJPG_BUF_SIZE, sizeof(uint8_t));
+    if (buf == NULL) {
+        errExit("allocating buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    // copy file to memory
+    rcnt = 0;
+    while ((cnt = read(fd, buf, RJPG_BUF_SIZE)) > 0) {
+        if (rcnt + cnt <= st.st_size) {
+            memcpy(fm + rcnt, buf, cnt);
+        } else {
+            fprintf(stderr, "write attempt beyond end of buffer");
+        }
+        rcnt += cnt;
+    }
+
+    if (memcmp(fm + IFD_FLIR_OFFSET - 8, rjpg_ifd_magic, 4) != 0) {
+        fprintf(stderr, "unknown file type\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // populate rjpg header
+    utemp = (uint16_t *)(fm + OFFSET_RawThermalImageWidth);
+    th->head.raw_th_img_width = ntohs(*utemp);
+    utemp = (uint16_t *)(fm + OFFSET_RawThermalImageHeight);
+    th->head.raw_th_img_height = ntohs(*utemp);
+    ltemp = (uint32_t *)(fm + OFFSET_RawThermalChunkSz);
+    th->head.raw_th_img_sz = ntohl(*ltemp);
+    th->head.raw_th_img = fm + OFFSET_RawThermalImage;
+
+    frame_sz = th->head.raw_th_img_width * th->head.raw_th_img_height;
     
-    data = exif_data_new_from_file(in_file);
-    if (!data) {
-        fprintf(stderr, "file not readable or no EXIF data in file %s\n", in_file);
+    // populate thermo frame
+    th->frame = (uint8_t *) calloc(frame_sz, sizeof(uint8_t));
+    if (buf == NULL) {
+        errExit("allocating buffer");
+    }
+
+    err = lodepng_decode_memory(&(th->frame), &w, &h, th->head.raw_th_img, th->head.raw_th_img_sz, LCT_GREY, 8);
+
+    if (err) {
+        fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
         return EXIT_FAILURE;
     }
 
-    //exif_data_unset_option(data, EXIF_DATA_OPTION_IGNORE_UNKNOWN_TAGS);
-    //exif_data_unset_option(data, EXIF_DATA_OPTION_FOLLOW_SPECIFICATION);
+    close(fd);
+    free(buf);
+    free(fm);
 
-    exif_data_dump(data);
-    //show_mnote_tag(data, 0x1);
+    return EXIT_SUCCESS;
+}
 
-    e = exif_data_get_entry (data, EXIF_TAG_MAKER_NOTE);
-    if (e) {
-        printf("mnote size %u\n", e->size);
-        print_buf(e->data, e->size);
+uint8_t rjpg_transfer(const tgram_rjpg_t *th, uint8_t *image, const uint8_t pal, const uint8_t zoom)
+{
+    uint16_t i = 0;
+    uint16_t row = 0;
+    uint16_t th_width = th->head.raw_th_img_width;
+    uint16_t th_height = th->head.raw_th_img_height;
+    uint8_t zc;
+    uint8_t *color;
+
+    if (zoom == 1) {
+        for (i = 0; i < th_width * th_height; i++) {
+            memcpy(image + (i * 3), &(vpl_data[pal][th->frame[i] * 3]), 3);
+        }
     } else {
-        fprintf(stderr, "no mnote detected\n");
+        // resize by multiplying pixels
+        for (row = 0; row < th_height; row++) {
+            for (i = 0; i < th_width; i++) {
+                color = &(vpl_data[pal][th->frame[row * th_width + i] * 3]);
+                for (zc = 0; zc<zoom; zc++) {
+                    // multiply each pixel zoom times
+                    memcpy(image + ((row * th_width * zoom * zoom + i * zoom + zc) * 3), color, 3);
+                }
+            }
+            for (zc = 1; zc<zoom; zc++) {
+                // copy last row zoom times
+                memmove(image + ((row * th_width * zoom * zoom + zc * zoom * th_width) * 3), image + ((row * th_width * zoom * zoom) * 3), th_width * zoom * 3);
+            }
+        }
     }
 
     return EXIT_SUCCESS;
 }
 
 #if 0
-
-uint8_t dtv_transfer(const tgram_t *th, uint8_t *image, const uint8_t pal, const uint8_t zoom)
-{
-    uint16_t i = 0;
-    uint16_t row = 0;
-    uint16_t res_x = th->head.nst;
-    uint16_t res_y = th->head.nstv;
-    uint8_t zc;
-    uint8_t *color;
-
-    if (zoom == 1) {
-        for (i = 0; i < res_x * res_y; i++) {
-            memcpy(image + (i * 3), &(vpl_data[pal][th->frame[i] * 3]), 3);
-        }
-    } else {
-        // resize by multiplying pixels
-        for (row = 0; row < res_y; row++) {
-            for (i = 0; i < res_x; i++) {
-                color = &(vpl_data[pal][th->frame[row * res_x + i] * 3]);
-                for (zc = 0; zc<zoom; zc++) {
-                    // multiply each pixel zoom times
-                    memcpy(image + ((row * res_x * zoom * zoom + i * zoom + zc) * 3), color, 3);
-                }
-            }
-            for (zc = 1; zc<zoom; zc++) {
-                // copy last row zoom times
-                memmove(image + ((row * res_x * zoom * zoom + zc * zoom * res_x) * 3), image + ((row * res_x * zoom * zoom) * 3), res_x * zoom * 3);
-            }
-        }
-    }
-
-    return EXIT_SUCCESS;
-}
 
 uint8_t dtv_rescale(tgram_t *dst_th, const tgram_t *src_th, const float new_min, const float new_max)
 {

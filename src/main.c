@@ -44,8 +44,8 @@ int main(int argc, char *argv[])
     unsigned err = 0;
     uint8_t *image;
     uint8_t zoom = 1;
-    uint16_t res_x;
-    uint16_t res_y;
+    uint16_t th_width;
+    uint16_t th_height;
     double new_min = 0.0;
     double new_max = 0.0;
     uint8_t file_type = FT_UNK;
@@ -91,11 +91,6 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    in_th = (tgram_t *) calloc(1, sizeof(tgram_t));
-    if (in_th == NULL) {
-        errExit("allocating memory");
-    }
-
     // read input file
     if ((fd = open(in_file, O_RDONLY)) < 0) {
         errExit("opening input file");
@@ -125,14 +120,19 @@ int main(int argc, char *argv[])
 
     if (file_type == FT_DTV) {
 
-        dtv_open(in_th, in_file);
-        res_x = in_th->head.nst;
-        res_y = in_th->head.nstv;
+        in_th = (tgram_t *) calloc(1, sizeof(tgram_t));
+            if (in_th == NULL) {
+            errExit("allocating memory");
+        }
 
-        printf("%dx%d image, %d frames\n", res_x, res_y, in_th->head.frn);
+        dtv_open(in_th, in_file);
+        th_width = in_th->head.nst;
+        th_height = in_th->head.nstv;
+
+        printf("%dx%d image, %d frames\n", th_width, th_height, in_th->head.frn);
         printf("src temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", in_th->head.tsc[1], in_th->head.tsc[0], in_th->head.tsc[1] + 256*in_th->head.tsc[0]);
 
-        image = (uint8_t *) calloc(res_x * res_y * zoom * zoom * 3, 1);
+        image = (uint8_t *) calloc(th_width * th_height * zoom * zoom * 3, 1);
         if (image == NULL) {
             errExit("allocating buffer");
         }
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
             dtv_transfer(in_th, image, pal, zoom);
         }
 
-        err = lodepng_encode24_file(out_file, image, res_x * zoom, res_y * zoom);
+        err = lodepng_encode24_file(out_file, image, th_width * zoom, th_height * zoom);
         if (err) {
             fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
         }
@@ -163,10 +163,30 @@ int main(int argc, char *argv[])
             dtv_close(out_th);
         }
     } else if (file_type == FT_RJPG) {
-        printf("rjpg detected\n");
+
+        in_rjpg_th = (tgram_rjpg_t *) calloc(1, sizeof(tgram_rjpg_t));
+            if (in_rjpg_th == NULL) {
+            errExit("allocating memory");
+        }
 
         rjpg_open(in_rjpg_th, in_file);
+        th_width = in_rjpg_th->head.raw_th_img_width;
+        th_height = in_rjpg_th->head.raw_th_img_height;
 
+        printf("%dx%d image\n", th_width, th_height);
+        image = (uint8_t *) calloc(th_width * th_height * zoom * zoom * 3, 1);
+        if (image == NULL) {
+            errExit("allocating buffer");
+        }
+
+        rjpg_transfer(in_rjpg_th, image, pal, zoom);
+
+        err = lodepng_encode24_file(out_file, image, th_width * zoom, th_height * zoom);
+        if (err) {
+            fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
+        }
+
+        free(image);
         rjpg_close(in_rjpg_th);
     } else {
         fprintf(stderr, "unknown input file type\n");

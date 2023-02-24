@@ -7,10 +7,7 @@ LODEPNG_LIB = ../lodepng/lodepng.o
 TLPI_DIR  = ../tlpi-lib
 TLPI_LIB  = ${TLPI_DIR}/libtlpi.a
 
-LIBEXIF_DIR = ../libexif
-LIBEXIF_LIB = ../libexif/libexif/.libs/libexif.a
-
-INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) -I $(LIBEXIF_DIR)/libexif
+INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) 
 LOCAL_SRC_CPP := $(wildcard *.cpp)
 LOCAL_SRC_C := $(wildcard *.c)
 PROJ_SRC   = main.c
@@ -66,10 +63,6 @@ $(TLPI_LIB): force_look
 	@echo "looking into subdir $(TLPI_DIR)"
 	@$(MAKE) -C $(TLPI_DIR) -j1 $(MFLAGS)
 
-$(LIBEXIF_LIB): force_look
-	@echo "looking into subdir $(LIBEXIF_DIR)"
-	@$(MAKE) -C $(LIBEXIF_DIR) -j1 $(MFLAGS)
-
 version.h: $(SRC)
 	@./tools/setver.sh
 
@@ -81,9 +74,9 @@ version.h: $(SRC)
 	@echo -e " * $(@F)"
 	@$(CXX) $(INCLUDES) $(CFLAGS) -c $< -o $@
 
-$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(LIBEXIF_LIB) $(EXOBJECT)
+$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(EXOBJECT)
 	@echo -e "\n>> Building $@ as target $(TARGET)"
-	$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(LIBEXIF_LIB) -o $@ && size $@
+	$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) -o $@ && size $@
 
 $(EXOBJECT): $(PROJ_SRC)
 	@$(CXX) $(INCLUDES) $(CFLAGS) -g -c $< -o $@
@@ -98,7 +91,7 @@ tags: $(SRCS)
 	@echo "Generating tags .."
 	@exuberant-ctags -R
 
-${EXE} : ${TLPI_LIB} $(LIBEXIF_LIB)		# True as a rough approximation
+${EXE} : ${TLPI_LIB}		# True as a rough approximation
 
 cppcheck: $(PROJ)
 	@cppcheck --quiet --force --enable=warning --enable=performance --enable=information --enable=performance --enable=portability -I ./ ./
