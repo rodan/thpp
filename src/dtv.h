@@ -5,8 +5,8 @@
 #define DTV_HEADER_SZ  110
 
 struct dtv_header {
-    uint8_t disz;               ///< 0  
-    uint8_t diver;              ///< 1
+    uint8_t disz;               ///< 0 header size?
+    uint8_t diver;              ///< 1 header version?
     uint16_t shtp;              ///< 2
     int8_t fltp;                ///< 4
     int8_t tc;                  ///< 5

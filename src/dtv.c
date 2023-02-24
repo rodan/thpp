@@ -55,6 +55,8 @@ uint8_t dtv_open(tgram_t *thermo, char *dtv_file)
         rcnt += cnt;
     }
 
+    close(fd);
+
     // populate thermo header
     memcpy(&(thermo->head), fm, DTV_HEADER_SZ);
 
@@ -150,8 +152,10 @@ uint8_t dtv_rescale(tgram_t *dst_th, const tgram_t *src_th, const float new_min,
 
 void dtv_close(tgram_t *thermo)
 {
-    if (thermo->frame) {
-        free(thermo->frame);
+    if (thermo) {
+        if (thermo->frame) {
+            free(thermo->frame);
+        }
     }
 
     if (thermo) {
