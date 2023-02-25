@@ -9,6 +9,7 @@
 
 #include "lodepng.h"
 #include "tlpi_hdr.h"
+#include "thermogram.h"
 #include "rjpg.h"
 
 #define                  RJPG_BUF_SIZE  2048
@@ -22,14 +23,6 @@
 static const uint8_t rjpg_ifd_magic[4] = {0x46, 0x4c, 0x49, 0x52}; // 'FLIR' @b6e
 extern uint8_t vpl_data[12][768];
 
-uint16_t flip_u16(const uint16_t val)
-{
-    uint16_t ret = 0;
-
-    ret = (( val & 0xff ) << 8 ) | (( val & 0xff00) >> 8); 
-
-    return ret;
-}
 
 void print_buf(uint8_t * data, const uint16_t size)
 {
@@ -60,7 +53,7 @@ void print_buf(uint8_t * data, const uint16_t size)
     }
 }
 
-uint8_t rjpg_open(tgram_rjpg_t *th, char *in_file)
+uint8_t rjpg_open(tgram_t *th, char *in_file)
 {
     struct stat st;     ///< stat structure that contains the input file size
     int fd;             ///< file descriptor for dtv file
@@ -113,14 +106,14 @@ uint8_t rjpg_open(tgram_rjpg_t *th, char *in_file)
 
     // populate rjpg header
     utemp = (uint16_t *)(fm + OFFSET_RawThermalImageWidth);
-    th->head.raw_th_img_width = ntohs(*utemp);
+    th->head.rjpg->raw_th_img_width = ntohs(*utemp);
     utemp = (uint16_t *)(fm + OFFSET_RawThermalImageHeight);
-    th->head.raw_th_img_height = ntohs(*utemp);
+    th->head.rjpg->raw_th_img_height = ntohs(*utemp);
     ltemp = (uint32_t *)(fm + OFFSET_RawThermalChunkSz);
-    th->head.raw_th_img_sz = ntohl(*ltemp);
-    th->head.raw_th_img = fm + OFFSET_RawThermalImage;
+    th->head.rjpg->raw_th_img_sz = ntohl(*ltemp);
+    th->head.rjpg->raw_th_img = fm + OFFSET_RawThermalImage;
 
-    frame_sz = th->head.raw_th_img_width * th->head.raw_th_img_height;
+    frame_sz = th->head.rjpg->raw_th_img_width * th->head.rjpg->raw_th_img_height;
     
     // populate thermo frame
     th->frame = (uint8_t *) calloc(frame_sz, sizeof(uint8_t));
@@ -128,7 +121,7 @@ uint8_t rjpg_open(tgram_rjpg_t *th, char *in_file)
         errExit("allocating buffer");
     }
 
-    err = lodepng_decode_memory(&(th->frame), &w, &h, th->head.raw_th_img, th->head.raw_th_img_sz, LCT_GREY, 8);
+    err = lodepng_decode_memory(&(th->frame), &w, &h, th->head.rjpg->raw_th_img, th->head.rjpg->raw_th_img_sz, LCT_GREY, 8);
 
     if (err) {
         fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
@@ -142,12 +135,12 @@ uint8_t rjpg_open(tgram_rjpg_t *th, char *in_file)
     return EXIT_SUCCESS;
 }
 
-uint8_t rjpg_transfer(const tgram_rjpg_t *th, uint8_t *image, const uint8_t pal, const uint8_t zoom)
+uint8_t rjpg_transfer(const tgram_t *th, uint8_t *image, const uint8_t pal, const uint8_t zoom)
 {
     uint16_t i = 0;
     uint16_t row = 0;
-    uint16_t th_width = th->head.raw_th_img_width;
-    uint16_t th_height = th->head.raw_th_img_height;
+    uint16_t th_width = th->head.rjpg->raw_th_img_width;
+    uint16_t th_height = th->head.rjpg->raw_th_img_height;
     uint8_t zc;
     uint8_t *color;
 
@@ -216,12 +209,16 @@ uint8_t dtv_rescale(tgram_t *dst_th, const tgram_t *src_th, const float new_min,
 }
 #endif
 
-void rjpg_close(tgram_rjpg_t *thermo)
+void rjpg_close(tgram_t *thermo)
 {
     if (thermo) {
         if (thermo->frame) {
             free(thermo->frame);
         }
+        if (thermo->head.rjpg) {
+            free(thermo->head.rjpg);
+        }
+
     }
 
     if (thermo) {

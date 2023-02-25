@@ -7,6 +7,7 @@
 #include <fcntl.h>
 
 #include "tlpi_hdr.h"
+#include "thermogram.h"
 #include "dtv.h"
 
 #define   DTV_BUF_SIZE  2048
@@ -58,11 +59,11 @@ uint8_t dtv_open(tgram_t *thermo, char *dtv_file)
     close(fd);
 
     // populate thermo header
-    memcpy(&(thermo->head), fm, DTV_HEADER_SZ);
+    memcpy(thermo->head.dtv, fm, DTV_HEADER_SZ);
 
-    frame_sz = thermo->head.nst * thermo->head.nstv * thermo->head.frn;
+    frame_sz = thermo->head.dtv->nst * thermo->head.dtv->nstv * thermo->head.dtv->frn;
     if (frame_sz < 256*248) {
-        fprintf(stderr, "warning: unexpected image size %dx%dx%d\n", thermo->head.nst, thermo->head.nstv, thermo->head.frn);
+        fprintf(stderr, "warning: unexpected image size %dx%dx%d\n", thermo->head.dtv->nst, thermo->head.dtv->nstv, thermo->head.dtv->frn);
     }
 
     // populate thermo frame
@@ -82,8 +83,8 @@ uint8_t dtv_transfer(const tgram_t *th, uint8_t *image, const uint8_t pal, const
 {
     uint16_t i = 0;
     uint16_t row = 0;
-    uint16_t res_x = th->head.nst;
-    uint16_t res_y = th->head.nstv;
+    uint16_t res_x = th->head.dtv->nst;
+    uint16_t res_y = th->head.dtv->nstv;
     uint8_t zc;
     uint8_t *color;
 
@@ -119,14 +120,14 @@ uint8_t dtv_rescale(tgram_t *dst_th, const tgram_t *src_th, const float new_min,
     uint8_t ut;
 
     // populate dst thermo header
-    memcpy(&(dst_th->head), &(src_th->head), DTV_HEADER_SZ);
+    memcpy(dst_th->head.dtv, src_th->head.dtv, DTV_HEADER_SZ);
 
-    frame_sz = src_th->head.nst * src_th->head.nstv * src_th->head.frn;
+    frame_sz = src_th->head.dtv->nst * src_th->head.dtv->nstv * src_th->head.dtv->frn;
     if (frame_sz < 256*248) {
-        fprintf(stderr, "warning: unexpected image size %dx%dx%d\n", src_th->head.nst, src_th->head.nstv, src_th->head.frn);
+        fprintf(stderr, "warning: unexpected image size %dx%dx%d\n", src_th->head.dtv->nst, src_th->head.dtv->nstv, src_th->head.dtv->frn);
     }
-    dst_th->head.tsc[1] = new_min;
-    dst_th->head.tsc[0] = (new_max - new_min) / 256.0;
+    dst_th->head.dtv->tsc[1] = new_min;
+    dst_th->head.dtv->tsc[0] = (new_max - new_min) / 256.0;
 
     // populate dst thermo frame
     dst_th->frame = (uint8_t *) calloc(frame_sz, sizeof(uint8_t));
@@ -135,7 +136,7 @@ uint8_t dtv_rescale(tgram_t *dst_th, const tgram_t *src_th, const float new_min,
     }
 
     for (i=0; i<frame_sz; i++) {
-        ft = ((src_th->head.tsc[0] * src_th->frame[i] + src_th->head.tsc[1] - dst_th->head.tsc[1]) / dst_th->head.tsc[0]) + 0.5;
+        ft = ((src_th->head.dtv->tsc[0] * src_th->frame[i] + src_th->head.dtv->tsc[1] - dst_th->head.dtv->tsc[1]) / dst_th->head.dtv->tsc[0]) + 0.5;
         if (ft < 0) {
             ut = 0;
         } else if (ft > 255) {
@@ -156,6 +157,10 @@ void dtv_close(tgram_t *thermo)
         if (thermo->frame) {
             free(thermo->frame);
         }
+        if (thermo->head.dtv) {
+            free(thermo->head.dtv);
+        }
+
     }
 
     if (thermo) {

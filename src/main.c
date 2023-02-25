@@ -8,6 +8,7 @@
 
 #include "lodepng.h"
 #include "tlpi_hdr.h"
+#include "thermogram.h"
 #include "dtv.h"
 #include "rjpg.h"
 #include "version.h"
@@ -40,7 +41,6 @@ int main(int argc, char *argv[])
     char *out_file = NULL;
     tgram_t *in_th = NULL;
     tgram_t *out_th = NULL;
-    tgram_rjpg_t *in_rjpg_th = NULL;
     unsigned err = 0;
     uint8_t *image;
     uint8_t zoom = 1;
@@ -121,16 +121,21 @@ int main(int argc, char *argv[])
     if (file_type == FT_DTV) {
 
         in_th = (tgram_t *) calloc(1, sizeof(tgram_t));
-            if (in_th == NULL) {
+        if (in_th == NULL) {
+            errExit("allocating memory");
+        }
+
+        in_th->head.dtv = (dtv_header_t *) calloc(1, sizeof(dtv_header_t));
+        if (in_th->head.dtv == NULL) {
             errExit("allocating memory");
         }
 
         dtv_open(in_th, in_file);
-        th_width = in_th->head.nst;
-        th_height = in_th->head.nstv;
+        th_width = in_th->head.dtv->nst;
+        th_height = in_th->head.dtv->nstv;
 
-        printf("%dx%d image, %d frames\n", th_width, th_height, in_th->head.frn);
-        printf("src temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", in_th->head.tsc[1], in_th->head.tsc[0], in_th->head.tsc[1] + 256*in_th->head.tsc[0]);
+        printf("%dx%d image, %d frames\n", th_width, th_height, in_th->head.dtv->frn);
+        printf("src temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", in_th->head.dtv->tsc[1], in_th->head.dtv->tsc[0], in_th->head.dtv->tsc[1] + 256*in_th->head.dtv->tsc[0]);
 
         image = (uint8_t *) calloc(th_width * th_height * zoom * zoom * 3, 1);
         if (image == NULL) {
@@ -145,9 +150,14 @@ int main(int argc, char *argv[])
                 errExit("allocating memory");
             }
 
+            out_th->head.dtv = (dtv_header_t *) calloc(1, sizeof(dtv_header_t));
+            if (out_th->head.dtv == NULL) {
+                errExit("allocating memory");
+            }
+
             dtv_rescale(out_th, in_th, new_min, new_max);
             dtv_transfer(out_th, image, pal, zoom);
-            printf("dst temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", out_th->head.tsc[1], out_th->head.tsc[0], out_th->head.tsc[1] + 256.0 * out_th->head.tsc[0]);
+            printf("dst temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", out_th->head.dtv->tsc[1], out_th->head.dtv->tsc[0], out_th->head.dtv->tsc[1] + 256.0 * out_th->head.dtv->tsc[0]);
         } else {
             dtv_transfer(in_th, image, pal, zoom);
         }
@@ -164,14 +174,19 @@ int main(int argc, char *argv[])
         }
     } else if (file_type == FT_RJPG) {
 
-        in_rjpg_th = (tgram_rjpg_t *) calloc(1, sizeof(tgram_rjpg_t));
-            if (in_rjpg_th == NULL) {
+        in_th = (tgram_t *) calloc(1, sizeof(tgram_t));
+            if (in_th == NULL) {
             errExit("allocating memory");
         }
 
-        rjpg_open(in_rjpg_th, in_file);
-        th_width = in_rjpg_th->head.raw_th_img_width;
-        th_height = in_rjpg_th->head.raw_th_img_height;
+        in_th->head.rjpg = (rjpg_header_t *) calloc(1, sizeof(rjpg_header_t));
+        if (in_th->head.rjpg == NULL) {
+            errExit("allocating memory");
+        }
+
+        rjpg_open(in_th, in_file);
+        th_width = in_th->head.rjpg->raw_th_img_width;
+        th_height = in_th->head.rjpg->raw_th_img_height;
 
         printf("%dx%d image\n", th_width, th_height);
         image = (uint8_t *) calloc(th_width * th_height * zoom * zoom * 3, 1);
@@ -179,7 +194,7 @@ int main(int argc, char *argv[])
             errExit("allocating buffer");
         }
 
-        rjpg_transfer(in_rjpg_th, image, pal, zoom);
+        rjpg_transfer(in_th, image, pal, zoom);
 
         err = lodepng_encode24_file(out_file, image, th_width * zoom, th_height * zoom);
         if (err) {
@@ -187,7 +202,7 @@ int main(int argc, char *argv[])
         }
 
         free(image);
-        rjpg_close(in_rjpg_th);
+        rjpg_close(in_th);
     } else {
         fprintf(stderr, "unknown input file type\n");
         exit(EXIT_FAILURE);
