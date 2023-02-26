@@ -11,6 +11,7 @@
 #include "thermogram.h"
 #include "dtv.h"
 #include "rjpg.h"
+#include "processing.h"
 #include "version.h"
 
 #define   FT_UNK  0
@@ -51,6 +52,7 @@ int main(int argc, char *argv[])
     uint8_t file_type = FT_UNK;
     int fd;
     uint8_t *buf;
+    proc_limits_t proc_lim;
 
     while ((opt = getopt(argc, argv, "i:o:p:z:l:a:vh")) != -1) {
         switch (opt) {
@@ -130,6 +132,8 @@ int main(int argc, char *argv[])
             errExit("allocating memory");
         }
 
+        in_th->type = TH_IRTIS_DTV;
+
         dtv_open(in_th, in_file);
         th_width = in_th->head.dtv->nst;
         th_height = in_th->head.dtv->nstv;
@@ -154,6 +158,8 @@ int main(int argc, char *argv[])
             if (out_th->head.dtv == NULL) {
                 errExit("allocating memory");
             }
+
+            out_th->type = TH_IRTIS_DTV;
 
             dtv_rescale(out_th, in_th, new_min, new_max);
             dtv_transfer(out_th, image, pal, zoom);
@@ -184,6 +190,8 @@ int main(int argc, char *argv[])
             errExit("allocating memory");
         }
 
+        in_th->type = TH_FLIR_RJPG;
+
         rjpg_open(in_th, in_file);
         th_width = in_th->head.rjpg->raw_th_img_width;
         th_height = in_th->head.rjpg->raw_th_img_height;
@@ -193,6 +201,9 @@ int main(int argc, char *argv[])
         if (image == NULL) {
             errExit("allocating buffer");
         }
+
+        proc_get_limits(in_th, &proc_lim);
+        printf("min %u, max %u, avg %u\n", proc_lim.umin, proc_lim.umax, proc_lim.uavg);
 
         rjpg_transfer(in_th, image, pal, zoom);
 

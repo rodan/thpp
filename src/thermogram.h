@@ -10,7 +10,7 @@
 
 struct tgram {
     uint16_t type;      ///< thermogram type
-    union head {
+    union head_t {
         dtv_header_t *dtv;      ///< pointer to a DTV header
         rjpg_header_t *rjpg;    ///< pointer to a rjpeg header
     } head;
