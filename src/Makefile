@@ -2,7 +2,8 @@
 PROJ = thpp
 
 LODEPNG_DIR = ../lodepng
-LODEPNG_LIB = ../lodepng/lodepng.o
+LODEPNG_LIB = ${LODEPNG_DIR}/lodepng.o
+LODEPNG_SRC_C	= ${LODEPNG_DIR}/lodepng.c
 
 TLPI_DIR  = ../tlpi-lib
 TLPI_LIB  = ${TLPI_DIR}/libtlpi.a
@@ -11,20 +12,20 @@ INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR)
 LOCAL_SRC_CPP := $(wildcard *.cpp)
 LOCAL_SRC_C := $(wildcard *.c)
 PROJ_SRC   = main.c
-SRC        = $(PROJ_SRC) $(LOCAL_SRC_C) $(LOCAL_SRC_CPP)
+SRC        = $(PROJ_SRC) $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C)
 EXOBJECT   = $(PROJ).o
 EXOUTPUT   = $(PROJ)
 
 LOCAL_OBJECTS     = $(LOCAL_SRC_CPP:%.cpp=%.o) $(LOCAL_SRC_C:%.c=%.o)
 
 # Append specific CFLAGS/LDFLAGS
-CFLAGS_REL	 += -O3 -fPIC -I. -pedantic
+CFLAGS_REL	 += -O3 -fPIC -pedantic
 LDFLAGS_REL	 += -Wl,-s
-CFLAGS_DBG	 += -O1 -ggdb
+CFLAGS_DBG	 += -O1 -ggdb -fPIC -pedantic
 LDFLAGS_DBG	 +=
 
-DEFAULT_FLAGS=-DNDEBUG -fopenmp -Wall -Wextra -Wa,-ahl=$(@:.o=.s)
-DEFAULT_LDFLAGS=-fopenmp -lm
+DEFAULT_FLAGS=-DNDEBUG -Wall -Wextra -Wa,-ahl=$(@:.o=.s)
+DEFAULT_LDFLAGS=-lm
 
 # First set the flags to their defaults if not supplied externally.
 CFLAGS?=$(DEFAULT_FLAGS)
@@ -55,10 +56,6 @@ all : lib version.h $(EXOUTPUT) tags
 
 lib : $(LODEPNG_LIB)
 
-$(LODEPNG_LIB): force_look
-	@echo "looking into subdir $(LODEPNG_DIR)"
-	@$(MAKE) -C $(LODEPNG_DIR) -j1 $(MFLAGS)
-
 $(TLPI_LIB): force_look
 	@echo "looking into subdir $(TLPI_DIR)"
 	@$(MAKE) -C $(TLPI_DIR) -j1 $(MFLAGS)
@@ -72,14 +69,14 @@ version.h: $(SRC)
 
 %.o: %.c
 	@echo -e " * $(@F)"
-	@$(CXX) $(INCLUDES) $(CFLAGS) -c $< -o $@
+	@$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
 
 $(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(EXOBJECT)
 	@echo -e "\n>> Building $@ as target $(TARGET)"
-	$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) -o $@ && size $@
+	@$(CC) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) -o $@ && size $@
 
 $(EXOBJECT): $(PROJ_SRC)
-	@$(CXX) $(INCLUDES) $(CFLAGS) -g -c $< -o $@
+	@$(CC) $(INCLUDES) $(CFLAGS) -g -c $< -o $@
 
 allgen : ${GEN_EXE}
 
