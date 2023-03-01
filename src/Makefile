@@ -20,9 +20,9 @@ LOCAL_OBJECTS     = $(LOCAL_SRC_CPP:%.cpp=%.o) $(LOCAL_SRC_C:%.c=%.o)
 
 # Append specific CFLAGS/LDFLAGS
 CFLAGS_REL	 += -O3 -fPIC -pedantic
-LDFLAGS_REL	 += -Wl,-s
+LDFLAGS_REL	 += -Wl,-s -ljson-c
 CFLAGS_DBG	 += -O1 -ggdb -fPIC -pedantic
-LDFLAGS_DBG	 +=
+LDFLAGS_DBG	 += -ljson-c
 
 DEFAULT_FLAGS=-DNDEBUG -Wall -Wextra -Wa,-ahl=$(@:.o=.s)
 DEFAULT_LDFLAGS=-lm
