@@ -6,163 +6,173 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <math.h>
 #include <arpa/inet.h>
+
+#include "apr_base64.h"
 
 #include "json_helper.h"
 #include "lodepng.h"
 #include "tlpi_hdr.h"
 #include "thermogram.h"
+#include "proj.h"
 #include "rjpg.h"
 
 #define                  RJPG_BUF_SIZE  2048
+#define    RJPG_EXIFTOOL_BASE64_PREFIX  7       ///< number of bytes that need to be skipped during base64_decode
 
-#define                IFD_FLIR_OFFSET  0xb76   // root exif image file directory containing flir-related info
-#define       OFFSET_RawThermalChunkSz  (0x50 + IFD_FLIR_OFFSET)
-#define    OFFSET_RawThermalImageWidth  (0x202 + IFD_FLIR_OFFSET)
-#define   OFFSET_RawThermalImageHeight  (0x204 + IFD_FLIR_OFFSET)
-#define         OFFSET_RawThermalImage  (0x220 + IFD_FLIR_OFFSET)
+#define                         RJPG_K  273.15
+
+#define   RJPG_CREATE_INTERMEDIATE_PNG_FILE
 
 extern uint8_t vpl_data[12][768];
 
-struct rth_param {
-    float distance;
-    float emissivity;
-    float alpha1;
-    float beta1;
-    float alpha2;
-    float beta2;
-    float planckR1;
-    float planckR2;
-    float planckB;
-    float planckF;
-    float planckO;
-    float air_temp;
-    float refl_temp;
-};
-
-typedef struct rth_param rth_param_t;
-
-void print_buf(uint8_t * data, const uint16_t size)
+uint8_t rjpg_new(tgram_t ** thermo)
 {
-    uint16_t bytes_remaining = size;
-    uint16_t bytes_to_be_printed, bytes_printed = 0;
-    uint16_t i;
+    tgram_t *t;
 
-    while (bytes_remaining > 0) {
-
-        if (bytes_remaining > 16) {
-            bytes_to_be_printed = 16;
-        } else {
-            bytes_to_be_printed = bytes_remaining;
-        }
-
-        printf("%u: ", bytes_printed);
-
-        for (i = 0; i < bytes_to_be_printed; i++) {
-            printf("%02x", data[bytes_printed + i]);
-            if (i & 0x1) {
-                printf(" ");
-            }
-        }
-
-        printf("\n");
-        bytes_printed += bytes_to_be_printed;
-        bytes_remaining -= bytes_to_be_printed;
+    *thermo = (tgram_t *) calloc(1, sizeof(tgram_t));
+    if (*thermo == NULL) {
+        errExit("allocating memory");
     }
+    t = *thermo;
+
+    t->head.rjpg = (rjpg_header_t *) calloc(1, sizeof(rjpg_header_t));
+    if (t->head.rjpg == NULL) {
+        errExit("allocating memory");
+    }
+
+    t->type = TH_FLIR_RJPG;
+
+    return EXIT_SUCCESS;
+}
+
+uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
+{
+    json_object *root_obj = NULL;
+    json_object *item_obj = NULL;
+    char *png_name;
+    uint8_t *png_contents;
+    int decode_len;
+    unsigned x, y;
+    unsigned err = 0;
+
+    rjpg_header_t *h = th->head.rjpg;
+
+    root_obj = json_object_from_file(json_file);
+
+    if (root_obj == NULL) {
+        fprintf(stderr, "unable to parse json file\n");
+        return EXIT_FAILURE;
+    }
+
+    item_obj = json_object_array_get_idx(root_obj, 0);
+    if (item_obj == NULL) {
+        fprintf(stderr, "unable to parse json file\n");
+        return EXIT_FAILURE;
+    }
+
+    h->emissivity = strtof(get(item_obj, "Emissivity"), NULL);
+    h->distance = strtof(get(item_obj, "ObjectDistance"), NULL);
+    h->rh = strtof(get(item_obj, "RelativeHumidity"), NULL) / 100.0;
+    h->alpha1 = strtof(get(item_obj, "AtmosphericTransAlpha1"), NULL);
+    h->alpha2 = strtof(get(item_obj, "AtmosphericTransAlpha2"), NULL);
+    h->beta1 = strtof(get(item_obj, "AtmosphericTransBeta1"), NULL);
+    h->beta2 = strtof(get(item_obj, "AtmosphericTransBeta2"), NULL);
+    h->planckR1 = strtof(get(item_obj, "PlanckR1"), NULL);
+    h->planckR2 = strtof(get(item_obj, "PlanckR2"), NULL);
+    h->planckB = strtof(get(item_obj, "PlanckB"), NULL);
+    h->planckF = strtof(get(item_obj, "PlanckF"), NULL);
+    h->planckO = strtof(get(item_obj, "PlanckO"), NULL);
+    h->atm_trans_X = strtof(get(item_obj, "AtmosphericTransX"), NULL);
+    h->air_temp = strtof(get(item_obj, "AtmosphericTemperature"), NULL) + RJPG_K;
+    h->refl_temp = strtof(get(item_obj, "ReflectedApparentTemperature"), NULL) + RJPG_K;
+    h->raw_th_img_width = strtol(get(item_obj, "RawThermalImageWidth"), NULL, 10);
+    h->raw_th_img_height = strtol(get(item_obj, "RawThermalImageHeight"), NULL, 10);
+
+    h->atm_temp = h->air_temp - RJPG_K;
+    h->h2o = h->rh * exp(1.5587 + 0.06939 * h->atm_temp - 0.00027816 * pow(h->atm_temp,2) + 0.00000068455 * pow(h->atm_temp,3)); //  # 8.563981576
+
+    printf("emissivity = %f\n", h->emissivity);
+    printf("distance = %f\n", h->distance);
+    printf("rh = %f\n", h->rh);
+    printf("alpha1 = %f\n", h->alpha1);
+    printf("alpha2 = %f\n", h->alpha2);
+    printf("beta1 = %f\n", h->beta1);
+    printf("beta2 = %f\n", h->beta2);
+    printf("planckR1 = %f\n", h->planckR1);
+    printf("planckR2 = %f\n", h->planckR2);
+    printf("planckB = %f\n", h->planckB);
+    printf("planckF = %f\n", h->planckF);
+    printf("planckO = %f\n", h->planckO);
+    printf("atm_trans_X = %f\n", h->atm_trans_X);
+    printf("air_temp = %f\n", h->air_temp);
+    printf("refl_temp = %f\n", h->refl_temp);
+    printf("raw_th_img_width = %u\n", h->raw_th_img_width);
+    printf("raw_th_img_height = %u\n", h->raw_th_img_height);
+    printf("atm_temp = %f\n", h->atm_temp);
+    printf("h2o = %f\n", h->h2o);
+
+    // fill raw_th_img
+    decode_len =
+        apr_base64_decode_len(get(item_obj, "RawThermalImage") + RJPG_EXIFTOOL_BASE64_PREFIX);
+
+    png_name = (char *)calloc(strlen(json_file) + 5, sizeof(char));
+    if (png_name == NULL) {
+        errExit("allocating png filename");
+        exit(EXIT_FAILURE);
+    }
+
+    png_contents = (uint8_t *) calloc(decode_len, sizeof(uint8_t));
+    if (png_contents == NULL) {
+        errExit("allocating png file");
+        exit(EXIT_FAILURE);
+    }
+
+    apr_base64_decode((char *)png_contents,
+                      get(item_obj, "RawThermalImage") + RJPG_EXIFTOOL_BASE64_PREFIX);
+
+#ifdef RJPG_CREATE_INTERMEDIATE_PNG_FILE
+    int png_fd;
+
+    snprintf(png_name, strlen(json_file) + 5, "%s.png", json_file);
+
+    if ((png_fd = open(png_name, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
+        errMsg("opening file %s", png_name);
+        goto cleanup;
+    }
+
+    if (write(png_fd, png_contents, decode_len) < decode_len) {
+        errMsg("writing");
+        goto cleanup;
+    }
+
+    close(png_fd);
+#endif
+
+    h->raw_th_img_sz = h->raw_th_img_width * h->raw_th_img_height;
+
+    // th->frame gets allocated by lodepng_decode_memory()
+    err = lodepng_decode_memory(&(th->frame), &x, &y, png_contents, decode_len, LCT_GREY, 8);
+    if (err) {
+        fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
+        goto cleanup;
+    }
+
+ cleanup:
+    json_object_put(root_obj);
+
+    free(png_name);
+    free(png_contents);
+    return EXIT_SUCCESS;
 }
 
 uint8_t rjpg_open(tgram_t * th, char *in_file)
 {
-
-#if 0
-    struct stat st;             ///< stat structure that contains the input file size
-    int fd;                     ///< file descriptor for dtv file
-    uint8_t *fm;                ///< dtv file contents copied to memory
-    uint8_t *buf;               ///< read buffer
-    ssize_t cnt, rcnt;          ///< read counters
-    uint16_t *utemp;
-    uint32_t *ltemp;
-    uint32_t frame_sz;
-    unsigned w, h;
-    unsigned err = 0;
-
-    // get file size
-    if (stat(in_file, &st) < 0) {
-        errExit("reading input file");
-    }
-
-    fm = (uint8_t *) calloc(st.st_size, sizeof(uint8_t));
-    if (fm == NULL) {
-        errExit("allocating buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    // read input file
-    if ((fd = open(in_file, O_RDONLY)) < 0) {
-        errExit("opening input file");
-    }
-
-    buf = (uint8_t *) calloc(RJPG_BUF_SIZE, sizeof(uint8_t));
-    if (buf == NULL) {
-        errExit("allocating buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    // copy file to memory
-    rcnt = 0;
-    while ((cnt = read(fd, buf, RJPG_BUF_SIZE)) > 0) {
-        if (rcnt + cnt <= st.st_size) {
-            memcpy(fm + rcnt, buf, cnt);
-        } else {
-            fprintf(stderr, "write attempt beyond end of buffer");
-        }
-        rcnt += cnt;
-    }
-
-    if (memcmp(fm + IFD_FLIR_OFFSET - 8, rjpg_ifd_magic, 4) != 0) {
-        fprintf(stderr, "unknown file type\n");
-        exit(EXIT_FAILURE);
-    }
-
-    // populate rjpg header
-    utemp = (uint16_t *) (fm + OFFSET_RawThermalImageWidth);
-    th->head.rjpg->raw_th_img_width = ntohs(*utemp);
-    utemp = (uint16_t *) (fm + OFFSET_RawThermalImageHeight);
-    th->head.rjpg->raw_th_img_height = ntohs(*utemp);
-    ltemp = (uint32_t *) (fm + OFFSET_RawThermalChunkSz);
-    th->head.rjpg->raw_th_img_sz = ntohl(*ltemp);
-    th->head.rjpg->raw_th_img = fm + OFFSET_RawThermalImage;
-
-    frame_sz = th->head.rjpg->raw_th_img_width * th->head.rjpg->raw_th_img_height;
-
-    // populate thermo frame
-    th->frame = (uint8_t *) calloc(frame_sz, sizeof(uint8_t));
-    if (buf == NULL) {
-        errExit("allocating buffer");
-    }
-
-    err =
-        lodepng_decode_memory(&(th->frame), &w, &h, th->head.rjpg->raw_th_img,
-                              th->head.rjpg->raw_th_img_sz, LCT_GREY, 8);
-
-    if (err) {
-        fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
-        return EXIT_FAILURE;
-    }
-
-    close(fd);
-    free(buf);
-    free(fm);
-#endif
-
     int status;
     pid_t pid;
     int fd_json;
     char tmp_json[] = "/tmp/thpp_json_XXXXXX";
-    json_object *root_obj = NULL;
-    json_object *item_obj = NULL;
-    rth_param_t rth;
-
     fd_json = mkstemp(tmp_json);
 
     switch (fork()) {
@@ -174,7 +184,7 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
             errExit("during mkstemp");
         }
         dup2(fd_json, 1);
-        execlp("exiftool", "exiftool", "-b", "-json", in_file, (char *) NULL);
+        execlp("exiftool", "exiftool", "-b", "-json", in_file, (char *)NULL);
         exit(EXIT_SUCCESS);
     default:
         for (;;) {
@@ -189,25 +199,10 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
             }
 
             if (WIFEXITED(status) || WIFSIGNALED(status)) {
-                // parse json
-                root_obj = json_object_from_file(tmp_json);
-
-                if (root_obj == NULL) {
-                    fprintf(stderr, "unable to parse json file\n");
+                // populated rjpg header with info from the json file
+                if (rjpg_extract_json(th, tmp_json) == EXIT_FAILURE) {
                     return EXIT_FAILURE;
                 }
-
-                item_obj = json_object_array_get_idx(root_obj, 0);
-                //fprintf(stdout, "%s\n", get(item_obj, "MIMEType"));
-                memset(&rth, 0, sizeof(rth_param_t));
-                rth.emissivity = strtof(get(item_obj, "Emissivity"), NULL);
-                rth.distance = strtof(get(item_obj, "ObjectDistance"), NULL);
-
-
-                printf("emissivity = %f\n", rth.emissivity);
-                printf("distance = %f\n", rth.distance);
-
-                json_object_put(root_obj);
                 return EXIT_SUCCESS;
             }
         }
@@ -250,49 +245,120 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal, co
     return EXIT_SUCCESS;
 }
 
-#if 0
-
-uint8_t dtv_rescale(tgram_t * dst_th, const tgram_t * src_th, const float new_min,
-                    const float new_max)
+uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, double new_min, double new_max)
 {
-    ssize_t frame_sz;
     ssize_t i;
-    double ft;
-    uint8_t ut;
+    //double ft;
+    double *dframe = NULL;
+    double raw_refl;
+    double ep_raw_refl;
+    double raw_obj;
+    double t_obj_c;
+    uint16_t temp;
+    double ftemp;
+    double new_res;
+
+    rjpg_header_t *h = dst_th->head.rjpg;
 
     // populate dst thermo header
-    memcpy(&(dst_th->head), &(src_th->head), DTV_HEADER_SZ);
+    memcpy((uint8_t *) dst_th->head.rjpg, (uint8_t *) src_th->head.rjpg, sizeof(rjpg_header_t));
 
-    frame_sz = src_th->head.nst * src_th->head.nstv * src_th->head.frn;
-    if (frame_sz < 256 * 248) {
-        fprintf(stderr, "warning: unexpected image size %dx%dx%d\n", src_th->head.nst,
-                src_th->head.nstv, src_th->head.frn);
-    }
-    dst_th->head.tsc[1] = new_min;
-    dst_th->head.tsc[0] = (new_max - new_min) / 256.0;
-
-    // populate dst thermo frame
-    dst_th->frame = (uint8_t *) calloc(frame_sz, sizeof(uint8_t));
+    // alloc frame mem
+    dst_th->frame = (uint8_t *) calloc(h->raw_th_img_sz, sizeof(uint8_t));
     if (dst_th->frame == NULL) {
-        errExit("allocating buffer");
+        errMsg("allocating buffer");
+        goto cleanup;
     }
 
-    for (i = 0; i < frame_sz; i++) {
-        ft = ((src_th->head.tsc[0] * src_th->frame[i] + src_th->head.tsc[1] -
-               dst_th->head.tsc[1]) / dst_th->head.tsc[0]) + 0.5;
-        if (ft < 0) {
-            ut = 0;
-        } else if (ft > 255) {
-            ut = 255;
-        } else {
-            ut = (uint8_t) ft;
+    // alloc float calculation buffer
+    dframe = (double *)calloc(h->raw_th_img_sz, sizeof(double));
+    if (dframe == NULL) {
+        errMsg("allocating buffer");
+        goto cleanup;
+    }
+
+    h->t_min = 32000.0;
+    h->t_max = -32000.0;
+
+    raw_refl =
+            h->planckR1 / (h->planckR2 * (exp(h->planckB / h->refl_temp) - h->planckF)) -
+            h->planckO;
+    ep_raw_refl = raw_refl * (1 - h->emissivity);
+
+    for (i = 0; i < h->raw_th_img_sz; i++) {
+        temp = src_th->frame[i] << 8;
+        raw_obj = 1.0 * (temp - ep_raw_refl) / h->emissivity;
+        t_obj_c =
+            h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) -
+            RJPG_K;
+        dframe[i] = t_obj_c;
+        if (h->t_min > t_obj_c) {
+            h->t_min = t_obj_c;
         }
-        dst_th->frame[i] = ut;
+        if (h->t_max < t_obj_c) {
+            h->t_max = t_obj_c;
+        }
+    }
+    h->t_res = (h->t_max - h->t_min) / 255;
+
+    printf("t_min %.2f, t_max %.2f, t_res %.2f\n", h->t_min, h->t_max, h->t_res);
+
+    if ((new_min == 0) && (new_max == 0)) {
+        new_min = h->t_min;
+        new_max = h->t_max;
+        new_res = h->t_res;
+    } else {
+        new_res = (new_max - new_min) / 255;
+    }
+
+    // rescale image
+    for (i = 0; i < h->raw_th_img_sz; i++) {
+        ftemp = ((dframe[i] - new_min) / new_res) + 0.5;
+        if (ftemp < 0) {
+            ftemp = 0;
+        } else if (ftemp > 255) {
+            ftemp = 255;
+        }
+        dst_th->frame[i] = ftemp;
+    }
+
+#if 0
+    def f_without_distance(x, d):raw_refl =
+        d['PlanckR1'] / (d['PlanckR2'] * (np.exp(d['PlanckB'] / d['Refl_Temp']) - d['PlanckF'])) -
+        d['PlanckO']
+        ep_raw_refl = raw_refl * (1 - d['Emissivity'])
+        raw_obj = (x - ep_raw_refl) / d['Emissivity']
+        t_obj_c =
+        d['PlanckB'] / np.log(d['PlanckR1'] / (d['PlanckR2'] * (raw_obj + d['PlanckO'])) +
+                              d['PlanckF']) - 273.15 print('raw_refl', raw_refl, 'ep_raw_refl',
+                                                           ep_raw_refl, 'raw_obj', raw_obj,
+                                                           't_obj_c', t_obj_c)
+ return t_obj_c def f_with_distance(x, d):
+#Distance [m]
+    tau =
+        d['X'] * np.exp(-np.sqrt(d['Distance']) * (d['Alpha1'] + d['Beta1'] * np.sqrt(d['h2o']))) +
+        (1 -
+         d['X']) * np.exp(-np.sqrt(d['Distance']) * (d['Alpha2'] + d['Beta2'] * np.sqrt(d['h2o'])))
+        RAW_Atm =
+        d['PlanckR1'] / (d['PlanckR2'] * (np.exp(d['PlanckB'] / (d['Air_Temp'])) - d['PlanckF'])) -
+        d['PlanckO']
+        tau_RAW_Atm = RAW_Atm * (1 - tau)
+        RAW_Refl =
+        d['PlanckR1'] / (d['PlanckR2'] * (np.exp(d['PlanckB'] / (d['Refl_Temp'])) - d['PlanckF'])) -
+        d['PlanckO']
+        epsilon_tau_RAW_Refl = RAW_Refl * (1 - d['Emissivity']) * tau RAW_Obj =
+        (x - tau_RAW_Atm - epsilon_tau_RAW_Refl) / d['Emissivity'] / tau T_Obj =
+        d['PlanckB'] / np.log(d['PlanckR1'] / (d['PlanckR2'] * (RAW_Obj + d['PlanckO'])) +
+                              d['PlanckF']) - 273.15 return T_Obj
+#endif
+
+ cleanup:
+    if (dframe) {
+        free(dframe);
     }
 
     return EXIT_SUCCESS;
 }
-#endif
 
 void rjpg_close(tgram_t * thermo)
 {

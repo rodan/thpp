@@ -13,6 +13,7 @@
 #include "rjpg.h"
 #include "processing.h"
 #include "version.h"
+#include "proj.h"
 
 #define   FT_UNK  0
 #define   FT_DTV  1
@@ -52,7 +53,6 @@ int main(int argc, char *argv[])
     uint8_t file_type = FT_UNK;
     int fd;
     uint8_t *buf;
-    proc_limits_t proc_lim;
 
     while ((opt = getopt(argc, argv, "i:o:p:z:l:a:vh")) != -1) {
         switch (opt) {
@@ -180,40 +180,31 @@ int main(int argc, char *argv[])
         }
     } else if (file_type == FT_RJPG) {
 
-        in_th = (tgram_t *) calloc(1, sizeof(tgram_t));
-            if (in_th == NULL) {
-            errExit("allocating memory");
-        }
-
-        in_th->head.rjpg = (rjpg_header_t *) calloc(1, sizeof(rjpg_header_t));
-        if (in_th->head.rjpg == NULL) {
-            errExit("allocating memory");
-        }
-
-        in_th->type = TH_FLIR_RJPG;
+        rjpg_new(&in_th);
+        rjpg_new(&out_th);
 
         rjpg_open(in_th, in_file);
-        th_width = in_th->head.rjpg->raw_th_img_width;
-        th_height = in_th->head.rjpg->raw_th_img_height;
+        //th_width = in_th->head.rjpg->raw_th_img_width;
+        //th_height = in_th->head.rjpg->raw_th_img_height;
 
-        printf("%dx%d image\n", th_width, th_height);
-        image = (uint8_t *) calloc(th_width * th_height * zoom * zoom * 3, 1);
+        rjpg_rescale(out_th, in_th, new_min, new_max);
+
+        image = (uint8_t *) calloc(out_th->head.rjpg->raw_th_img_width * out_th->head.rjpg->raw_th_img_height * zoom * zoom * 3, 1);
         if (image == NULL) {
             errExit("allocating buffer");
         }
 
-        proc_get_limits(in_th, &proc_lim);
-        printf("min %u, max %u, avg %u\n", proc_lim.umin, proc_lim.umax, proc_lim.uavg);
+        rjpg_transfer(out_th, image, pal, zoom);
+        //print_buf(in_th->frame, in_th->head.rjpg->raw_th_img_sz);
 
-        rjpg_transfer(in_th, image, pal, zoom);
-
-        err = lodepng_encode24_file(out_file, image, th_width * zoom, th_height * zoom);
+        err = lodepng_encode24_file(out_file, image, out_th->head.rjpg->raw_th_img_width * zoom, out_th->head.rjpg->raw_th_img_height * zoom);
         if (err) {
             fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
         }
 
         free(image);
         rjpg_close(in_th);
+        rjpg_close(out_th);
     } else {
         fprintf(stderr, "unknown input file type\n");
         exit(EXIT_FAILURE);
@@ -221,3 +212,34 @@ int main(int argc, char *argv[])
 
     return EXIT_SUCCESS;
 }
+
+void print_buf(uint8_t * data, const uint16_t size)
+{
+    uint16_t bytes_remaining = size;
+    uint16_t bytes_to_be_printed, bytes_printed = 0;
+    uint16_t i;
+
+    while (bytes_remaining > 0) {
+
+        if (bytes_remaining > 16) {
+            bytes_to_be_printed = 16;
+        } else {
+            bytes_to_be_printed = bytes_remaining;
+        }
+
+        printf("%u: ", bytes_printed);
+
+        for (i = 0; i < bytes_to_be_printed; i++) {
+            printf("%02x", data[bytes_printed + i]);
+            if (i & 0x1) {
+                printf(" ");
+            }
+        }
+
+        printf("\n");
+        bytes_printed += bytes_to_be_printed;
+        bytes_remaining -= bytes_to_be_printed;
+    }
+}
+
+

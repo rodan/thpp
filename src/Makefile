@@ -8,7 +8,7 @@ LODEPNG_SRC_C	= ${LODEPNG_DIR}/lodepng.c
 TLPI_DIR  = ../tlpi-lib
 TLPI_LIB  = ${TLPI_DIR}/libtlpi.a
 
-INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) 
+INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) -I `apr-1-config --includedir` 
 LOCAL_SRC_CPP := $(wildcard *.cpp)
 LOCAL_SRC_C := $(wildcard *.c)
 PROJ_SRC   = main.c
@@ -19,13 +19,13 @@ EXOUTPUT   = $(PROJ)
 LOCAL_OBJECTS     = $(LOCAL_SRC_CPP:%.cpp=%.o) $(LOCAL_SRC_C:%.c=%.o)
 
 # Append specific CFLAGS/LDFLAGS
-CFLAGS_REL	 += -O3 -fPIC -pedantic
-LDFLAGS_REL	 += -Wl,-s -ljson-c
-CFLAGS_DBG	 += -O1 -ggdb -fPIC -pedantic
-LDFLAGS_DBG	 += -ljson-c
+CFLAGS_REL	 += -O3
+LDFLAGS_REL	 += -Wl,-s
+CFLAGS_DBG	 += -O1 -ggdb -DNDEBUG
+LDFLAGS_DBG	 +=
 
-DEFAULT_FLAGS=-DNDEBUG -Wall -Wextra -Wa,-ahl=$(@:.o=.s)
-DEFAULT_LDFLAGS=-lm
+DEFAULT_FLAGS=-fPIC -pedantic -Wall -Wextra -Wa,-ahl=$(@:.o=.s)
+DEFAULT_LDFLAGS=-lm -ljson-c -lapr-1 -laprutil-1
 
 # First set the flags to their defaults if not supplied externally.
 CFLAGS?=$(DEFAULT_FLAGS)

@@ -39,12 +39,16 @@ currently supported functions:
 image type | export to png | palette change | rescale | zoom
 --- | --- | --- | --- | --- 
 dtv | yes | yes | yes | yes
-rJPG| yes | yes | - | yes
+rJPG| yes | yes | yes | yes
 
 
 ### Build requirements
 
-the code depends on the >=media-libs/exiftool-12.42 package and the json-c headers and library.
+the code depends on the headers and libraries provided by the following packages:
+
+media-libs/exiftool-12.42
+dev-libs/json-c-0.16
+dev-libs/apr-util-1.6.3
 
 compilation is simple, one only needs to
 ```
