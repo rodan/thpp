@@ -5,15 +5,16 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <getopt.h>
 
 #include "lodepng.h"
 #include "tlpi_hdr.h"
 #include "thermogram.h"
+#include "proj.h"
 #include "dtv.h"
 #include "rjpg.h"
 #include "processing.h"
 #include "version.h"
-#include "proj.h"
 
 #define   FT_UNK  0
 #define   FT_DTV  1
@@ -21,18 +22,55 @@
 
 #define BUF_SIZE  32
 
-static const uint8_t sig_exif[4] = {0x45, 0x78, 0x69, 0x66}; // appears at file offset 0x18
-static const uint8_t sig_dtv[2] = {0x6e, 0x02}; // appears at offset 0x0
+static const uint8_t sig_exif[4] = { 0x45, 0x78, 0x69, 0x66 };  // appears at file offset 0x18
+static const uint8_t sig_dtv[2] = { 0x6e, 0x02 };       // appears at offset 0x0
 
 void show_usage(void)
 {
     fprintf(stdout, "Usage:\n");
-    fprintf(stdout, " thpps  -i INPUT_FILE -o OUTPUT_FILE [-h] [-v]\n");
+    fprintf(stdout, " thpps  --input INPUT_FILE --output OUTPUT_FILE [--palette INT] [--zoom INT]\n");
+    fprintf(stdout, "            [--min FLOAT] [--max FLOAT] [--distance FLOAT] [--emissivity FLOAT]\n");
+    fprintf(stdout, "            [-h] [-v]\n");
 }
 
 void show_version(void)
 {
     fprintf(stdout, " thpps %d.%d\nbuild %d commit %d\n", VER_MAJOR, VER_MINOR, BUILD, COMMIT);
+}
+
+uint8_t get_file_type(const char *in_file)
+{
+    int fd;
+    uint8_t *buf;
+    uint8_t ret = FT_UNK;
+
+    // read input file
+    if ((fd = open(in_file, O_RDONLY)) < 0) {
+        errExit("opening input file");
+    }
+
+    buf = (uint8_t *) calloc(BUF_SIZE, sizeof(uint8_t));
+    if (buf == NULL) {
+        errExit("allocating buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    if (read(fd, buf, BUF_SIZE) != BUF_SIZE) {
+        fprintf(stderr, "error while reading input file\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (memcmp(buf, sig_dtv, 2) == 0) {
+        ret = FT_DTV;
+    }
+
+    if (memcmp(buf + 0x18, sig_exif, 4) == 0) {
+        ret = FT_RJPG;
+    }
+
+    close(fd);
+    free(buf);
+    return ret;
 }
 
 int main(int argc, char *argv[])
@@ -48,13 +86,25 @@ int main(int argc, char *argv[])
     uint8_t zoom = 1;
     uint16_t th_width;
     uint16_t th_height;
-    double new_min = 0.0;
-    double new_max = 0.0;
     uint8_t file_type = FT_UNK;
-    int fd;
-    uint8_t *buf;
+    th_custom_param_t p;
+    int option_index = 0;
 
-    while ((opt = getopt(argc, argv, "i:o:p:z:l:a:vh")) != -1) {
+    struct option long_options[] = {
+            {"input",      required_argument, 0,  'i' },
+            {"output",     required_argument, 0,  'o' },
+            {"palette",    required_argument, 0,  'p' },
+            {"zoom",       required_argument, 0,  'z' },
+            {"min",        required_argument, 0,  'l' },
+            {"max",        required_argument, 0,  'a' },
+            {"distance",   required_argument, 0,  'd' },
+            {"emissivity", required_argument, 0,  'e' },
+            {"version",    no_argument,       0,  'v' },
+            {"help",       no_argument,       0,  'h'},
+            {0,         0,                 0,  0 }
+        };
+
+    while ((opt = getopt_long(argc, argv, "i:o:p:z:l:a:d:e:vh", long_options, &option_index)) != -1) {
         switch (opt) {
         case 'i':
             in_file = optarg;
@@ -69,10 +119,20 @@ int main(int argc, char *argv[])
             zoom = atoi(optarg);
             break;
         case 'l':
-            new_min = atof(optarg);
+            p.flags |= RJPG_SET_NEW_MIN;
+            p.t_min = atof(optarg);
             break;
         case 'a':
-            new_max = atof(optarg);
+            p.flags |= RJPG_SET_NEW_MAX;
+            p.t_max = atof(optarg);
+            break;
+        case 'd':
+            p.flags |= RJPG_SET_NEW_DISTANCE;
+            p.distance = atof(optarg);
+            break;
+        case 'e':
+            p.flags |= RJPG_SET_NEW_EMISSIVITY;
+            p.emissivity = atof(optarg);
             break;
         case 'v':
             show_version();
@@ -93,77 +153,36 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // read input file
-    if ((fd = open(in_file, O_RDONLY)) < 0) {
-        errExit("opening input file");
-    }
-
-    buf = (uint8_t *) calloc(BUF_SIZE, sizeof(uint8_t));
-    if (buf == NULL) {
-        errExit("allocating buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    if (read(fd, buf, BUF_SIZE) != BUF_SIZE) {
-        fprintf(stderr, "error while reading input file\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if (memcmp(buf, sig_dtv, 2) == 0) {
-        file_type = FT_DTV;
-    }
-
-    if (memcmp(buf + 0x18, sig_exif, 4) == 0) {
-        file_type = FT_RJPG;
-    }
-
-    close(fd);
-    free(buf);
+    file_type = get_file_type(in_file);
 
     if (file_type == FT_DTV) {
 
-        in_th = (tgram_t *) calloc(1, sizeof(tgram_t));
-        if (in_th == NULL) {
-            errExit("allocating memory");
-        }
-
-        in_th->head.dtv = (dtv_header_t *) calloc(1, sizeof(dtv_header_t));
-        if (in_th->head.dtv == NULL) {
-            errExit("allocating memory");
-        }
-
-        in_th->type = TH_IRTIS_DTV;
+        dtv_new(&in_th);
 
         dtv_open(in_th, in_file);
+
         th_width = in_th->head.dtv->nst;
         th_height = in_th->head.dtv->nstv;
-
         printf("%dx%d image, %d frames\n", th_width, th_height, in_th->head.dtv->frn);
-        printf("src temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", in_th->head.dtv->tsc[1], in_th->head.dtv->tsc[0], in_th->head.dtv->tsc[1] + 256*in_th->head.dtv->tsc[0]);
+        printf("src temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", in_th->head.dtv->tsc[1],
+               in_th->head.dtv->tsc[0], in_th->head.dtv->tsc[1] + 256 * in_th->head.dtv->tsc[0]);
 
         image = (uint8_t *) calloc(th_width * th_height * zoom * zoom * 3, 1);
         if (image == NULL) {
             errExit("allocating buffer");
         }
-        
-        if ((new_min != 0) || (new_max != 0)) {
-            printf("recalculate to %f %f\n", new_min, new_max);
 
-            out_th = (tgram_t *) calloc(1, sizeof(tgram_t));
-            if (out_th == NULL) {
-                errExit("allocating memory");
-            }
+        if (p.flags & (RJPG_SET_NEW_MIN | RJPG_SET_NEW_MAX)) {
 
-            out_th->head.dtv = (dtv_header_t *) calloc(1, sizeof(dtv_header_t));
-            if (out_th->head.dtv == NULL) {
-                errExit("allocating memory");
-            }
+            dtv_new(&out_th);
 
-            out_th->type = TH_IRTIS_DTV;
+            dtv_rescale(out_th, in_th, &p);
 
-            dtv_rescale(out_th, in_th, new_min, new_max);
             dtv_transfer(out_th, image, pal, zoom);
-            printf("dst temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", out_th->head.dtv->tsc[1], out_th->head.dtv->tsc[0], out_th->head.dtv->tsc[1] + 256.0 * out_th->head.dtv->tsc[0]);
+
+            printf("dst temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", out_th->head.dtv->tsc[1],
+                   out_th->head.dtv->tsc[0],
+                   out_th->head.dtv->tsc[1] + 256.0 * out_th->head.dtv->tsc[0]);
         } else {
             dtv_transfer(in_th, image, pal, zoom);
         }
@@ -184,20 +203,25 @@ int main(int argc, char *argv[])
         rjpg_new(&out_th);
 
         rjpg_open(in_th, in_file);
-        //th_width = in_th->head.rjpg->raw_th_img_width;
-        //th_height = in_th->head.rjpg->raw_th_img_height;
 
-        rjpg_rescale(out_th, in_th, new_min, new_max);
+        // a rescale needs to happen since the radiometric data has to be converted to temperatures
+        // via a very convoluted path. 
+        // out_th will contain actual temperatures in ->frame instead of the radiometric raw data as in in_th->frame
+        rjpg_rescale(out_th, in_th, &p);
 
-        image = (uint8_t *) calloc(out_th->head.rjpg->raw_th_img_width * out_th->head.rjpg->raw_th_img_height * zoom * zoom * 3, 1);
+        image =
+            (uint8_t *) calloc(out_th->head.rjpg->raw_th_img_width *
+                               out_th->head.rjpg->raw_th_img_height * zoom * zoom * 3, 1);
         if (image == NULL) {
             errExit("allocating buffer");
         }
-
+        // create the output png file
         rjpg_transfer(out_th, image, pal, zoom);
         //print_buf(in_th->frame, in_th->head.rjpg->raw_th_img_sz);
 
-        err = lodepng_encode24_file(out_file, image, out_th->head.rjpg->raw_th_img_width * zoom, out_th->head.rjpg->raw_th_img_height * zoom);
+        err =
+            lodepng_encode24_file(out_file, image, out_th->head.rjpg->raw_th_img_width * zoom,
+                                  out_th->head.rjpg->raw_th_img_height * zoom);
         if (err) {
             fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
         }
@@ -241,5 +265,3 @@ void print_buf(uint8_t * data, const uint16_t size)
         bytes_remaining -= bytes_to_be_printed;
     }
 }
-
-

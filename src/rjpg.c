@@ -245,7 +245,7 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal, co
     return EXIT_SUCCESS;
 }
 
-uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, double new_min, double new_max)
+uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_param_t *p)
 {
     ssize_t i;
     //double ft;
@@ -256,6 +256,8 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, double new_min, d
     double t_obj_c;
     uint16_t temp;
     double ftemp;
+    double new_min;
+    double new_max;
     double new_res;
 
     rjpg_header_t *h = dst_th->head.rjpg;
@@ -303,13 +305,24 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, double new_min, d
 
     printf("t_min %.2f, t_max %.2f, t_res %.2f\n", h->t_min, h->t_max, h->t_res);
 
-    if ((new_min == 0) && (new_max == 0)) {
-        new_min = h->t_min;
-        new_max = h->t_max;
-        new_res = h->t_res;
+    if (p->flags & RJPG_SET_NEW_MIN) {
+        new_min = p->t_min;
     } else {
-        new_res = (new_max - new_min) / 255;
+        new_min = h->t_min;
     }
+
+    if (p->flags & RJPG_SET_NEW_MAX) {
+        new_max = p->t_max;
+    } else {
+        new_max = h->t_max;
+    }
+
+    if (new_max <= new_min) {
+        fprintf(stderr, "invalid min %.2f/max %.2f values\n", new_min, new_max);
+        goto cleanup;
+    }
+
+    new_res = (new_max - new_min) / 255;
 
     // rescale image
     for (i = 0; i < h->raw_th_img_sz; i++) {

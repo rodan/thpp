@@ -7,12 +7,33 @@
 #include <fcntl.h>
 
 #include "tlpi_hdr.h"
+#include "proj.h"
 #include "thermogram.h"
 #include "dtv.h"
 
 #define   DTV_BUF_SIZE  2048
 
 extern uint8_t vpl_data[12][768];
+
+uint8_t dtv_new(tgram_t ** thermo)
+{
+    tgram_t *t;
+
+    *thermo = (tgram_t *) calloc(1, sizeof(tgram_t));
+    if (*thermo == NULL) {
+        errExit("allocating memory");
+    }
+    t = *thermo;
+
+    t->head.dtv = (dtv_header_t *) calloc(1, sizeof(dtv_header_t));
+    if (t->head.dtv == NULL) {
+        errExit("allocating memory");
+    }
+
+    t->type = TH_IRTIS_DTV;
+
+    return EXIT_SUCCESS;
+}
 
 uint8_t dtv_open(tgram_t *thermo, char *dtv_file)
 {
@@ -112,7 +133,7 @@ uint8_t dtv_transfer(const tgram_t *th, uint8_t *image, const uint8_t pal, const
     return EXIT_SUCCESS;
 }
 
-uint8_t dtv_rescale(tgram_t *dst_th, const tgram_t *src_th, const float new_min, const float new_max)
+uint8_t dtv_rescale(tgram_t *dst_th, const tgram_t *src_th, const th_custom_param_t *p)
 {
     ssize_t frame_sz;
     ssize_t i;
@@ -126,8 +147,8 @@ uint8_t dtv_rescale(tgram_t *dst_th, const tgram_t *src_th, const float new_min,
     if (frame_sz < 256*248) {
         fprintf(stderr, "warning: unexpected image size %dx%dx%d\n", src_th->head.dtv->nst, src_th->head.dtv->nstv, src_th->head.dtv->frn);
     }
-    dst_th->head.dtv->tsc[1] = new_min;
-    dst_th->head.dtv->tsc[0] = (new_max - new_min) / 256.0;
+    dst_th->head.dtv->tsc[1] = p->t_min;
+    dst_th->head.dtv->tsc[0] = (p->t_max - p->t_min) / 256.0;
 
     // populate dst thermo frame
     dst_th->frame = (uint8_t *) calloc(frame_sz, sizeof(uint8_t));
