@@ -99,12 +99,13 @@ int main(int argc, char *argv[])
             {"max",        required_argument, 0,  'a' },
             {"distance",   required_argument, 0,  'd' },
             {"emissivity", required_argument, 0,  'e' },
+            {"distcomp",   no_argument,       0,  'k' },
             {"version",    no_argument,       0,  'v' },
             {"help",       no_argument,       0,  'h'},
             {0,         0,                 0,  0 }
         };
 
-    while ((opt = getopt_long(argc, argv, "i:o:p:z:l:a:d:e:vh", long_options, &option_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "i:o:p:z:l:a:d:e:vkh", long_options, &option_index)) != -1) {
         switch (opt) {
         case 'i':
             in_file = optarg;
@@ -119,19 +120,22 @@ int main(int argc, char *argv[])
             zoom = atoi(optarg);
             break;
         case 'l':
-            p.flags |= RJPG_SET_NEW_MIN;
+            p.flags |= OPT_SET_NEW_MIN;
             p.t_min = atof(optarg);
             break;
         case 'a':
-            p.flags |= RJPG_SET_NEW_MAX;
+            p.flags |= OPT_SET_NEW_MAX;
             p.t_max = atof(optarg);
             break;
         case 'd':
-            p.flags |= RJPG_SET_NEW_DISTANCE;
+            p.flags |= OPT_SET_NEW_DISTANCE;
             p.distance = atof(optarg);
             break;
+        case 'k':
+            p.flags |= OPT_SET_DISTANCE_COMP;
+            break;
         case 'e':
-            p.flags |= RJPG_SET_NEW_EMISSIVITY;
+            p.flags |= OPT_SET_NEW_EMISSIVITY;
             p.emissivity = atof(optarg);
             break;
         case 'v':
@@ -172,7 +176,7 @@ int main(int argc, char *argv[])
             errExit("allocating buffer");
         }
 
-        if (p.flags & (RJPG_SET_NEW_MIN | RJPG_SET_NEW_MAX)) {
+        if (p.flags & (OPT_SET_NEW_MIN | OPT_SET_NEW_MAX)) {
 
             dtv_new(&out_th);
 

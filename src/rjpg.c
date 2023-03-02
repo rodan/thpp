@@ -254,11 +254,17 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
     double ep_raw_refl;
     double raw_obj;
     double t_obj_c;
+    double tau;
+    double raw_atm;
+    double tau_raw_atm;
+    double epsilon_tau_raw_refl;
     uint16_t temp;
     double ftemp;
-    double new_min;
-    double new_max;
-    double new_res;
+    double l_min;
+    double l_max;
+    double l_res;
+    double l_distance;
+    double l_emissivity;
 
     rjpg_header_t *h = dst_th->head.rjpg;
 
@@ -282,51 +288,87 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
     h->t_min = 32000.0;
     h->t_max = -32000.0;
 
-    raw_refl =
-            h->planckR1 / (h->planckR2 * (exp(h->planckB / h->refl_temp) - h->planckF)) -
-            h->planckO;
-    ep_raw_refl = raw_refl * (1 - h->emissivity);
+    if (p->flags & OPT_SET_NEW_DISTANCE) {
+        l_distance = p->distance;
+    } else {
+        l_distance = h->distance;
+    }
 
-    for (i = 0; i < h->raw_th_img_sz; i++) {
-        temp = src_th->frame[i] << 8;
-        raw_obj = 1.0 * (temp - ep_raw_refl) / h->emissivity;
-        t_obj_c =
-            h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) -
-            RJPG_K;
-        dframe[i] = t_obj_c;
-        if (h->t_min > t_obj_c) {
-            h->t_min = t_obj_c;
+    if (p->flags & OPT_SET_NEW_EMISSIVITY) {
+        l_emissivity = p->emissivity;
+    } else {
+        l_emissivity = h->emissivity;
+    }
+
+    if (p->flags & OPT_SET_DISTANCE_COMP) {
+        tau = h->atm_trans_X * exp(-sqrt(l_distance) * (h->alpha1 + h->beta1 * sqrt(h->h2o))) + (1 - h->atm_trans_X) * 
+                  exp( -sqrt(l_distance) * (h->alpha2 + h->beta2 * sqrt(h->h2o)));
+        raw_atm = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->air_temp)) - h->planckF)) - h->planckO;
+        tau_raw_atm = raw_atm * (1 - tau);
+        raw_refl = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->refl_temp)) - h->planckF)) - h->planckO;
+        epsilon_tau_raw_refl = raw_refl * (1 - l_emissivity) * tau;
+
+        for (i = 0; i < h->raw_th_img_sz; i++) {
+            temp = src_th->frame[i] << 8;
+            raw_obj = (temp - tau_raw_atm - epsilon_tau_raw_refl) / l_emissivity / tau;
+            t_obj_c = h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) - RJPG_K;
+            dframe[i] = t_obj_c;
+            if (h->t_min > t_obj_c) {
+                h->t_min = t_obj_c;
+            }
+            if (h->t_max < t_obj_c) {
+                h->t_max = t_obj_c;
+            }
         }
-        if (h->t_max < t_obj_c) {
-            h->t_max = t_obj_c;
+
+    } else {
+        raw_refl =
+                h->planckR1 / (h->planckR2 * (exp(h->planckB / h->refl_temp) - h->planckF)) -
+                h->planckO;
+        ep_raw_refl = raw_refl * (1 - h->emissivity);
+
+        for (i = 0; i < h->raw_th_img_sz; i++) {
+            temp = src_th->frame[i] << 8;
+            raw_obj = 1.0 * (temp - ep_raw_refl) / h->emissivity;
+            t_obj_c =
+                h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) -
+                RJPG_K;
+            dframe[i] = t_obj_c;
+            if (h->t_min > t_obj_c) {
+                h->t_min = t_obj_c;
+            }
+            if (h->t_max < t_obj_c) {
+                h->t_max = t_obj_c;
+            }
         }
     }
+
     h->t_res = (h->t_max - h->t_min) / 255;
 
     printf("t_min %.2f, t_max %.2f, t_res %.2f\n", h->t_min, h->t_max, h->t_res);
 
-    if (p->flags & RJPG_SET_NEW_MIN) {
-        new_min = p->t_min;
+    if (p->flags & OPT_SET_NEW_MIN) {
+        l_min = p->t_min;
     } else {
-        new_min = h->t_min;
+        l_min = h->t_min;
     }
 
-    if (p->flags & RJPG_SET_NEW_MAX) {
-        new_max = p->t_max;
+    if (p->flags & OPT_SET_NEW_MAX) {
+        l_max = p->t_max;
     } else {
-        new_max = h->t_max;
+        l_max = h->t_max;
     }
 
-    if (new_max <= new_min) {
-        fprintf(stderr, "invalid min %.2f/max %.2f values\n", new_min, new_max);
+    if (l_max <= l_min) {
+        fprintf(stderr, "invalid min %.2f/max %.2f values\n", l_min, l_max);
         goto cleanup;
     }
 
-    new_res = (new_max - new_min) / 255;
+    l_res = (l_max - l_min) / 255;
 
     // rescale image
     for (i = 0; i < h->raw_th_img_sz; i++) {
-        ftemp = ((dframe[i] - new_min) / new_res) + 0.5;
+        ftemp = ((dframe[i] - l_min) / l_res) + 0.5;
         if (ftemp < 0) {
             ftemp = 0;
         } else if (ftemp > 255) {
@@ -334,36 +376,6 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
         }
         dst_th->frame[i] = ftemp;
     }
-
-#if 0
-    def f_without_distance(x, d):raw_refl =
-        d['PlanckR1'] / (d['PlanckR2'] * (np.exp(d['PlanckB'] / d['Refl_Temp']) - d['PlanckF'])) -
-        d['PlanckO']
-        ep_raw_refl = raw_refl * (1 - d['Emissivity'])
-        raw_obj = (x - ep_raw_refl) / d['Emissivity']
-        t_obj_c =
-        d['PlanckB'] / np.log(d['PlanckR1'] / (d['PlanckR2'] * (raw_obj + d['PlanckO'])) +
-                              d['PlanckF']) - 273.15 print('raw_refl', raw_refl, 'ep_raw_refl',
-                                                           ep_raw_refl, 'raw_obj', raw_obj,
-                                                           't_obj_c', t_obj_c)
- return t_obj_c def f_with_distance(x, d):
-#Distance [m]
-    tau =
-        d['X'] * np.exp(-np.sqrt(d['Distance']) * (d['Alpha1'] + d['Beta1'] * np.sqrt(d['h2o']))) +
-        (1 -
-         d['X']) * np.exp(-np.sqrt(d['Distance']) * (d['Alpha2'] + d['Beta2'] * np.sqrt(d['h2o'])))
-        RAW_Atm =
-        d['PlanckR1'] / (d['PlanckR2'] * (np.exp(d['PlanckB'] / (d['Air_Temp'])) - d['PlanckF'])) -
-        d['PlanckO']
-        tau_RAW_Atm = RAW_Atm * (1 - tau)
-        RAW_Refl =
-        d['PlanckR1'] / (d['PlanckR2'] * (np.exp(d['PlanckB'] / (d['Refl_Temp'])) - d['PlanckF'])) -
-        d['PlanckO']
-        epsilon_tau_RAW_Refl = RAW_Refl * (1 - d['Emissivity']) * tau RAW_Obj =
-        (x - tau_RAW_Atm - epsilon_tau_RAW_Refl) / d['Emissivity'] / tau T_Obj =
-        d['PlanckB'] / np.log(d['PlanckR1'] / (d['PlanckR2'] * (RAW_Obj + d['PlanckO'])) +
-                              d['PlanckF']) - 273.15 return T_Obj
-#endif
 
  cleanup:
     if (dframe) {

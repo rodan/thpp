@@ -6,6 +6,12 @@
 extern "C" {
 #endif
 
+#define          OPT_SET_NEW_MIN  0x01
+#define          OPT_SET_NEW_MAX  0x02
+#define     OPT_SET_NEW_DISTANCE  0x04
+#define    OPT_SET_DISTANCE_COMP  0x08
+#define   OPT_SET_NEW_EMISSIVITY  0x10
+
 struct th_custom_param {
     uint16_t flags;
     double t_min;

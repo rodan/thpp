@@ -6,12 +6,6 @@
 extern "C" {
 #endif
 
-#define          RJPG_SET_NEW_MIN  0x1
-#define          RJPG_SET_NEW_MAX  0x2
-#define     RJPG_SET_NEW_DISTANCE  0x4
-#define   RJPG_SET_NEW_EMISSIVITY  0x8
-
-
 uint8_t rjpg_new(tgram_t **thermo);
 uint8_t rjpg_open(tgram_t *thermo, char *src_file);
 void rjpg_close(tgram_t *thermo);
