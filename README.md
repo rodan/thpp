@@ -1,4 +1,8 @@
 
+<a href="https://scan.coverity.com/projects/rodan-thpp">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/27526/badge.svg"/>
+</a>
 
 ## thpp
 
