@@ -8,9 +8,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <arpa/inet.h>
-
 #include "apr_base64.h"
-
 #include "json_helper.h"
 #include "lodepng.h"
 #include "tlpi_hdr.h"
