@@ -174,8 +174,7 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
     int fd_json;
     char tmp_json[] = "/tmp/thpp_json_XXXXXX";
 
-
-    umask(0);
+    umask(077);
     fd_json = mkstemp(tmp_json);
 
     switch (fork()) {

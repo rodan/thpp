@@ -230,6 +230,11 @@ uint8_t *pal_init_lut(const uint8_t id, const uint8_t bpp)
             }
         }
 
+        if (stop_end == stop_begin) {
+            fprintf(stderr, "invalid stop offsets in interval %d\n", interval);
+            return NULL;
+        }
+
         for (c = 0; c<3; c++) {
 #ifdef USE_FLOATS
             col_begin = pal_db[id].rgb[interval * 3 + c];
