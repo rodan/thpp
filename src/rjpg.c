@@ -13,6 +13,7 @@
 #include "lodepng.h"
 #include "tlpi_hdr.h"
 #include "thermogram.h"
+#include "palette.h"
 #include "proj.h"
 #include "rjpg.h"
 
@@ -142,6 +143,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
 
     if (write(png_fd, png_contents, decode_len) < decode_len) {
         errMsg("writing");
+        close(png_fd);
         goto cleanup;
     }
 
@@ -171,6 +173,9 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
     pid_t pid;
     int fd_json;
     char tmp_json[] = "/tmp/thpp_json_XXXXXX";
+
+
+    umask(0);
     fd_json = mkstemp(tmp_json);
 
     switch (fork()) {
@@ -209,7 +214,7 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
     return EXIT_SUCCESS;
 }
 
-uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal, const uint8_t zoom)
+uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id, const uint8_t zoom)
 {
     uint16_t i = 0;
     uint16_t row = 0;
@@ -217,16 +222,23 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal, co
     uint16_t th_height = th->head.rjpg->raw_th_img_height;
     uint8_t zc;
     uint8_t *color;
+    uint8_t *pal_rgb;
+    
+    pal_rgb = pal_init_lut(pal_id, PAL_8BPP);
+    if (pal_rgb == NULL) {
+        fprintf(stderr, "palette generation error\n");
+        exit(EXIT_FAILURE);
+    }
 
     if (zoom == 1) {
         for (i = 0; i < th_width * th_height; i++) {
-            memcpy(image + (i * 3), &(vpl_data[pal][th->frame[i] * 3]), 3);
+            memcpy(image + (i * 3), &(pal_rgb[th->frame[i] * 3]), 3);
         }
     } else {
         // resize by multiplying pixels
         for (row = 0; row < th_height; row++) {
             for (i = 0; i < th_width; i++) {
-                color = &(vpl_data[pal][th->frame[row * th_width + i] * 3]);
+                color = &(pal_rgb[th->frame[row * th_width + i] * 3]);
                 for (zc = 0; zc < zoom; zc++) {
                     // multiply each pixel zoom times
                     memcpy(image + ((row * th_width * zoom * zoom + i * zoom + zc) * 3), color, 3);

@@ -45,7 +45,7 @@ CFLAGS	+= $(CFLAGS_DBG)
 LDFLAGS	+= $(LDFLAGS_DBG)
 endif
 
-#COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN)
+COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN)
 
 .PHONY: all
 .PHONY: clean
@@ -104,7 +104,7 @@ coverity: clean
 	  --form file=@/tmp/$(PROJ).tgz \
 	  --form version="$(shell ./tools/getver.sh -i ./version.h -t MAJ.MINbBUILD)" \
 	  --form description="Description" \
-	  https://scan.coverity.com/builds?project=rodan%2Fsigdup
+	  https://scan.coverity.com/builds?project=rodan%2Fthpp
 
 force_look:
 	@true

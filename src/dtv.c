@@ -9,6 +9,7 @@
 #include "tlpi_hdr.h"
 #include "proj.h"
 #include "thermogram.h"
+#include "palette.h"
 #include "dtv.h"
 
 #define   DTV_BUF_SIZE  2048
@@ -44,20 +45,18 @@ uint8_t dtv_open(tgram_t *thermo, char *dtv_file)
     ssize_t cnt, rcnt;  ///< read counters
     ssize_t frame_sz;   ///< total size of frames in the input file
 
-    // get file size
-    if (stat(dtv_file, &st) < 0) {
+    if ((fd = open(dtv_file, O_RDONLY)) < 0) {
+        errExit("opening input file");
+    }
+
+    if (fstat(fd, &st) < 0) {
         errExit("reading input file");
-    }    
+    }
 
     fm = (uint8_t *) calloc(st.st_size, sizeof(uint8_t));
     if (fm == NULL) {
         errExit("allocating buffer");
         exit(EXIT_FAILURE);
-    }
-
-    // read input file
-    if ((fd = open(dtv_file, O_RDONLY)) < 0) {
-        errExit("opening input file");
     }
 
     buf = (uint8_t *) calloc(DTV_BUF_SIZE, sizeof(uint8_t));
@@ -83,13 +82,16 @@ uint8_t dtv_open(tgram_t *thermo, char *dtv_file)
     memcpy(thermo->head.dtv, fm, DTV_HEADER_SZ);
 
     frame_sz = thermo->head.dtv->nst * thermo->head.dtv->nstv * thermo->head.dtv->frn;
-    if (frame_sz < 256*248) {
-        fprintf(stderr, "warning: unexpected image size %dx%dx%d\n", thermo->head.dtv->nst, thermo->head.dtv->nstv, thermo->head.dtv->frn);
+    if (frame_sz > 256*248) {
+        fprintf(stderr, "error: unexpected image size %dx%dx%d\n", thermo->head.dtv->nst, thermo->head.dtv->nstv, thermo->head.dtv->frn);
+        free(buf);
+        free(fm);
+        exit(EXIT_FAILURE);
     }
 
     // populate thermo frame
     thermo->frame = (uint8_t *) calloc(frame_sz, sizeof(uint8_t));
-    if (buf == NULL) {
+    if (thermo->frame == NULL) {
         errExit("allocating buffer");
     }
     memcpy(thermo->frame, fm + DTV_HEADER_SZ, frame_sz);
@@ -100,7 +102,8 @@ uint8_t dtv_open(tgram_t *thermo, char *dtv_file)
     return EXIT_SUCCESS;
 }
 
-uint8_t dtv_transfer(const tgram_t *th, uint8_t *image, const uint8_t pal, const uint8_t zoom)
+// coverity[ -taint_source : arg-0 ]
+uint8_t dtv_transfer(const tgram_t *th, uint8_t *image, const uint8_t pal_id, const uint8_t zoom)
 {
     uint16_t i = 0;
     uint16_t row = 0;
@@ -108,16 +111,23 @@ uint8_t dtv_transfer(const tgram_t *th, uint8_t *image, const uint8_t pal, const
     uint16_t res_y = th->head.dtv->nstv;
     uint8_t zc;
     uint8_t *color;
+    uint8_t *pal_rgb;
+    
+    pal_rgb = pal_init_lut(pal_id, PAL_8BPP);
+    if (pal_rgb == NULL) {
+        fprintf(stderr, "palette generation error\n");
+        exit(EXIT_FAILURE);
+    }    
 
     if (zoom == 1) {
         for (i = 0; i < res_x * res_y; i++) {
-            memcpy(image + (i * 3), &(vpl_data[pal][th->frame[i] * 3]), 3);
+            memcpy(image + (i * 3), &(pal_rgb[th->frame[i] * 3]), 3);
         }
     } else {
         // resize by multiplying pixels
         for (row = 0; row < res_y; row++) {
             for (i = 0; i < res_x; i++) {
-                color = &(vpl_data[pal][th->frame[row * res_x + i] * 3]);
+                color = &(pal_rgb[th->frame[row * res_x + i] * 3]);
                 for (zc = 0; zc<zoom; zc++) {
                     // multiply each pixel zoom times
                     memcpy(image + ((row * res_x * zoom * zoom + i * zoom + zc) * 3), color, 3);

@@ -13,6 +13,7 @@
 #include "proj.h"
 #include "dtv.h"
 #include "rjpg.h"
+#include "palette.h"
 #include "processing.h"
 #include "version.h"
 
@@ -104,6 +105,8 @@ int main(int argc, char *argv[])
             {"help",       no_argument,       0,  'h'},
             {0,         0,                 0,  0 }
         };
+
+    memset(&p, 0, sizeof(th_custom_param_t));
 
     while ((opt = getopt_long(argc, argv, "i:o:p:z:l:a:d:e:vkh", long_options, &option_index)) != -1) {
         switch (opt) {
@@ -237,6 +240,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "unknown input file type\n");
         exit(EXIT_FAILURE);
     }
+
+    pal_free();
 
     return EXIT_SUCCESS;
 }
