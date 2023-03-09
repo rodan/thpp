@@ -35,6 +35,10 @@ LDFLAGS?=$(DEFAULT_LDFLAGS)
 CXXFLAGS+=-fPIC -I. -std=c++0x
 
 DEBUG := $(shell grep "^#define CONFIG_DEBUG" config.h)
+SDL := $(shell grep "^#define CONFIG_SDL" config.h)
+SDL_OPENGL := $(shell grep "^#define CONFIG_SDL_OPENGL" config.h)
+MACROS := $(shell ./tools/extract_macros.sh config.h)
+CFLAGS += $(MACROS)
 ifeq ($(DEBUG),)
 TARGET	:= RELEASE
 CFLAGS	+= $(CFLAGS_REL)
@@ -44,6 +48,19 @@ TARGET	:= DEBUG
 CFLAGS	+= $(CFLAGS_DBG)
 LDFLAGS	+= $(LDFLAGS_DBG)
 endif
+
+ifeq ($(SDL),)
+else
+CFLAGS	+= $(shell sdl2-config --cflags)
+LDFLAGS	+= $(shell sdl2-config --libs) -lSDL2_image
+endif
+
+ifeq ($(SDL_OPENGL),)
+else
+LDFLAGS	+= -lGL
+endif
+
+
 
 COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN)
 

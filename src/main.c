@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <getopt.h>
 
+#include "sdl_vis.h"
 #include "lodepng.h"
 #include "tlpi_hdr.h"
 #include "thermogram.h"
@@ -211,14 +212,15 @@ int main(int argc, char *argv[])
 
         rjpg_open(in_th, in_file);
 
+        th_width = in_th->head.rjpg->raw_th_img_width;
+        th_height = in_th->head.rjpg->raw_th_img_height;
+
         // a rescale needs to happen since the radiometric data has to be converted to temperatures
         // via a very convoluted path. 
         // out_th will contain actual temperatures in ->frame instead of the radiometric raw data as in in_th->frame
         rjpg_rescale(out_th, in_th, &p);
 
-        image =
-            (uint8_t *) calloc(out_th->head.rjpg->raw_th_img_width *
-                               out_th->head.rjpg->raw_th_img_height * zoom * zoom * 3, 1);
+        image = (uint8_t *) calloc(th_width * th_height * zoom * zoom * 3, 1);
         if (image == NULL) {
             errExit("allocating buffer");
         }
@@ -227,8 +229,8 @@ int main(int argc, char *argv[])
         //print_buf(in_th->frame, in_th->head.rjpg->raw_th_img_sz);
 
         err =
-            lodepng_encode24_file(out_file, image, out_th->head.rjpg->raw_th_img_width * zoom,
-                                  out_th->head.rjpg->raw_th_img_height * zoom);
+            lodepng_encode24_file(out_file, image, th_width * zoom,
+                                  th_height * zoom);
         if (err) {
             fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
         }
@@ -242,6 +244,10 @@ int main(int argc, char *argv[])
     }
 
     pal_free();
+
+#ifdef CONFIG_SDL
+    sdl_vis_file(out_file, th_width * zoom, th_height * zoom);
+#endif
 
     return EXIT_SUCCESS;
 }

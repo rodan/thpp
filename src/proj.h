@@ -12,6 +12,9 @@ extern "C" {
 #define    OPT_SET_DISTANCE_COMP  0x08
 #define   OPT_SET_NEW_EMISSIVITY  0x10
 
+#define WINDOW_WIDTH 2000
+#define WINDOW_HEIGHT 2000
+
 struct th_custom_param {
     uint16_t flags;
     double t_min;
