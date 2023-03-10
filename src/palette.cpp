@@ -285,6 +285,7 @@ void pal_free(void)
     if (pal) {
         free(pal);
     }
+    pal = NULL;
 }
 
 uint8_t *pal_get_p(void)

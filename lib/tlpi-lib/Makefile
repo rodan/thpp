@@ -13,8 +13,8 @@ include Makefile.inc
 
 allgen : ${TLPI_LIB}
 
-${TLPI_LIB} : *.c ename.c.inc
-	${CC} -c -g ${CFLAGS} *.c
+${TLPI_LIB} : *.cpp ename.c.inc
+	${CXX} -c -g ${CXXFLAGS} -Wno-write-strings *.cpp
 	${RM} ${TLPI_LIB}
 	${AR} rs libtlpi.a *.o
 

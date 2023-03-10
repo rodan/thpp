@@ -1,19 +1,26 @@
 
 PROJ = thpp
 
-LODEPNG_DIR = ../lodepng
+LODEPNG_DIR = ../lib/lodepng
 LODEPNG_LIB = ${LODEPNG_DIR}/lodepng.o
-LODEPNG_SRC_C	= ${LODEPNG_DIR}/lodepng.c
+LODEPNG_SRC_C = ${LODEPNG_DIR}/lodepng.cpp
 
-TLPI_DIR  = ../tlpi-lib
+TLPI_DIR  = ../lib/tlpi-lib
 TLPI_LIB  = ${TLPI_DIR}/libtlpi.a
 
-INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) -I `apr-1-config --includedir` 
-LOCAL_SRC_CPP := $(wildcard *.cpp)
-LOCAL_SRC_C := $(wildcard *.c)
-PROJ_SRC   = main.c
-SRC        = $(PROJ_SRC) $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C)
-EXOBJECT   = $(PROJ).o
+IMGUI_DIR = ../lib/imgui/
+IMGUI_SRC = $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
+IMGUI_SRC += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
+#IMGUI_OBJ = $(addsuffix .o, $(basename $(notdir $(IMGUI_SRC))))
+IMGUI_OBJ = $(addsuffix .o, $(basename $(IMGUI_SRC)))
+
+IMGUI_BK_DIR = ../lib/imgui/backends/
+
+INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I `apr-1-config --includedir` 
+LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp proj.cpp palette.cpp processing.cpp json_helper.cpp dtv.cpp rjpg.cpp # $(wildcard *.cpp)
+LOCAL_SRC_C := # $(wildcard *.c)
+SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C)
+#EXOBJECT   = $(PROJ).o
 EXOUTPUT   = $(PROJ)
 
 LOCAL_OBJECTS     = $(LOCAL_SRC_CPP:%.cpp=%.o) $(LOCAL_SRC_C:%.c=%.o)
@@ -25,7 +32,7 @@ CFLAGS_DBG	 += -O1 -ggdb -DNDEBUG
 LDFLAGS_DBG	 +=
 
 DEFAULT_FLAGS=-fPIC -pedantic -Wall -Wextra -Wa,-ahl=$(@:.o=.s)
-DEFAULT_LDFLAGS=-lm -ljson-c -lapr-1 -laprutil-1
+DEFAULT_LDFLAGS=-lm -ljson-c -lapr-1 -laprutil-1 -lGL `pkg-config --static --libs glfw3`
 
 # First set the flags to their defaults if not supplied externally.
 CFLAGS?=$(DEFAULT_FLAGS)
@@ -35,8 +42,6 @@ LDFLAGS?=$(DEFAULT_LDFLAGS)
 CXXFLAGS+=-fPIC -I. -std=c++0x
 
 DEBUG := $(shell grep "^#define CONFIG_DEBUG" config.h)
-SDL := $(shell grep "^#define CONFIG_SDL" config.h)
-SDL_OPENGL := $(shell grep "^#define CONFIG_SDL_OPENGL" config.h)
 MACROS := $(shell ./tools/extract_macros.sh config.h)
 CFLAGS += $(MACROS)
 ifeq ($(DEBUG),)
@@ -48,19 +53,6 @@ TARGET	:= DEBUG
 CFLAGS	+= $(CFLAGS_DBG)
 LDFLAGS	+= $(LDFLAGS_DBG)
 endif
-
-ifeq ($(SDL),)
-else
-CFLAGS	+= $(shell sdl2-config --cflags)
-LDFLAGS	+= $(shell sdl2-config --libs) -lSDL2_image
-endif
-
-ifeq ($(SDL_OPENGL),)
-else
-LDFLAGS	+= -lGL
-endif
-
-
 
 COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN)
 
@@ -88,12 +80,9 @@ version.h: $(SRC)
 	@echo -e " * $(@F)"
 	@$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
 
-$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(EXOBJECT)
+$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ)
 	@echo -e "\n>> Building $@ as target $(TARGET)"
-	@$(CC) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) -o $@ && size $@
-
-$(EXOBJECT): $(PROJ_SRC)
-	@$(CC) $(INCLUDES) $(CFLAGS) -g -c $< -o $@
+	@$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(IMGUI_OBJ) -o $@ && size $@
 
 allgen : ${GEN_EXE}
 

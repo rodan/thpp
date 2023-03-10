@@ -20,6 +20,10 @@ uint8_t dtv_new(tgram_t ** thermo)
 {
     tgram_t *t;
 
+    if (*thermo != NULL) {
+        dtv_close(*thermo);
+    }
+
     *thermo = (tgram_t *) calloc(1, sizeof(tgram_t));
     if (*thermo == NULL) {
         errExit("allocating memory");
@@ -187,15 +191,17 @@ void dtv_close(tgram_t *thermo)
     if (thermo) {
         if (thermo->frame) {
             free(thermo->frame);
+            thermo->frame = NULL;
         }
         if (thermo->head.dtv) {
             free(thermo->head.dtv);
+            thermo->head.dtv = NULL;
         }
-
     }
 
     if (thermo) {
         free(thermo);
+        thermo = NULL;
     }
 }
 

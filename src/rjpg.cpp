@@ -30,6 +30,10 @@ uint8_t rjpg_new(tgram_t ** thermo)
 {
     tgram_t *t;
 
+    if (*thermo != NULL) {
+        rjpg_close(*thermo);
+    }
+
     *thermo = (tgram_t *) calloc(1, sizeof(tgram_t));
     if (*thermo == NULL) {
         errExit("allocating memory");
@@ -399,14 +403,16 @@ void rjpg_close(tgram_t * thermo)
     if (thermo) {
         if (thermo->frame) {
             free(thermo->frame);
+            thermo->frame = NULL;
         }
         if (thermo->head.rjpg) {
             free(thermo->head.rjpg);
+            thermo->head.rjpg = NULL;
         }
-
     }
 
     if (thermo) {
         free(thermo);
+        thermo = NULL;
     }
 }

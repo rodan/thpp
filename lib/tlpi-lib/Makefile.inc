@@ -20,15 +20,15 @@ LINUX_LIBCAP = -lcap
 # or "#define _BSD_SOURCE" in the example programs with
 # "#define _DEFAULT_SOURCE".)
 
-IMPL_CFLAGS = -std=c99 -D_XOPEN_SOURCE=600 \
+IMPL_CFLAGS = -D_XOPEN_SOURCE=600 \
 	        -D_DEFAULT_SOURCE \
 		-g -I${TLPI_INCL_DIR} \
 		-pedantic \
 		-Wall \
 		-W \
-		-Wmissing-prototypes \
 		-Wno-sign-compare \
-		-Wno-unused-parameter
+		-Wno-unused-parameter \
+        -Wno-write-strings
 
 # clang(1) is a little more zealous than gcc(1) with respect to some warnings.
 # Suppress those warnings (which, at least in the book code, relate to code
