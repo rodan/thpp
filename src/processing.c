@@ -60,6 +60,10 @@ uint8_t proc_get_limits(tgram_t *th, proc_limits_t *data)
             break;
     }
 
+    if (frame_sz == 0) {
+        return EXIT_FAILURE;
+    }
+
     memset(data, 0, sizeof(proc_limits_t));
 
     data->umin = 255;
