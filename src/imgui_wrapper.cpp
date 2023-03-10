@@ -140,40 +140,40 @@ int imgui_wrapper(th_db_t *db)
         show_apply_button = 1;
     }
 
-    rjpg_header_t *h;
 
     if (db->in_th->type == TH_FLIR_RJPG) {
+        rjpg_header_t *h;
         h = db->out_th->head.rjpg;
-    }
 
-    static float s_begin = h->t_min;
-    static float s_end = h->t_max;
-    ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC", "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
-    if ((s_begin != h->t_min) || (s_end != h->t_max)) {
-        db->p.t_min = s_begin;
-        db->p.t_max = s_end;
-        show_apply_button = 1;
-    }
-
-    ImGui::Separator();
-
-    // temperature compensation
-    if (db->in_th->type == TH_FLIR_RJPG) {
-        ImGui::Text("temperature compensation");
-        ImGui::Separator();
-
-        static float s_distance = h->distance;
-        ImGui::SliderFloat("distance [m]", &s_distance, 0.2f, 100.0f);
-        if (s_distance != h->distance) {
-            db->p.distance = s_distance;
+        static float s_begin = h->t_min;
+        static float s_end = h->t_max;
+        ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC", "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
+        if ((s_begin != h->t_min) || (s_end != h->t_max)) {
+            db->p.t_min = s_begin;
+            db->p.t_max = s_end;
             show_apply_button = 1;
         }
 
-        static float s_emissivity = h->emissivity;
-        ImGui::SliderFloat("emissivity [m]", &s_emissivity, 0.1f, 1.0f);
-        if (s_emissivity != h->emissivity) {
-            db->p.emissivity = s_emissivity;
-            show_apply_button = 1;
+        ImGui::Separator();
+
+        // temperature compensation
+        if (db->in_th->type == TH_FLIR_RJPG) {
+            ImGui::Text("temperature compensation");
+            ImGui::Separator();
+
+            static float s_distance = h->distance;
+            ImGui::DragFloat("distance [m]", &s_distance, 0.2f, 0.2f, 100.0f, "%0.2f m");
+            if (s_distance != h->distance) {
+                db->p.distance = s_distance;
+                show_apply_button = 1;
+            }
+
+            static float s_emissivity = h->emissivity;
+            ImGui::DragFloat("emissivity", &s_emissivity, 0.01f, 0.1f, 1.0f, "%0.2f");
+            if (s_emissivity != h->emissivity) {
+                db->p.emissivity = s_emissivity;
+                show_apply_button = 1;
+            }
         }
     }
 

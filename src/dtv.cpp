@@ -201,7 +201,6 @@ void dtv_close(tgram_t *thermo)
 
     if (thermo) {
         free(thermo);
-        thermo = NULL;
     }
 }
 
