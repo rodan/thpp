@@ -339,11 +339,11 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
         raw_refl =
                 h->planckR1 / (h->planckR2 * (exp(h->planckB / h->refl_temp) - h->planckF)) -
                 h->planckO;
-        ep_raw_refl = raw_refl * (1 - h->emissivity);
+        ep_raw_refl = raw_refl * (1 - l_emissivity);
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
             temp = src_th->frame[i] << 8;
-            raw_obj = 1.0 * (temp - ep_raw_refl) / h->emissivity;
+            raw_obj = 1.0 * (temp - ep_raw_refl) / l_emissivity;
             t_obj_c =
                 h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) -
                 RJPG_K;

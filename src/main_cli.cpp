@@ -114,11 +114,15 @@ int main_cli(th_db_t * db)
         db->rgba.width = th_width * db->p.zoom;
         db->rgba.height = th_height * db->p.zoom;
 
-        if (db->p.flags & (OPT_SET_NEW_MIN | OPT_SET_NEW_MAX)) {
+        if (db->p.flags) {
 
             dtv_new(&(db->out_th));
 
-            dtv_rescale(db->out_th, db->in_th, &(db->p));
+            if (db->p.flags & (OPT_SET_NEW_MIN | OPT_SET_NEW_MAX)) {
+                dtv_rescale(db->out_th, db->in_th, &(db->p));
+            } else {
+                memcpy(db->out_th, db->in_th, sizeof(tgram_t));
+            }
 
             dtv_transfer(db->out_th, db->rgba.data, db->p.pal, db->p.zoom);
 

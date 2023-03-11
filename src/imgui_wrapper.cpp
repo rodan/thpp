@@ -65,6 +65,8 @@ int imgui_wrapper(th_db_t * db)
 {
     int ret = RET_OK;
     static int show_apply_button = 0;
+    static uint8_t reset_changes = 0;
+
     // add docking
     //ImGuiIO& io = ImGui::GetIO();
 
@@ -148,12 +150,38 @@ int imgui_wrapper(th_db_t * db)
         show_apply_button = 1;
     }
 
-    if (db->in_th->type == TH_FLIR_RJPG) {
+    if (db->in_th->type == TH_IRTIS_DTV) {
+
+        dtv_header_t *hd;
+        hd = db->in_th->head.dtv;
+
+        static float s_d_begin = hd->tsc[1];
+        static float s_d_end = hd->tsc[1] + 256.0 * hd->tsc[0];
+        if (reset_changes) {
+            s_d_begin = hd->tsc[1];
+            s_d_end = hd->tsc[1] + 256.0 * hd->tsc[0];
+        }
+        ImGui::DragFloatRange2("rescale [C]", &s_d_begin, &s_d_end, 0.5f, -20.0f, 300.0f, "min: %.1fC",
+                               "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
+        if ((s_d_begin != hd->tsc[1]) || (s_d_end != hd->tsc[1] + 256.0 * hd->tsc[0])) {
+            db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
+            db->p.t_min = s_d_begin;
+            db->p.t_max = s_d_end;
+            show_apply_button = 1;
+        }
+
+        ImGui::Separator();
+
+    } else if (db->in_th->type == TH_FLIR_RJPG) {
         rjpg_header_t *h;
         h = db->out_th->head.rjpg;
 
         static float s_begin = h->t_min;
         static float s_end = h->t_max;
+        if (reset_changes) {
+            s_begin = h->t_min;
+            s_end = h->t_max;
+        }
         ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC",
                                "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
         if ((s_begin != h->t_min) || (s_end != h->t_max)) {
@@ -166,27 +194,47 @@ int imgui_wrapper(th_db_t * db)
         ImGui::Separator();
 
         // temperature compensation
-        if (db->in_th->type == TH_FLIR_RJPG) {
-            ImGui::Text("temperature compensation");
-            ImGui::Separator();
+        ImGui::Text("temperature compensation");
+        ImGui::Separator();
 
-            static float s_distance = h->distance;
-            ImGui::DragFloat("distance [m]", &s_distance, 0.2f, 0.2f, 100.0f, "%0.2f m");
-            if (s_distance != h->distance) {
-                db->p.flags |= OPT_SET_DISTANCE_COMP;
-                db->p.distance = s_distance;
-                show_apply_button = 1;
-            }
+        static float s_distance = h->distance;
+        if (reset_changes) {
+            s_distance = h->distance;
+        }
+        ImGui::DragFloat("distance [m]", &s_distance, 0.2f, 0.2f, 100.0f, "%0.2f m");
+        if (s_distance != h->distance) {
+            db->p.flags |= OPT_SET_DISTANCE_COMP | OPT_SET_NEW_DISTANCE;
+            db->p.distance = s_distance;
+            show_apply_button = 1;
+        }
 
-            static float s_emissivity = h->emissivity;
-            ImGui::DragFloat("emissivity", &s_emissivity, 0.01f, 0.1f, 1.0f, "%0.2f");
-            if (s_emissivity != h->emissivity) {
-                db->p.flags |= OPT_SET_NEW_EMISSIVITY;
-                db->p.emissivity = s_emissivity;
-                show_apply_button = 1;
-            }
+        static float s_emissivity = h->emissivity;
+        if (reset_changes) {
+            s_emissivity = h->emissivity;
+        }
+        ImGui::DragFloat("emissivity", &s_emissivity, 0.01f, 0.1f, 1.0f, "%0.2f");
+        if (s_emissivity != h->emissivity) {
+            db->p.flags |= OPT_SET_NEW_EMISSIVITY;
+            db->p.emissivity = s_emissivity;
+            show_apply_button = 1;
         }
     }
+
+    ImGui::Separator();
+
+    if (reset_changes) {
+        reset_changes = 0;
+    }
+
+    if (ImGui::Button("reset changes")) {
+        db->p.flags = 0;
+        main_cli(db);
+        show_apply_button = 0;
+        ret = RET_OK_REFRESH_NEEDED;
+        reset_changes = 1;
+    }
+
+    ImGui::SameLine();
 
     if (show_apply_button) {
         if (ImGui::Button("apply changes")) {
