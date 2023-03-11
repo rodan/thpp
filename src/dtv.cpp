@@ -111,10 +111,10 @@ uint8_t dtv_transfer(const tgram_t *th, uint8_t *image, const uint8_t pal_id, co
 {
     uint16_t i = 0;
     uint16_t row = 0;
-    uint16_t res_x = th->head.dtv->nst;
-    uint16_t res_y = th->head.dtv->nstv;
+    uint16_t th_width = th->head.dtv->nst;
+    uint16_t th_height = th->head.dtv->nstv;
     uint8_t zc;
-    uint8_t *color;
+    uint8_t color[4];
     uint8_t *pal_rgb;
     
     pal_rgb = pal_init_lut(pal_id, PAL_8BPP);
@@ -124,22 +124,25 @@ uint8_t dtv_transfer(const tgram_t *th, uint8_t *image, const uint8_t pal_id, co
     }    
 
     if (zoom == 1) {
-        for (i = 0; i < res_x * res_y; i++) {
-            memcpy(image + (i * 3), &(pal_rgb[th->frame[i] * 3]), 3);
+        for (i = 0; i < th_width * th_height; i++) {
+            memcpy(image + (i * 4), &(pal_rgb[th->frame[i] * 3]), 3);
+            image[i*4 + 3] = 255; // alpha channel
         }
     } else {
         // resize by multiplying pixels
-        for (row = 0; row < res_y; row++) {
-            for (i = 0; i < res_x; i++) {
-                color = &(pal_rgb[th->frame[row * res_x + i] * 3]);
+        for (row = 0; row < th_height; row++) {
+            for (i = 0; i < th_width; i++) {
+                //color = &(pal_rgb[th->frame[row * th_width + i] * 3]);
+                memcpy(color, &(pal_rgb[th->frame[row * th_width + i] * 3]), 3);
+                color[3] = 255; // alpha channel
                 for (zc = 0; zc<zoom; zc++) {
                     // multiply each pixel zoom times
-                    memcpy(image + ((row * res_x * zoom * zoom + i * zoom + zc) * 3), color, 3);
+                    memcpy(image + ((row * th_width * zoom * zoom + i * zoom + zc) * 4), color, 4);
                 }
             }
             for (zc = 1; zc<zoom; zc++) {
                 // copy last row zoom times
-                memmove(image + ((row * res_x * zoom * zoom + zc * zoom * res_x) * 3), image + ((row * res_x * zoom * zoom) * 3), res_x * zoom * 3);
+                memmove(image + ((row * th_width * zoom * zoom + zc * zoom * th_width) * 4), image + ((row * th_width * zoom * zoom) * 4), th_width * zoom * 4);
             }
         }
     }

@@ -149,6 +149,7 @@ int imgui_wrapper(th_db_t *db)
         static float s_end = h->t_max;
         ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC", "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
         if ((s_begin != h->t_min) || (s_end != h->t_max)) {
+            db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
             db->p.t_min = s_begin;
             db->p.t_max = s_end;
             show_apply_button = 1;
@@ -164,6 +165,7 @@ int imgui_wrapper(th_db_t *db)
             static float s_distance = h->distance;
             ImGui::DragFloat("distance [m]", &s_distance, 0.2f, 0.2f, 100.0f, "%0.2f m");
             if (s_distance != h->distance) {
+                db->p.flags |= OPT_SET_DISTANCE_COMP;
                 db->p.distance = s_distance;
                 show_apply_button = 1;
             }
@@ -171,6 +173,7 @@ int imgui_wrapper(th_db_t *db)
             static float s_emissivity = h->emissivity;
             ImGui::DragFloat("emissivity", &s_emissivity, 0.01f, 0.1f, 1.0f, "%0.2f");
             if (s_emissivity != h->emissivity) {
+                db->p.flags |= OPT_SET_NEW_EMISSIVITY;
                 db->p.emissivity = s_emissivity;
                 show_apply_button = 1;
             }

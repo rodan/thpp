@@ -36,10 +36,19 @@ struct th_custom_param {
 
 typedef struct th_custom_param th_custom_param_t;
 
+struct th_rgba {
+    uint16_t width;
+    uint16_t height;
+    uint8_t *data;
+};
+
+typedef th_rgba th_rgba_t;
+
 struct th_db {
     th_custom_param_t p;
     tgram_t *in_th;
     tgram_t *out_th;
+    th_rgba_t rgba;
 };
 
 typedef struct th_db th_db_t;

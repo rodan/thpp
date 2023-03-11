@@ -47,6 +47,9 @@ void cleanup(void)
         }
     }
 
+    if (db.rgba.data != NULL) {
+        free(db.rgba.data);
+    }
 }
 
 void termination_handler(int)
@@ -81,7 +84,7 @@ int main_cli(th_db_t * db)
     //tgram_t *in_th = NULL;
     //tgram_t *out_th = NULL;
     unsigned err = 0;
-    uint8_t *image = NULL;
+    //uint8_t *image = NULL;
     uint16_t th_width;
     uint16_t th_height;
     uint8_t file_type = FT_UNK;
@@ -102,8 +105,12 @@ int main_cli(th_db_t * db)
         printf("src temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", db->in_th->head.dtv->tsc[1],
                db->in_th->head.dtv->tsc[0], db->in_th->head.dtv->tsc[1] + 256 * db->in_th->head.dtv->tsc[0]);
 
-        image = (uint8_t *) calloc(th_width * th_height * db->p.zoom * db->p.zoom * 3, 1);
-        if (image == NULL) {
+        if (db->rgba.data) {
+            free(db->rgba.data);
+        }
+
+        db->rgba.data = (uint8_t *) calloc(th_width * th_height * db->p.zoom * db->p.zoom * 4, 1);
+        if (db->rgba.data == NULL) {
             errExit("allocating buffer");
         }
 
@@ -113,23 +120,23 @@ int main_cli(th_db_t * db)
 
             dtv_rescale(db->out_th, db->in_th, &(db->p));
 
-            dtv_transfer(db->out_th, image, db->p.pal, db->p.zoom);
+            dtv_transfer(db->out_th, db->rgba.data, db->p.pal, db->p.zoom);
 
             printf("dst temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", db->out_th->head.dtv->tsc[1],
                    db->out_th->head.dtv->tsc[0],
                    db->out_th->head.dtv->tsc[1] + 256.0 * db->out_th->head.dtv->tsc[0]);
         } else {
-            dtv_transfer(db->in_th, image, db->p.pal, db->p.zoom);
+            dtv_transfer(db->in_th, db->rgba.data, db->p.pal, db->p.zoom);
         }
 
         err =
-            lodepng_encode24_file(db->p.out_file, image, th_width * db->p.zoom,
+            lodepng_encode32_file(db->p.out_file, db->rgba.data, th_width * db->p.zoom,
                                   th_height * db->p.zoom);
         if (err) {
             fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
         }
 
-        free(image);
+        //free(image);
         //dtv_close(in_th);
         //if (out_th) {
         //    dtv_close(out_th);
@@ -149,22 +156,26 @@ int main_cli(th_db_t * db)
         // out_th will contain actual temperatures in ->frame instead of the radiometric raw data as in in_th->frame
         rjpg_rescale(db->out_th, db->in_th, &(db->p));
 
-        image = (uint8_t *) calloc(th_width * th_height * db->p.zoom * db->p.zoom * 3, 1);
-        if (image == NULL) {
+        if (db->rgba.data) {
+            free(db->rgba.data);
+        }
+
+        db->rgba.data = (uint8_t *) calloc(th_width * th_height * db->p.zoom * db->p.zoom * 4, 1);
+        if (db->rgba.data == NULL) {
             errExit("allocating buffer");
         }
         // create the output png file
-        rjpg_transfer(db->out_th, image, db->p.pal, db->p.zoom);
+        rjpg_transfer(db->out_th, db->rgba.data, db->p.pal, db->p.zoom);
         //print_buf(in_th->frame, in_th->head.rjpg->raw_th_img_sz);
 
         err =
-            lodepng_encode24_file(db->p.out_file, image, th_width * db->p.zoom,
+            lodepng_encode32_file(db->p.out_file, db->rgba.data, th_width * db->p.zoom,
                                   th_height * db->p.zoom);
         if (err) {
             fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
         }
 
-        free(image);
+        //free(image);
         //rjpg_close(in_th);
         //rjpg_close(out_th);
     } else {
