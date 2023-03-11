@@ -132,7 +132,6 @@ uint8_t dtv_transfer(const tgram_t *th, uint8_t *image, const uint8_t pal_id, co
         // resize by multiplying pixels
         for (row = 0; row < th_height; row++) {
             for (i = 0; i < th_width; i++) {
-                //color = &(pal_rgb[th->frame[row * th_width + i] * 3]);
                 memcpy(color, &(pal_rgb[th->frame[row * th_width + i] * 3]), 3);
                 color[3] = 255; // alpha channel
                 for (zc = 0; zc<zoom; zc++) {

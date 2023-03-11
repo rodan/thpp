@@ -1,7 +1,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <GLFW/glfw3.h> // Will drag system OpenGL headers
+#include <GLFW/glfw3.h>         // Will drag system OpenGL headers
 #include "proj.h"
 #include "imgui.h"
 #include "lodepng.h"
@@ -12,19 +12,10 @@ unsigned int vp_width = 0;
 unsigned int vp_height = 0;
 GLuint vp_texture = 0;
 
-// Simple helper function to load an image into a OpenGL texture with common settings
-bool load_texture_from_file(const char *filename, GLuint * out_texture, unsigned int *out_width,
-                         unsigned int *out_height)
-{
-    // Load from file
-    unsigned int image_width = 0;
-    unsigned int image_height = 0;
-    unsigned char *image_data = NULL;
 
-    //unsigned char *image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
-    lodepng_decode32_file(&image_data, &image_width, &image_height, filename);
-    if (image_data == NULL)
-        return false;
+bool load_texture_from_mem(uint8_t * rgba_data, GLuint * out_texture,
+                           const unsigned int image_width, const unsigned int image_height)
+{
 
     // Create a OpenGL texture identifier
     GLuint image_texture;
@@ -41,18 +32,36 @@ bool load_texture_from_file(const char *filename, GLuint * out_texture, unsigned
 #if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 #endif
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
-    //stbi_image_free(image_data);
-    free(image_data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba_data);
 
     *out_texture = image_texture;
+
+    return EXIT_SUCCESS;
+}
+
+bool load_texture_from_file(const char *filename, GLuint * out_texture, unsigned int *out_width,
+                            unsigned int *out_height)
+{
+    unsigned int image_width = 0;
+    unsigned int image_height = 0;
+    unsigned char *image_data = NULL;
+
+    //unsigned char *image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
+    lodepng_decode32_file(&image_data, &image_width, &image_height, filename);
+    if (image_data == NULL) {
+        return false;
+    }
+
+    load_texture_from_mem(image_data, out_texture, image_width, image_height);
+
+    free(image_data);
     *out_width = image_width;
     *out_height = image_height;
 
-    return true;
+    return EXIT_SUCCESS;
 }
 
-int imgui_wrapper(th_db_t *db)
+int imgui_wrapper(th_db_t * db)
 {
     int ret = RET_OK;
     static int show_apply_button = 0;
@@ -116,8 +125,6 @@ int imgui_wrapper(th_db_t *db)
 
     // end of docking copy-pasta
 
-
-
     ImGui::Begin("Processing");
 
     ImGui::Separator();
@@ -126,7 +133,8 @@ int imgui_wrapper(th_db_t *db)
 
     // palette picker
     static int s_pal = db->p.pal;
-    ImGui::Combo("palette", &s_pal, "256\0color\0grey\0hmetal0\0hmetal1\0hmetal2\0hotblue1\0hotblue2\0iron\0per_true\0pericolor\0rainbow\0rainbow0\0\0");
+    ImGui::Combo("palette", &s_pal,
+                 "256\0color\0grey\0hmetal0\0hmetal1\0hmetal2\0hotblue1\0hotblue2\0iron\0per_true\0pericolor\0rainbow\0rainbow0\0\0");
     if (s_pal != db->p.pal) {
         db->p.pal = s_pal;
         show_apply_button = 1;
@@ -140,14 +148,14 @@ int imgui_wrapper(th_db_t *db)
         show_apply_button = 1;
     }
 
-
     if (db->in_th->type == TH_FLIR_RJPG) {
         rjpg_header_t *h;
         h = db->out_th->head.rjpg;
 
         static float s_begin = h->t_min;
         static float s_end = h->t_max;
-        ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC", "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC",
+                               "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
         if ((s_begin != h->t_min) || (s_end != h->t_max)) {
             db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
             db->p.t_min = s_begin;
@@ -193,14 +201,14 @@ int imgui_wrapper(th_db_t *db)
     ImGui::Begin("Viewport");
 
     if ((vp_texture == 0) || (ret == RET_OK_REFRESH_NEEDED)) {
-        load_texture_from_file(db->p.out_file, &vp_texture, &vp_width, &vp_height);
+        //load_texture_from_file(db->p.out_file, &vp_texture, &vp_width, &vp_height);
+        vp_width = db->rgba.width;
+        vp_height = db->rgba.height;
+        load_texture_from_mem(db->rgba.data, &vp_texture, vp_width, vp_height);
     } else {
-        //ImGui::Text("pointer = %p", vp_texture);
-        //ImGui::Text("size = %d x %d", vp_width, vp_height);
-        ImGui::Image((void*)(intptr_t)vp_texture, ImVec2(vp_width, vp_height));
+        ImGui::Image((void *)(intptr_t) vp_texture, ImVec2(vp_width, vp_height));
     }
     ImGui::End();
-
 
     ImGui::ShowDemoWindow();
 

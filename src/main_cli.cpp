@@ -81,10 +81,7 @@ void setup_sighandler(void)
 int main_cli(th_db_t * db)
 {
 
-    //tgram_t *in_th = NULL;
-    //tgram_t *out_th = NULL;
     unsigned err = 0;
-    //uint8_t *image = NULL;
     uint16_t th_width;
     uint16_t th_height;
     uint8_t file_type = FT_UNK;
@@ -114,6 +111,9 @@ int main_cli(th_db_t * db)
             errExit("allocating buffer");
         }
 
+        db->rgba.width = th_width * db->p.zoom;
+        db->rgba.height = th_height * db->p.zoom;
+
         if (db->p.flags & (OPT_SET_NEW_MIN | OPT_SET_NEW_MAX)) {
 
             dtv_new(&(db->out_th));
@@ -136,11 +136,6 @@ int main_cli(th_db_t * db)
             fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
         }
 
-        //free(image);
-        //dtv_close(in_th);
-        //if (out_th) {
-        //    dtv_close(out_th);
-        //}
     } else if (file_type == FT_RJPG) {
 
         rjpg_new(&(db->in_th));
@@ -164,6 +159,10 @@ int main_cli(th_db_t * db)
         if (db->rgba.data == NULL) {
             errExit("allocating buffer");
         }
+
+        db->rgba.width = th_width * db->p.zoom;
+        db->rgba.height = th_height * db->p.zoom;
+
         // create the output png file
         rjpg_transfer(db->out_th, db->rgba.data, db->p.pal, db->p.zoom);
         //print_buf(in_th->frame, in_th->head.rjpg->raw_th_img_sz);
@@ -175,9 +174,6 @@ int main_cli(th_db_t * db)
             fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
         }
 
-        //free(image);
-        //rjpg_close(in_th);
-        //rjpg_close(out_th);
     } else {
         fprintf(stderr, "unknown input file type\n");
         exit(EXIT_FAILURE);
