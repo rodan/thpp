@@ -12,6 +12,8 @@ unsigned int fbo;
 unsigned int texture;
 unsigned int rbo;
 
+container_t cnt;
+
 uint8_t load_texture_from_mem(uint8_t * rgba_data, GLuint * out_texture,
                               const unsigned int image_width, const unsigned int image_height)
 {
@@ -60,19 +62,22 @@ uint8_t load_texture_from_file(const char *filename, GLuint * out_texture, unsig
     return EXIT_SUCCESS;
 }
 
+void gll_init()
+{
+}
+
 void fb_create(const float width, const float height)
 {
-    glewInit();
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);        // This is required on WebGL for non power-of-two textures
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);        // Same
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);        // This is required on WebGL for non power-of-two textures
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);        // Same
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 
     glGenRenderbuffers(1, &rbo);
@@ -109,7 +114,7 @@ unsigned int fb_get_texture()
 void fb_rescale(const float width, const float height)
 {
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
@@ -127,4 +132,10 @@ void fb_bind(void)
 void fb_unbind(void)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void fb_init(void)
+{
+    glewInit();
+    fb_create(RENDER_W, RENDER_H);
 }

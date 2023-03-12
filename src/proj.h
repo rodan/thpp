@@ -39,7 +39,6 @@ struct th_custom_param {
     double atm_temp;        ///< atmospheric temperature in dC
     double rh;
 };
-
 typedef struct th_custom_param th_custom_param_t;
 
 struct th_rgba {
@@ -47,7 +46,6 @@ struct th_rgba {
     uint16_t height;
     uint8_t *data;
 };
-
 typedef th_rgba th_rgba_t;
 
 struct th_db {
@@ -55,6 +53,7 @@ struct th_db {
     tgram_t *in_th;
     tgram_t *out_th;
     th_rgba_t rgba;
+    double *temp_arr;
 };
 
 typedef struct th_db th_db_t;

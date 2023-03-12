@@ -20,7 +20,7 @@
 #define                  RJPG_BUF_SIZE  2048
 #define    RJPG_EXIFTOOL_BASE64_PREFIX  7       ///< number of bytes that need to be skipped during base64_decode
 
-#define   RJPG_CREATE_INTERMEDIATE_PNG_FILE
+//#define   RJPG_CREATE_INTERMEDIATE_PNG_FILE
 
 extern uint8_t vpl_data[12][768];
 
@@ -254,10 +254,10 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id,
     return EXIT_SUCCESS;
 }
 
-uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_param_t *p)
+uint8_t rjpg_rescale(th_db_t *d)
+//tgram_t * dst_th, const tgram_t * src_th, const th_custom_param_t *p)
 {
     ssize_t i;
-    double *dframe = NULL;
     double raw_refl;
     double ep_raw_refl;
     double raw_obj;
@@ -276,6 +276,9 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
     double l_emissivity;
     double l_atm_temp;
     double l_rh;
+    tgram_t * src_th = d->in_th;
+    tgram_t * dst_th = d->out_th;
+    th_custom_param_t *p = &(d->p);
 
     rjpg_header_t *h = dst_th->head.rjpg;
 
@@ -286,14 +289,18 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
     dst_th->frame = (uint8_t *) calloc(h->raw_th_img_sz, sizeof(uint8_t));
     if (dst_th->frame == NULL) {
         errMsg("allocating buffer");
-        goto cleanup;
+        return EXIT_FAILURE;
+    }
+
+    if (d->temp_arr != NULL) {
+        free(d->temp_arr);
     }
 
     // alloc float calculation buffer
-    dframe = (double *)calloc(h->raw_th_img_sz, sizeof(double));
-    if (dframe == NULL) {
+    d->temp_arr = (double *)calloc(h->raw_th_img_sz, sizeof(double));
+    if (d->temp_arr == NULL) {
         errMsg("allocating buffer");
-        goto cleanup;
+        return EXIT_FAILURE;
     }
 
     h->t_min = 32000.0;
@@ -338,7 +345,7 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
             temp = src_th->frame[i] << 8;
             raw_obj = (temp - tau_raw_atm - epsilon_tau_raw_refl) / l_emissivity / tau;
             t_obj_c = h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) - RJPG_K;
-            dframe[i] = t_obj_c;
+            d->temp_arr[i] = t_obj_c;
             if (h->t_min > t_obj_c) {
                 h->t_min = t_obj_c;
             }
@@ -359,7 +366,7 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
             t_obj_c =
                 h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) -
                 RJPG_K;
-            dframe[i] = t_obj_c;
+            d->temp_arr[i] = t_obj_c;
             if (h->t_min > t_obj_c) {
                 h->t_min = t_obj_c;
             }
@@ -387,25 +394,20 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
 
     if (l_max <= l_min) {
         fprintf(stderr, "invalid min %.2f/max %.2f values\n", l_min, l_max);
-        goto cleanup;
+        return EXIT_FAILURE;
     }
 
     l_res = (l_max - l_min) / 255;
 
     // rescale image
     for (i = 0; i < h->raw_th_img_sz; i++) {
-        ftemp = ((dframe[i] - l_min) / l_res) + 0.5;
+        ftemp = ((d->temp_arr[i] - l_min) / l_res) + 0.5;
         if (ftemp < 0) {
             ftemp = 0;
         } else if (ftemp > 255) {
             ftemp = 255;
         }
         dst_th->frame[i] = ftemp;
-    }
-
- cleanup:
-    if (dframe) {
-        free(dframe);
     }
 
     return EXIT_SUCCESS;

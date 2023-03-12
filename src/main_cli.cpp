@@ -16,7 +16,7 @@
 #include "version.h"
 #include "main_cli.h"
 
-th_db db;
+th_db_t db;
 
 void cleanup(void)
 {
@@ -49,6 +49,10 @@ void cleanup(void)
 
     if (db.rgba.data != NULL) {
         free(db.rgba.data);
+    }
+
+    if (db.temp_arr != NULL) {
+        free(db.temp_arr);
     }
 }
 
@@ -153,7 +157,8 @@ int main_cli(th_db_t * db)
         // a rescale needs to happen since the radiometric data has to be converted to temperatures
         // via a very convoluted path. 
         // out_th will contain actual temperatures in ->frame instead of the radiometric raw data as in in_th->frame
-        rjpg_rescale(db->out_th, db->in_th, &(db->p));
+        //rjpg_rescale(db->out_th, db->in_th, &(db->p));
+        rjpg_rescale(db);
 
         if (db->rgba.data) {
             free(db->rgba.data);

@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <GLFW/glfw3.h>         // Will drag system OpenGL headers
 #include "proj.h"
 #include "imgui.h"
@@ -218,23 +219,42 @@ int imgui_wrapper(th_db_t * db)
             ret = RET_OK_REFRESH_NEEDED;
         }
     }
-
     ImGui::End();
 
+#if 1
     ImGui::Begin("Viewport");
+    ImVec2 screen_pos = ImGui::GetCursorScreenPos();
 
     if ((vp_texture == 0) || (ret == RET_OK_REFRESH_NEEDED)) {
         //load_texture_from_file(db->p.out_file, &vp_texture, &vp_width, &vp_height);
         vp_width = db->rgba.width;
         vp_height = db->rgba.height;
         load_texture_from_mem(db->rgba.data, &vp_texture, vp_width, vp_height);
-        load_texture_from_mem(db->rgba.data, fb_get_texture_ptr(), vp_width, vp_height);
+        //load_texture_from_mem(db->rgba.data, fb_get_texture_ptr(), vp_width, vp_height);
     } else {
         ImGui::Image((void *)(intptr_t) vp_texture, ImVec2(vp_width, vp_height));
     }
-    ImGui::End();
 
-#if 1
+    if (db->in_th->type == TH_FLIR_RJPG) {
+        int16_t x, y;
+        x = (io.MousePos.x - screen_pos.x) / db->p.zoom;
+        y = (io.MousePos.y - screen_pos.y) / db->p.zoom;
+
+        if ((x > 0) && (x < db->in_th->head.rjpg->raw_th_img_width) && (y > 0) && (y < db->in_th->head.rjpg->raw_th_img_height)) {
+            ImGui::Text("spot %.2f°C", db->temp_arr[y * db->in_th->head.rjpg->raw_th_img_width + x]);
+        }
+    }
+
+    ImGui::End();
+#endif
+
+#if 0
+    fb_bind();
+    //glClearColor(255.0, 255.0, 255.0, 255.0);
+    //glClear(GL_COLOR_BUFFER_BIT);
+    gll_draw_interface();
+    fb_unbind();
+
     ImGui::Begin("Scene");
     {
         ImGui::BeginChild("GameRender");
@@ -244,8 +264,10 @@ int imgui_wrapper(th_db_t * db)
 
         //*m_width = width;
         //*m_height = height;
-        ImGui::Image((ImTextureID) fb_get_texture(), ImVec2(vp_width, vp_height));
+//        ImGui::Image((ImTextureID) fb_get_texture(), ImVec2(RENDER_W, RENDER_H));
 //                     ImGui::GetContentRegionAvail(), ImVec2(0, 1), ImVec2(1, 0)
+        ImGui::Image((ImTextureID) fb_get_texture(), ImGui::GetContentRegionAvail()); //, ImVec2(0, 1), ImVec2(1, 0));
+
 
     }
     ImGui::EndChild();
