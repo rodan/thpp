@@ -42,6 +42,8 @@ uint8_t parse_options(int argc, char *argv[], th_custom_param_t * p)
         {"max", required_argument, 0, 'a'},
         {"distance", required_argument, 0, 'd'},
         {"emissivity", required_argument, 0, 'e'},
+        {"rh", required_argument, 0, 'r'},
+        {"at", required_argument, 0, 't'},
         {"distcomp", no_argument, 0, 'k'},
         {"version", no_argument, 0, 'v'},
         {"help", no_argument, 0, 'h'},
@@ -53,7 +55,7 @@ uint8_t parse_options(int argc, char *argv[], th_custom_param_t * p)
     p->zoom = 1;
 
     while ((opt =
-            getopt_long(argc, argv, "i:o:p:z:l:a:d:e:vkh", long_options, &option_index)) != -1) {
+            getopt_long(argc, argv, "i:o:p:z:l:a:d:e:r:t:vkh", long_options, &option_index)) != -1) {
         switch (opt) {
         case 'i':
             p->in_file = optarg;
@@ -85,6 +87,14 @@ uint8_t parse_options(int argc, char *argv[], th_custom_param_t * p)
         case 'e':
             p->flags |= OPT_SET_NEW_EMISSIVITY;
             p->emissivity = atof(optarg);
+            break;
+        case 't':
+            p->flags |= OPT_SET_NEW_AT;
+            p->atm_temp = atof(optarg);
+            break;
+        case 'r':
+            p->flags |= OPT_SET_NEW_RH;
+            p->rh = atof(optarg);
             break;
         case 'v':
             show_version();

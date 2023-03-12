@@ -19,8 +19,6 @@ struct rjpg_header {
     double refl_temp;
     uint16_t raw_th_img_width;               ///< number of horizontal pixels
     uint16_t raw_th_img_height;              ///< number of vertical pixels
-    double atm_temp;
-    double h2o;
     double t_min;
     double t_res;
     double t_max;

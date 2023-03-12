@@ -9,6 +9,8 @@
 #define     OPT_SET_NEW_DISTANCE  0x04
 #define    OPT_SET_DISTANCE_COMP  0x08
 #define   OPT_SET_NEW_EMISSIVITY  0x10
+#define           OPT_SET_NEW_AT  0x20
+#define           OPT_SET_NEW_RH  0x40
 
 #define                   FT_UNK  0
 #define                   FT_DTV  1
@@ -17,6 +19,8 @@
 #define    RET_OK_REFRESH_NEEDED  1
 #define                   RET_OK  0
 #define              RET_FAILURE  -1
+
+#define                   RJPG_K  273.15
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,6 +36,8 @@ struct th_custom_param {
     double t_max;
     double distance;
     double emissivity;
+    double atm_temp;        ///< atmospheric temperature in dC
+    double rh;
 };
 
 typedef struct th_custom_param th_custom_param_t;

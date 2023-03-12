@@ -20,8 +20,6 @@
 #define                  RJPG_BUF_SIZE  2048
 #define    RJPG_EXIFTOOL_BASE64_PREFIX  7       ///< number of bytes that need to be skipped during base64_decode
 
-#define                         RJPG_K  273.15
-
 #define   RJPG_CREATE_INTERMEDIATE_PNG_FILE
 
 extern uint8_t vpl_data[12][768];
@@ -93,8 +91,6 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     h->raw_th_img_width = strtol(get(item_obj, "RawThermalImageWidth"), NULL, 10);
     h->raw_th_img_height = strtol(get(item_obj, "RawThermalImageHeight"), NULL, 10);
 
-    h->atm_temp = h->air_temp - RJPG_K;
-    h->h2o = h->rh * exp(1.5587 + 0.06939 * h->atm_temp - 0.00027816 * pow(h->atm_temp,2) + 0.00000068455 * pow(h->atm_temp,3)); //  # 8.563981576
 
     printf("emissivity = %f\n", h->emissivity);
     printf("distance = %f\n", h->distance);
@@ -113,8 +109,6 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     printf("refl_temp = %f\n", h->refl_temp);
     printf("raw_th_img_width = %u\n", h->raw_th_img_width);
     printf("raw_th_img_height = %u\n", h->raw_th_img_height);
-    printf("atm_temp = %f\n", h->atm_temp);
-    printf("h2o = %f\n", h->h2o);
 
     // fill raw_th_img
     decode_len =
@@ -267,6 +261,7 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
     double raw_refl;
     double ep_raw_refl;
     double raw_obj;
+    double h2o;
     double t_obj_c;
     double tau;
     double raw_atm;
@@ -279,6 +274,8 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
     double l_res;
     double l_distance;
     double l_emissivity;
+    double l_atm_temp;
+    double l_rh;
 
     rjpg_header_t *h = dst_th->head.rjpg;
 
@@ -314,9 +311,24 @@ uint8_t rjpg_rescale(tgram_t * dst_th, const tgram_t * src_th, const th_custom_p
         l_emissivity = h->emissivity;
     }
 
+    if (p->flags & OPT_SET_NEW_AT) {
+        l_atm_temp = p->atm_temp;
+    } else {
+        l_atm_temp = h->air_temp - RJPG_K;
+    }
+
+    if (p->flags & OPT_SET_NEW_RH) {
+        l_rh = p->rh;
+    } else {
+        l_rh = h->rh;
+    }
+
     if (p->flags & OPT_SET_DISTANCE_COMP) {
-        tau = h->atm_trans_X * exp(-sqrt(l_distance) * (h->alpha1 + h->beta1 * sqrt(h->h2o))) + (1 - h->atm_trans_X) * 
-                  exp( -sqrt(l_distance) * (h->alpha2 + h->beta2 * sqrt(h->h2o)));
+        h2o = l_rh * exp(1.5587 + 0.06939 * l_atm_temp - 0.00027816 * pow(l_atm_temp,2) + 0.00000068455 * pow(l_atm_temp,3)); //  # 8.563981576
+        printf("h2o = %f\n", h2o);
+
+        tau = h->atm_trans_X * exp(-sqrt(l_distance) * (h->alpha1 + h->beta1 * sqrt(h2o))) + (1 - h->atm_trans_X) * 
+                  exp( -sqrt(l_distance) * (h->alpha2 + h->beta2 * sqrt(h2o)));
         raw_atm = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->air_temp)) - h->planckF)) - h->planckO;
         tau_raw_atm = raw_atm * (1 - tau);
         raw_refl = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->refl_temp)) - h->planckF)) - h->planckO;

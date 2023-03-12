@@ -218,6 +218,29 @@ int imgui_wrapper(th_db_t * db)
             db->p.emissivity = s_emissivity;
             show_apply_button = 1;
         }
+
+        static float s_atm_temp = h->air_temp - RJPG_K;
+        if (reset_changes) {
+            s_atm_temp = h->air_temp - RJPG_K;
+        }
+        ImGui::DragFloat("atm temp [C]", &s_atm_temp, 1.0f, -20.1f, 300.0f, "%0.2f C");
+        if (s_atm_temp != h->air_temp - RJPG_K) {
+            db->p.flags |= OPT_SET_NEW_AT | OPT_SET_DISTANCE_COMP;
+            db->p.atm_temp = s_atm_temp;
+            show_apply_button = 1;
+        }
+
+        static float s_rh = h->rh * 100.0;
+        if (reset_changes) {
+            s_rh = h->rh * 100.0;
+        }
+        ImGui::DragFloat("rel humidity [%]", &s_rh, 1.0f, 0.1f, 100.0f, "%.0f %rH");
+        if (s_rh != h->rh) {
+            db->p.flags |= OPT_SET_NEW_RH | OPT_SET_DISTANCE_COMP;
+            db->p.rh = s_rh / 100.0;
+            show_apply_button = 1;
+        }
+
     }
 
     ImGui::Separator();
@@ -258,7 +281,7 @@ int imgui_wrapper(th_db_t * db)
     }
     ImGui::End();
 
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
 
     ImGui::End();
 
