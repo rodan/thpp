@@ -17,7 +17,7 @@ IMGUI_OBJ = $(addsuffix .o, $(basename $(IMGUI_SRC)))
 IMGUI_BK_DIR = ../lib/imgui/backends/
 
 INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I `apr-1-config --includedir` 
-LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp proj.cpp palette.cpp processing.cpp json_helper.cpp dtv.cpp rjpg.cpp # $(wildcard *.cpp)
+LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp processing.cpp json_helper.cpp dtv.cpp rjpg.cpp # $(wildcard *.cpp)
 LOCAL_SRC_C := # $(wildcard *.c)
 SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C)
 #EXOBJECT   = $(PROJ).o
@@ -32,7 +32,7 @@ CFLAGS_DBG	 += -O1 -ggdb -DNDEBUG
 LDFLAGS_DBG	 +=
 
 DEFAULT_FLAGS=-fPIC -pedantic -Wall -Wextra -Wa,-ahl=$(@:.o=.s)
-DEFAULT_LDFLAGS=-lm -ljson-c -lapr-1 -laprutil-1 -lGL `pkg-config --static --libs glfw3`
+DEFAULT_LDFLAGS=-lm -ljson-c -lapr-1 -laprutil-1 -lGL `pkg-config --static --libs glfw3` -lGLEW
 
 # First set the flags to their defaults if not supplied externally.
 CFLAGS?=$(DEFAULT_FLAGS)
