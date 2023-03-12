@@ -15,7 +15,8 @@ void fb_create(const float width, const float height);
 
 void fb_free(void);
 
-unsigned int fb_getFrameTexture(void);
+unsigned int *fb_get_texture_ptr(void);
+unsigned int fb_get_texture(void);
 
 void fb_rescale(const float width, const float height);
 

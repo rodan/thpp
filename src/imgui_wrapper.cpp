@@ -78,6 +78,7 @@ int imgui_wrapper(th_db_t * db)
 
     // end of docking copy-pasta
 
+
     ImGui::Begin("Processing");
 
     ImGui::Separator();
@@ -112,8 +113,8 @@ int imgui_wrapper(th_db_t * db)
             s_d_begin = hd->tsc[1];
             s_d_end = hd->tsc[1] + 256.0 * hd->tsc[0];
         }
-        ImGui::DragFloatRange2("rescale [C]", &s_d_begin, &s_d_end, 0.5f, -20.0f, 300.0f, "min: %.1fC",
-                               "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloatRange2("rescale [C]", &s_d_begin, &s_d_end, 0.5f, -20.0f, 300.0f,
+                               "min: %.1fC", "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
         if ((s_d_begin != hd->tsc[1]) || (s_d_end != hd->tsc[1] + 256.0 * hd->tsc[0])) {
             db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
             db->p.t_min = s_d_begin;
@@ -227,10 +228,29 @@ int imgui_wrapper(th_db_t * db)
         vp_width = db->rgba.width;
         vp_height = db->rgba.height;
         load_texture_from_mem(db->rgba.data, &vp_texture, vp_width, vp_height);
+        load_texture_from_mem(db->rgba.data, fb_get_texture_ptr(), vp_width, vp_height);
     } else {
         ImGui::Image((void *)(intptr_t) vp_texture, ImVec2(vp_width, vp_height));
     }
     ImGui::End();
+
+#if 1
+    ImGui::Begin("Scene");
+    {
+        ImGui::BeginChild("GameRender");
+
+        //float width = ImGui::GetContentRegionAvail().x;
+        //float height = ImGui::GetContentRegionAvail().y;
+
+        //*m_width = width;
+        //*m_height = height;
+        ImGui::Image((ImTextureID) fb_get_texture(), ImVec2(vp_width, vp_height));
+//                     ImGui::GetContentRegionAvail(), ImVec2(0, 1), ImVec2(1, 0)
+
+    }
+    ImGui::EndChild();
+    ImGui::End();
+#endif
 
     //ImGui::ShowDemoWindow();
 
@@ -238,4 +258,3 @@ int imgui_wrapper(th_db_t * db)
 
     return ret;
 }
-
