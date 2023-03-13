@@ -10,6 +10,9 @@
 
 #define MAX_HIST_BINS  100
 
+double *xdata = NULL;
+double *ydata = NULL;
+
 void line_plot_calc(th_db_t * db, linedef_t * line, double *data, const uint16_t data_len)
 {
     double x1, y1, x2, y2;
@@ -52,8 +55,6 @@ void line_plot_calc(th_db_t * db, linedef_t * line, double *data, const uint16_t
 
 void line_plot(th_db_t * db, linedef_t *line)
 {
-    static double *xdata = NULL;
-    static double *ydata = NULL;
     uint16_t i;
     static uint16_t data_len = 0;
     double len;
@@ -121,6 +122,17 @@ void line_plot(th_db_t * db, linedef_t *line)
             break;
         }
         ImPlot::EndPlot();
+    }
+}
+
+void line_plot_free(void)
+{
+    if (xdata != NULL) {
+        free(xdata);
+    }
+
+    if (ydata != NULL) {
+        free(ydata);
     }
 }
 

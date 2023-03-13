@@ -14,6 +14,7 @@
 #include "palette.h"
 #include "processing.h"
 #include "version.h"
+#include "implot_wrapper.h"
 #include "main_cli.h"
 
 th_db_t db;
@@ -54,6 +55,8 @@ void cleanup(void)
     if (db.temp_arr != NULL) {
         free(db.temp_arr);
     }
+
+    line_plot_free();
 }
 
 void termination_handler(int)
@@ -158,7 +161,6 @@ int main_cli(th_db_t * db)
         // a rescale needs to happen since the radiometric data has to be converted to temperatures
         // via a very convoluted path. 
         // out_th will contain actual temperatures in ->frame instead of the radiometric raw data as in in_th->frame
-        //rjpg_rescale(db->out_th, db->in_th, &(db->p));
         rjpg_rescale(db);
 
         if (db->rgba.data) {
@@ -175,7 +177,6 @@ int main_cli(th_db_t * db)
 
         // create the output png file
         rjpg_transfer(db->out_th, db->rgba.data, db->p.pal, db->p.zoom);
-        //print_buf(in_th->frame, in_th->head.rjpg->raw_th_img_sz);
 
         err =
             lodepng_encode32_file(db->p.out_file, db->rgba.data, th_width * db->p.zoom,

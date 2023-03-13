@@ -16,6 +16,7 @@ typedef linedef linedef_t;
 #endif
 
 void implot_wrapper(th_db_t *db, linedef_t *line);
+void line_plot_free();
 
 #ifdef __cplusplus
 //}
