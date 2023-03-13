@@ -5,8 +5,11 @@
 #include <GLFW/glfw3.h>         // Will drag system OpenGL headers
 #include "proj.h"
 #include "imgui.h"
+#include "implot.h"
 #include "opengl_helper.h"
 #include "main_cli.h"
+#include "implot_wrapper.h"
+#include "imgui_wrapper.h"
 
 //SDL_Texture *vp_texture = NULL;
 unsigned int vp_width = 0;
@@ -97,6 +100,7 @@ int imgui_wrapper(th_db_t * db)
 
     // zoom level
     static int s_zoom = db->p.zoom;
+    static int actual_zoom = s_zoom;
     ImGui::SliderInt("zoom [1..10]", &s_zoom, 1, 10);
     if (s_zoom != db->p.zoom) {
         db->p.zoom = s_zoom;
@@ -216,6 +220,7 @@ int imgui_wrapper(th_db_t * db)
         if (ImGui::Button("apply changes")) {
             main_cli(db);
             show_apply_button = 0;
+            actual_zoom = db->p.zoom;
             ret = RET_OK_REFRESH_NEEDED;
         }
     }
@@ -235,44 +240,46 @@ int imgui_wrapper(th_db_t * db)
         ImGui::Image((void *)(intptr_t) vp_texture, ImVec2(vp_width, vp_height));
     }
 
-    if (db->in_th->type == TH_FLIR_RJPG) {
-        int16_t x, y;
-        x = (io.MousePos.x - screen_pos.x) / db->p.zoom;
-        y = (io.MousePos.y - screen_pos.y) / db->p.zoom;
+    int16_t img_pos_x, img_pos_y;
+    img_pos_x = (io.MousePos.x - screen_pos.x) / actual_zoom;
+    img_pos_y = (io.MousePos.y - screen_pos.y) / actual_zoom;
+    static uint8_t pointer_inside_image = 0;
+    static linedef_t line;
 
-        if ((x > 0) && (x < db->in_th->head.rjpg->raw_th_img_width) && (y > 0) && (y < db->in_th->head.rjpg->raw_th_img_height)) {
-            ImGui::Text("spot %.2f°C", db->temp_arr[y * db->in_th->head.rjpg->raw_th_img_width + x]);
-        }
+    switch (db->in_th->type) {
+        case TH_FLIR_RJPG:
+            if ((img_pos_x > 0) && (img_pos_x < db->in_th->head.rjpg->raw_th_img_width) && 
+               (img_pos_y > 0) && (img_pos_y < db->in_th->head.rjpg->raw_th_img_height)) {
+                ImGui::Text("spot %.2f°C", db->temp_arr[img_pos_y * db->in_th->head.rjpg->raw_th_img_width + img_pos_x]);
+                pointer_inside_image = 1;
+            } else {
+                pointer_inside_image = 0;
+            }
+            break;
+        case TH_IRTIS_DTV:
+            if ((img_pos_x > 0) && (img_pos_x < db->in_th->head.dtv->nst) && 
+               (img_pos_y > 0) && (img_pos_y < db->in_th->head.dtv->nstv)) {
+                ImGui::Text("spot %.2f°C", db->temp_arr[img_pos_y * db->in_th->head.dtv->nst + img_pos_x]);
+                pointer_inside_image = 1;
+            } else {
+                pointer_inside_image = 0;
+            }
+            break;
+    }
+
+    if (pointer_inside_image) {
+        line.x1 = 80;
+        line.y1 = 60;
+        line.x2 = img_pos_x;
+        line.y2 = img_pos_y;
     }
 
     ImGui::End();
 #endif
 
-#if 0
-    fb_bind();
-    //glClearColor(255.0, 255.0, 255.0, 255.0);
-    //glClear(GL_COLOR_BUFFER_BIT);
-    gll_draw_interface();
-    fb_unbind();
+    implot_wrapper(db, &line);
 
-    ImGui::Begin("Scene");
-    {
-        ImGui::BeginChild("GameRender");
-
-        //float width = ImGui::GetContentRegionAvail().x;
-        //float height = ImGui::GetContentRegionAvail().y;
-
-        //*m_width = width;
-        //*m_height = height;
-//        ImGui::Image((ImTextureID) fb_get_texture(), ImVec2(RENDER_W, RENDER_H));
-//                     ImGui::GetContentRegionAvail(), ImVec2(0, 1), ImVec2(1, 0)
-        ImGui::Image((ImTextureID) fb_get_texture(), ImGui::GetContentRegionAvail()); //, ImVec2(0, 1), ImVec2(1, 0));
-
-
-    }
-    ImGui::EndChild();
-    ImGui::End();
-#endif
+    //ImPlot::ShowDemoWindow();
 
     //ImGui::ShowDemoWindow();
 

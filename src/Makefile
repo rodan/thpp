@@ -16,8 +16,12 @@ IMGUI_OBJ = $(addsuffix .o, $(basename $(IMGUI_SRC)))
 
 IMGUI_BK_DIR = ../lib/imgui/backends/
 
-INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I `apr-1-config --includedir` 
-LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp processing.cpp json_helper.cpp dtv.cpp rjpg.cpp # $(wildcard *.cpp)
+IMPLOT_DIR = ../lib/implot/
+IMPLOT_SRC = $(IMPLOT_DIR)/implot.cpp $(IMPLOT_DIR)/implot_demo.cpp $(IMPLOT_DIR)/implot_items.cpp
+IMPLOT_OBJ = $(addsuffix .o, $(basename $(IMPLOT_SRC)))
+
+INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I $(IMPLOT_DIR) -I `apr-1-config --includedir` 
+LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp implot_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp processing.cpp json_helper.cpp dtv.cpp rjpg.cpp # $(wildcard *.cpp)
 LOCAL_SRC_C := # $(wildcard *.c)
 SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C)
 #EXOBJECT   = $(PROJ).o
@@ -80,9 +84,9 @@ version.h: $(SRC)
 	@echo -e " * $(@F)"
 	@$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
 
-$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ)
+$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ) $(IMPLOT_OBJ)
 	@echo -e "\n>> Building $@ as target $(TARGET)"
-	@$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(IMGUI_OBJ) -o $@ && size $@
+	@$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(IMGUI_OBJ) $(IMPLOT_OBJ) -o $@ && size $@
 
 allgen : ${GEN_EXE}
 

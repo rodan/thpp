@@ -99,6 +99,7 @@ int main_cli(th_db_t * db)
         dtv_new(&(db->in_th));
 
         dtv_open(db->in_th, db->p.in_file);
+        dtv_populate_temp_arr(db);
 
         th_width = db->in_th->head.dtv->nst;
         th_height = db->in_th->head.dtv->nstv;
@@ -123,7 +124,7 @@ int main_cli(th_db_t * db)
             dtv_new(&(db->out_th));
 
             if (db->p.flags & (OPT_SET_NEW_MIN | OPT_SET_NEW_MAX)) {
-                dtv_rescale(db->out_th, db->in_th, &(db->p));
+                dtv_rescale(db);
             } else {
                 memcpy(db->out_th, db->in_th, sizeof(tgram_t));
             }

@@ -218,7 +218,7 @@ uint8_t *pal_init_lut(const uint8_t id, const uint8_t bpp)
 
     pal = (uint8_t *) calloc (pal_sz * 3, sizeof(uint8_t));
 
-    printf("%u allocated\n", pal_sz * 3);
+    // printf("%u allocated\n", pal_sz * 3);
 
     for (i=0; i<pal_sz; i++) {
         // find interval that contains i

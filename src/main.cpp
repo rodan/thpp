@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "implot.h"
 #include <stdint.h>
 #include <stdio.h>
 #define GL_SILENCE_DEPRECATION
@@ -77,7 +78,7 @@ int main(int argc, char **argv)
 #endif
 
     // Create window with graphics context
-    GLFWwindow *window = glfwCreateWindow(2000, 2000, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(1300, 1200, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
     if (window == NULL)
         return 1;
     glfwMakeContextCurrent(window);
@@ -86,6 +87,7 @@ int main(int argc, char **argv)
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO & io = ImGui::GetIO();
     (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
@@ -131,9 +133,6 @@ int main(int argc, char **argv)
     // Our state
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    gll_init();
-    fb_init();
-
     // Main loop
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
@@ -144,8 +143,6 @@ int main(int argc, char **argv)
     while (!glfwWindowShouldClose(window))
 #endif
     {
-        //fb_bind();
-
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
@@ -181,19 +178,18 @@ int main(int argc, char **argv)
         }
 
         glfwSwapBuffers(window);
-        //fb_unbind();
     }
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;
 #endif
 
-    fb_free();
     cleanup();
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+    ImPlot::DestroyContext();
 
     glfwDestroyWindow(window);
     glfwTerminate();

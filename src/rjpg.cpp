@@ -91,7 +91,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     h->raw_th_img_width = strtol(get(item_obj, "RawThermalImageWidth"), NULL, 10);
     h->raw_th_img_height = strtol(get(item_obj, "RawThermalImageHeight"), NULL, 10);
 
-
+#if 0
     printf("emissivity = %f\n", h->emissivity);
     printf("distance = %f\n", h->distance);
     printf("rh = %f\n", h->rh);
@@ -109,6 +109,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     printf("refl_temp = %f\n", h->refl_temp);
     printf("raw_th_img_width = %u\n", h->raw_th_img_width);
     printf("raw_th_img_height = %u\n", h->raw_th_img_height);
+#endif
 
     // fill raw_th_img
     decode_len =
@@ -332,8 +333,6 @@ uint8_t rjpg_rescale(th_db_t *d)
 
     if (p->flags & OPT_SET_DISTANCE_COMP) {
         h2o = l_rh * exp(1.5587 + 0.06939 * l_atm_temp - 0.00027816 * pow(l_atm_temp,2) + 0.00000068455 * pow(l_atm_temp,3)); //  # 8.563981576
-        printf("h2o = %f\n", h2o);
-
         tau = h->atm_trans_X * exp(-sqrt(l_distance) * (h->alpha1 + h->beta1 * sqrt(h2o))) + (1 - h->atm_trans_X) * 
                   exp( -sqrt(l_distance) * (h->alpha2 + h->beta2 * sqrt(h2o)));
         raw_atm = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->air_temp)) - h->planckF)) - h->planckO;
