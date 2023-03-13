@@ -241,6 +241,7 @@ int imgui_wrapper(th_db_t * db)
     }
 
     int16_t img_pos_x, img_pos_y;
+    static int16_t prev_img_pos_x, prev_img_pos_y;
     img_pos_x = (io.MousePos.x - screen_pos.x) / actual_zoom;
     img_pos_y = (io.MousePos.y - screen_pos.y) / actual_zoom;
     static uint8_t pointer_inside_image = 0;
@@ -267,11 +268,21 @@ int imgui_wrapper(th_db_t * db)
             break;
     }
 
+    if (pointer_inside_image && ImGui::IsMouseDown(0) && (line.do_refresh == 0))  {
+        prev_img_pos_x = img_pos_x;
+        prev_img_pos_y = img_pos_y;
+        line.do_refresh = 1;
+    }
+
     if (pointer_inside_image) {
-        line.x1 = 80;
-        line.y1 = 60;
+        line.x1 = prev_img_pos_x;
+        line.y1 = prev_img_pos_y;
         line.x2 = img_pos_x;
         line.y2 = img_pos_y;
+    }
+
+    if (ImGui::IsMouseDown(0) == 0) {
+        line.do_refresh = 0;
     }
 
     ImGui::End();
@@ -280,7 +291,6 @@ int imgui_wrapper(th_db_t * db)
     implot_wrapper(db, &line);
 
     //ImPlot::ShowDemoWindow();
-
     //ImGui::ShowDemoWindow();
 
     ImGui::End();

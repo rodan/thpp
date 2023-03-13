@@ -52,72 +52,76 @@ void line_plot_calc(th_db_t * db, linedef_t * line, double *data, const uint16_t
 
 void line_plot(th_db_t * db, linedef_t *line)
 {
-    double *xdata = NULL;
-    double *ydata = NULL;
+    static double *xdata = NULL;
+    static double *ydata = NULL;
     uint16_t i;
-    uint16_t data_len;
+    static uint16_t data_len = 0;
     double len;
     double x1 = line->x1;
     double y1 = line->y1;
     double x2 = line->x2;
     double y2 = line->y2;
+    static ImVec4 color = ImVec4(1,1,0,1);
 
-    if (x1 == x2) {
-        if (x1 == 0) {
-            x1 = 1;
-        } else {
-            x1--;
+    if (line->do_refresh) {
+
+        if (xdata != NULL) {
+            free(xdata);
         }
-    }
-    if (y1 == y2) {
-        if (y1 == 0) {
-            y1 = 1;
-        } else {
-            y1--;
+
+        if (ydata != NULL) {
+            free(ydata);
         }
+
+        if (x1 == x2) {
+            if (x1 == 0) {
+                x1 = 1;
+            } else {
+                x1--;
+            }
+        }
+        if (y1 == y2) {
+            if (y1 == 0) {
+                y1 = 1;
+            } else {
+                y1--;
+            }
+        }
+
+        // distance in pixels between the two mouse pointers
+        len = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+        if (len == 0) {
+            return;
+        }
+        data_len = len;
+
+        xdata = (double *) calloc(data_len, sizeof(double));
+        ydata = (double *) calloc(data_len, sizeof(double));
+
+        for (i = 0; i < data_len; i++) {
+            xdata[i] = i;
+        }
+
+        line_plot_calc(db, line, ydata, data_len);
     }
 
-    // distance in pixels between the two mouse pointers
-    len = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-    if (len == 0) {
-        return;
-    }
-    data_len = len;
-
-    xdata = (double *) calloc(data_len, sizeof(double));
-    ydata = (double *) calloc(data_len, sizeof(double));
-
-    for (i = 0; i < data_len; i++) {
-        xdata[i] = i;
-    }
-
-    line_plot_calc(db, line, ydata, data_len);
-
-    if (ImPlot::BeginPlot("current line trasient")) {
+    if (ImPlot::BeginPlot("current line transient")) {
         ImPlot::SetupAxes("x", "y");
+        ImPlot::SetNextLineStyle(color, 2);
         switch (db->in_th->type) {
         case TH_FLIR_RJPG:
-            ImPlot::PushColormap(ImPlotColormap_Deep);
-            ImPlot::NextColormapColor();
             ImPlot::SetupAxesLimits(0, 10, db->out_th->head.rjpg->t_min - 5.0, db->out_th->head.rjpg->t_max + 5.0);
             ImPlot::SetupAxes("pixel","temp [C]",ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoDecorations,ImPlotAxisFlags_RangeFit);
             ImPlot::PlotLine("", xdata, ydata, data_len);
-            ImPlot::PopColormap();
             break;
         case TH_IRTIS_DTV:
-            ImPlot::PushColormap(ImPlotColormap_Deep);
-            ImPlot::NextColormapColor();
             ImPlot::SetupAxesLimits(0, 10, db->in_th->head.dtv->tsc[1], db->in_th->head.dtv->tsc[1] + db->in_th->head.dtv->tsc[0] * 256 );
             ImPlot::SetupAxes("pixel","temp [C]",ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoDecorations,ImPlotAxisFlags_RangeFit);
             ImPlot::PlotLine("", xdata, ydata, data_len);
-            ImPlot::PopColormap();
             break;
         }
         ImPlot::EndPlot();
     }
-
-    free(xdata);
-    free(ydata);
 }
 
 void histogram(th_db_t * db)

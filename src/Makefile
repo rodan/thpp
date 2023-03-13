@@ -36,7 +36,7 @@ CFLAGS_DBG	 += -O1 -ggdb -DNDEBUG
 LDFLAGS_DBG	 +=
 
 DEFAULT_FLAGS=-fPIC -pedantic -Wall -Wextra -Wa,-ahl=$(@:.o=.s)
-DEFAULT_LDFLAGS=-lm -ljson-c -lapr-1 -laprutil-1 -lGL `pkg-config --static --libs glfw3` -lGLEW
+DEFAULT_LDFLAGS=-lm -ljson-c -lapr-1 -laprutil-1 -lGL `pkg-config --static --libs glfw3`
 
 # First set the flags to their defaults if not supplied externally.
 CFLAGS?=$(DEFAULT_FLAGS)

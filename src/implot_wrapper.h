@@ -2,6 +2,7 @@
 #define __IMPLOT_WRAPPER_H__
 
 struct linedef {
+    uint8_t do_refresh;
     uint16_t x1;
     uint16_t y1;
     uint16_t x2;
