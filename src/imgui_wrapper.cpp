@@ -179,6 +179,7 @@ void imgui_render_viewport(th_db_t * db, linedef_t *line)
 
 void imgui_rended_processing_panel(th_db_t *db)
 {
+    double t_min, t_max;
     static uint8_t reset_changes = 0;
     static int show_apply_button = 0;
 
@@ -223,15 +224,17 @@ void imgui_rended_processing_panel(th_db_t *db)
         dtv_header_t *hd;
         hd = db->in_th->head.dtv;
 
-        static float s_d_begin = hd->tsc[1];
-        static float s_d_end = hd->tsc[1] + 256.0 * hd->tsc[0];
+        t_min = hd->tsc[1];
+        t_max = hd->tsc[1] + 256.0 * hd->tsc[0];
+        static float s_d_begin = t_min;
+        static float s_d_end = t_max;
         if (reset_changes) {
-            s_d_begin = hd->tsc[1];
-            s_d_end = hd->tsc[1] + 256.0 * hd->tsc[0];
+            s_d_begin = t_min;
+            s_d_end = t_max;
         }
         ImGui::DragFloatRange2("rescale [C]", &s_d_begin, &s_d_end, 0.5f, -20.0f, 300.0f,
                                "min: %.1fC", "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
-        if ((s_d_begin != hd->tsc[1]) || (s_d_end != hd->tsc[1] + 256.0 * hd->tsc[0])) {
+        if ((fabs(s_d_begin - t_min) > 0.001) || (fabs(s_d_end - t_max) > 0.001)) {
             db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
             db->p.t_min = s_d_begin;
             db->p.t_max = s_d_end;
@@ -244,15 +247,17 @@ void imgui_rended_processing_panel(th_db_t *db)
         rjpg_header_t *h;
         h = db->out_th->head.rjpg;
 
-        static float s_begin = h->t_min;
-        static float s_end = h->t_max;
+        t_min = h->t_min;
+        t_max = h->t_max;
+        static float s_begin = t_min;
+        static float s_end = t_max;
         if (reset_changes) {
-            s_begin = h->t_min;
-            s_end = h->t_max;
+            s_begin = t_min;
+            s_end = t_max;
         }
         ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC",
                                "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
-        if ((s_begin != h->t_min) || (s_end != h->t_max)) {
+        if ((fabs(s_begin - t_min) > 0.001) || (fabs(s_end - t_max) > 0.001)) {
             db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
             db->p.t_min = s_begin;
             db->p.t_max = s_end;
@@ -270,7 +275,7 @@ void imgui_rended_processing_panel(th_db_t *db)
             s_distance = h->distance;
         }
         ImGui::DragFloat("distance [m]", &s_distance, 0.2f, 0.2f, 100.0f, "%0.2f m");
-        if (s_distance != h->distance) {
+        if (fabs(s_distance - h->distance) > 0.001) {
             db->p.flags |= OPT_SET_DISTANCE_COMP | OPT_SET_NEW_DISTANCE;
             db->p.distance = s_distance;
             show_apply_button = 1;
@@ -281,7 +286,7 @@ void imgui_rended_processing_panel(th_db_t *db)
             s_emissivity = h->emissivity;
         }
         ImGui::DragFloat("emissivity", &s_emissivity, 0.01f, 0.1f, 1.0f, "%0.2f");
-        if (s_emissivity != h->emissivity) {
+        if (fabs(s_emissivity - h->emissivity) > 0.001) {
             db->p.flags |= OPT_SET_NEW_EMISSIVITY;
             db->p.emissivity = s_emissivity;
             show_apply_button = 1;
@@ -292,7 +297,8 @@ void imgui_rended_processing_panel(th_db_t *db)
             s_atm_temp = h->air_temp - RJPG_K;
         }
         ImGui::DragFloat("atm temp [C]", &s_atm_temp, 1.0f, -20.1f, 300.0f, "%0.2f C");
-        if (s_atm_temp != h->air_temp - RJPG_K) {
+        if (fabs(s_atm_temp - h->air_temp + RJPG_K) > 0.001) {
+            printf("diff at %f\n", fabs(s_atm_temp - h->air_temp + RJPG_K));
             db->p.flags |= OPT_SET_NEW_AT | OPT_SET_DISTANCE_COMP;
             db->p.atm_temp = s_atm_temp;
             show_apply_button = 1;
@@ -303,7 +309,8 @@ void imgui_rended_processing_panel(th_db_t *db)
             s_rh = h->rh * 100.0;
         }
         ImGui::DragFloat("rel humidity [%]", &s_rh, 1.0f, 0.1f, 100.0f, "%.0f %rH");
-        if (s_rh != h->rh) {
+        if (fabs(s_rh / 100.0 - h->rh) > 0.001) {
+            printf("diff rH %f\n", fabs(s_rh / 100.0 - h->rh));
             db->p.flags |= OPT_SET_NEW_RH | OPT_SET_DISTANCE_COMP;
             db->p.rh = s_rh / 100.0;
             show_apply_button = 1;

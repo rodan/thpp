@@ -256,7 +256,6 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id,
 }
 
 uint8_t rjpg_rescale(th_db_t *d)
-//tgram_t * dst_th, const tgram_t * src_th, const th_custom_param_t *p)
 {
     ssize_t i;
     double raw_refl;
