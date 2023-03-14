@@ -7,3 +7,6 @@
 [submodule "lib/implot"]
 	path = lib/implot
 	url = https://github.com/epezent/implot.git
+[submodule "lib/imgui-filebrowser"]
+	path = lib/imgui-filebrowser
+	url = https://github.com/AirGuanZ/imgui-filebrowser.git

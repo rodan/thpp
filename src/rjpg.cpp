@@ -91,26 +91,6 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     h->raw_th_img_width = strtol(get(item_obj, "RawThermalImageWidth"), NULL, 10);
     h->raw_th_img_height = strtol(get(item_obj, "RawThermalImageHeight"), NULL, 10);
 
-#if 0
-    printf("emissivity = %f\n", h->emissivity);
-    printf("distance = %f\n", h->distance);
-    printf("rh = %f\n", h->rh);
-    printf("alpha1 = %f\n", h->alpha1);
-    printf("alpha2 = %f\n", h->alpha2);
-    printf("beta1 = %f\n", h->beta1);
-    printf("beta2 = %f\n", h->beta2);
-    printf("planckR1 = %f\n", h->planckR1);
-    printf("planckR2 = %f\n", h->planckR2);
-    printf("planckB = %f\n", h->planckB);
-    printf("planckF = %f\n", h->planckF);
-    printf("planckO = %f\n", h->planckO);
-    printf("atm_trans_X = %f\n", h->atm_trans_X);
-    printf("air_temp = %f\n", h->air_temp);
-    printf("refl_temp = %f\n", h->refl_temp);
-    printf("raw_th_img_width = %u\n", h->raw_th_img_width);
-    printf("raw_th_img_height = %u\n", h->raw_th_img_height);
-#endif
-
     // fill raw_th_img
     decode_len =
         apr_base64_decode_len(get(item_obj, "RawThermalImage") + RJPG_EXIFTOOL_BASE64_PREFIX);

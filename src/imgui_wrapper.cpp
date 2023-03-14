@@ -113,7 +113,7 @@ int imgui_init_docking(th_db_t * db)
     bool opt_exit = false;
     static bool show_about = false;
     static bool show_properties = false;
-    bool opt_ignore;
+    //bool opt_ignore;
     static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
     // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
@@ -467,7 +467,7 @@ int imgui_wrapper(th_db_t * db)
 
     implot_wrapper(db, &line);
 
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
     //ImPlot::ShowDemoWindow();
 
     ImGui::End();
