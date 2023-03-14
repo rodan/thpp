@@ -26,6 +26,15 @@ error checking based on the Linux Programming Interface book's library
  license:       GNU GPLv3
 ```
 
+### git clone
+
+this repository is using a few submodules that will get linked into the final binary.
+so when you clone the repo make sure you also retrieve the submodules, like so:
+
+```
+git clone --recurse-submodules git@github.com:rodan/thpp.git
+```
+
 ### functionality
 
 currently supported image formats:
@@ -59,8 +68,11 @@ cd ./src
 make
 ```
 
-### Usage
+### Usage example
 
+```
+./thpp --input ../img/IR_6357.jpg --output /tmp/foo.png -z 4
+```
 
 ### Testing
 
