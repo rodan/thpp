@@ -21,7 +21,6 @@ th_db_t db;
 
 void cleanup(void)
 {
-    printf("cleanup\n");
     if (db.in_th != NULL) {
         switch (db.in_th->type) {
             case TH_IRTIS_DTV:

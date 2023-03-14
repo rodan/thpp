@@ -8,6 +8,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "implot.h"
+#include <imfilebrowser.h>
 #include <stdint.h>
 #include <stdio.h>
 #define GL_SILENCE_DEPRECATION
@@ -34,6 +35,7 @@
 #endif
 
 extern th_db db;
+ImGui::FileBrowser fileDialog;
 
 static void glfw_error_callback(int error, const char *description)
 {
@@ -47,7 +49,6 @@ int main(int argc, char **argv)
     memset(&db, 0, sizeof(th_db));
 
     parse_options(argc, argv, &(db.p));
-
     main_cli(&db);
 
     glfwSetErrorCallback(glfw_error_callback);
@@ -132,6 +133,10 @@ int main(int argc, char **argv)
 
     // Our state
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    // (optional) set browser properties
+    fileDialog.SetTitle("exploder");
+    fileDialog.SetTypeFilters({ ".dtv", ".jpg" });
 
     // Main loop
 #ifdef __EMSCRIPTEN__

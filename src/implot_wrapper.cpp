@@ -197,14 +197,14 @@ void implot_wrapper(th_db_t * db, linedef_t * ld)
     ImGui::Begin("plots window");
     ImGui::BeginTabItem("plots");
 
-    if (ImGui::TreeNodeEx("histogram")) {
-        histogram(db);
-        ImGui::TreePop();
-    }
-
     if (ImGui::TreeNodeEx("line plot")) {
         line_plot(db, ld);
         ImGui::Text("%d %d -> %d %d", ld->x1, ld->y1, ld->x2, ld->y2);
+        ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNodeEx("histogram")) {
+        histogram(db);
         ImGui::TreePop();
     }
 

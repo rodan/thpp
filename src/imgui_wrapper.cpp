@@ -1,27 +1,35 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <GLFW/glfw3.h>         // Will drag system OpenGL headers
 #include "proj.h"
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "implot.h"
+#include "imfilebrowser.h"
 #include "opengl_helper.h"
 #include "main_cli.h"
 #include "implot_wrapper.h"
 #include "imgui_wrapper.h"
 
-//SDL_Texture *vp_texture = NULL;
-unsigned int vp_width = 0;
-unsigned int vp_height = 0;
-GLuint vp_texture = 0;
 
-int imgui_wrapper(th_db_t * db)
+struct idb_t {
+    uint8_t actual_zoom;
+    uint8_t refresh_flag;
+    unsigned int vp_width = 0;
+    unsigned int vp_height = 0;
+    unsigned int vp_texture = 0;
+};
+
+struct idb_t idb;
+
+extern ImGui::FileBrowser fileDialog;
+extern ImGuiContext* GImGui;
+
+void imgui_init_docking(void)
 {
-    int ret = RET_OK;
-    static int show_apply_button = 0;
-    static uint8_t reset_changes = 0;
-
     // add docking
     //ImGuiIO& io = ImGui::GetIO();
 
@@ -79,11 +87,114 @@ int imgui_wrapper(th_db_t * db)
         ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
     }
+}
 
-    // end of docking copy-pasta
+void imgui_init_preferences(void)
+{
+    // window decorations, theme
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImGui::StyleColorsClassic();
+    style.FrameBorderSize = 1.0f;
+}
 
+void imgui_render_viewport(th_db_t * db, linedef_t *line)
+{
+    ImGuiIO & io = ImGui::GetIO();
 
-    ImGui::Begin("Processing");
+    ImGui::Begin("viewport");
+    ImVec2 screen_pos = ImGui::GetCursorScreenPos();
+
+    if ((idb.vp_texture == 0) || (idb.refresh_flag == RET_OK_REFRESH_NEEDED)) {
+        //load_texture_from_file(db->p.out_file, &idb.vp_texture, &vp_width, &vp_height);
+        idb.actual_zoom = db->p.zoom;
+        idb.vp_width = db->rgba.width;
+        idb.vp_height = db->rgba.height;
+        load_texture_from_mem(db->rgba.data, &idb.vp_texture, idb.vp_width, idb.vp_height);
+        //load_texture_from_mem(db->rgba.data, fb_get_texture_ptr(), vp_width, vp_height);
+    } else {
+        ImGui::Image((void *)(intptr_t) idb.vp_texture, ImVec2(idb.vp_width, idb.vp_height));
+    }
+
+    int16_t img_pos_x, img_pos_y;
+    static int16_t prev_img_pos_x, prev_img_pos_y;
+    img_pos_x = (io.MousePos.x - screen_pos.x) / idb.actual_zoom;
+    img_pos_y = (io.MousePos.y - screen_pos.y) / idb.actual_zoom;
+    static uint8_t pointer_inside_image = 0;
+
+    switch (db->in_th->type) {
+    case TH_FLIR_RJPG:
+        if ((img_pos_x > 0) && (img_pos_x < db->in_th->head.rjpg->raw_th_img_width) &&
+            (img_pos_y > 0) && (img_pos_y < db->in_th->head.rjpg->raw_th_img_height)) {
+            ImGui::Text("spot %.2f°C",
+                        db->temp_arr[img_pos_y * db->in_th->head.rjpg->raw_th_img_width +
+                                     img_pos_x]);
+            pointer_inside_image = 1;
+        } else {
+            pointer_inside_image = 0;
+        }
+        break;
+    case TH_IRTIS_DTV:
+        if ((img_pos_x > 0) && (img_pos_x < db->in_th->head.dtv->nst) &&
+            (img_pos_y > 0) && (img_pos_y < db->in_th->head.dtv->nstv)) {
+            ImGui::Text("spot %.2f°C",
+                        db->temp_arr[img_pos_y * db->in_th->head.dtv->nst + img_pos_x]);
+            pointer_inside_image = 1;
+        } else {
+            pointer_inside_image = 0;
+        }
+        break;
+    }
+
+    ImGuiContext& g = *GImGui;
+    uint8_t pointer_over_viewport = 0;
+
+    if (g.HoveredWindow) {
+        if (strstr(g.HoveredWindow->Name,"viewport") != NULL) {
+            pointer_over_viewport = 1;
+        }
+    }
+
+    if (pointer_inside_image && ImGui::IsMouseDown(0) && (line->do_refresh == 0) && pointer_over_viewport) {
+        prev_img_pos_x = img_pos_x;
+        prev_img_pos_y = img_pos_y;
+        line->do_refresh = 1;
+    }
+
+    if (pointer_inside_image && ImGui::IsMouseDown(0) && pointer_over_viewport) {
+        line->x1 = prev_img_pos_x;
+        line->y1 = prev_img_pos_y;
+        line->x2 = img_pos_x;
+        line->y2 = img_pos_y;
+    }
+
+    if (ImGui::IsMouseDown(0) == 0) {
+        line->do_refresh = 0;
+    }
+    ImGui::End();
+
+    if (line->do_refresh) {
+        ImGui::SetNextItemOpen(1, 0);
+    }
+}
+
+void imgui_rended_processing_panel(th_db_t *db)
+{
+    static uint8_t reset_changes = 0;
+    static int show_apply_button = 0;
+
+    ImGui::Begin("processing");
+
+    // open file dialog when user clicks this button
+    if (ImGui::Button("open ...")) {
+        fileDialog.Open();
+    }
+
+    fileDialog.Display();
+
+    if (fileDialog.HasSelected()) {
+        printf("Selected filename %s\n", fileDialog.GetSelected().string().c_str());
+        fileDialog.ClearSelected();
+    }
 
     ImGui::Separator();
     ImGui::Text("input parameters");
@@ -100,7 +211,7 @@ int imgui_wrapper(th_db_t * db)
 
     // zoom level
     static int s_zoom = db->p.zoom;
-    static int actual_zoom = s_zoom;
+    //actual_zoom = s_zoom;
     ImGui::SliderInt("zoom [1..10]", &s_zoom, 1, 10);
     if (s_zoom != db->p.zoom) {
         db->p.zoom = s_zoom;
@@ -210,7 +321,7 @@ int imgui_wrapper(th_db_t * db)
         db->p.flags = 0;
         main_cli(db);
         show_apply_button = 0;
-        ret = RET_OK_REFRESH_NEEDED;
+        idb.refresh_flag = RET_OK_REFRESH_NEEDED;
         reset_changes = 1;
     }
 
@@ -220,73 +331,23 @@ int imgui_wrapper(th_db_t * db)
         if (ImGui::Button("apply changes")) {
             main_cli(db);
             show_apply_button = 0;
-            actual_zoom = db->p.zoom;
-            ret = RET_OK_REFRESH_NEEDED;
+            idb.actual_zoom = db->p.zoom;
+            idb.refresh_flag = RET_OK_REFRESH_NEEDED;
         }
     }
     ImGui::End();
+}
 
-#if 1
-    ImGui::Begin("Viewport");
-    ImVec2 screen_pos = ImGui::GetCursorScreenPos();
-
-    if ((vp_texture == 0) || (ret == RET_OK_REFRESH_NEEDED)) {
-        //load_texture_from_file(db->p.out_file, &vp_texture, &vp_width, &vp_height);
-        vp_width = db->rgba.width;
-        vp_height = db->rgba.height;
-        load_texture_from_mem(db->rgba.data, &vp_texture, vp_width, vp_height);
-        //load_texture_from_mem(db->rgba.data, fb_get_texture_ptr(), vp_width, vp_height);
-    } else {
-        ImGui::Image((void *)(intptr_t) vp_texture, ImVec2(vp_width, vp_height));
-    }
-
-    int16_t img_pos_x, img_pos_y;
-    static int16_t prev_img_pos_x, prev_img_pos_y;
-    img_pos_x = (io.MousePos.x - screen_pos.x) / actual_zoom;
-    img_pos_y = (io.MousePos.y - screen_pos.y) / actual_zoom;
-    static uint8_t pointer_inside_image = 0;
+int imgui_wrapper(th_db_t * db)
+{
     static linedef_t line;
 
-    switch (db->in_th->type) {
-        case TH_FLIR_RJPG:
-            if ((img_pos_x > 0) && (img_pos_x < db->in_th->head.rjpg->raw_th_img_width) && 
-               (img_pos_y > 0) && (img_pos_y < db->in_th->head.rjpg->raw_th_img_height)) {
-                ImGui::Text("spot %.2f°C", db->temp_arr[img_pos_y * db->in_th->head.rjpg->raw_th_img_width + img_pos_x]);
-                pointer_inside_image = 1;
-            } else {
-                pointer_inside_image = 0;
-            }
-            break;
-        case TH_IRTIS_DTV:
-            if ((img_pos_x > 0) && (img_pos_x < db->in_th->head.dtv->nst) && 
-               (img_pos_y > 0) && (img_pos_y < db->in_th->head.dtv->nstv)) {
-                ImGui::Text("spot %.2f°C", db->temp_arr[img_pos_y * db->in_th->head.dtv->nst + img_pos_x]);
-                pointer_inside_image = 1;
-            } else {
-                pointer_inside_image = 0;
-            }
-            break;
-    }
+    imgui_init_docking();
+    imgui_init_preferences();
 
-    if (pointer_inside_image && ImGui::IsMouseDown(0) && (line.do_refresh == 0))  {
-        prev_img_pos_x = img_pos_x;
-        prev_img_pos_y = img_pos_y;
-        line.do_refresh = 1;
-    }
-
-    if (pointer_inside_image) {
-        line.x1 = prev_img_pos_x;
-        line.y1 = prev_img_pos_y;
-        line.x2 = img_pos_x;
-        line.y2 = img_pos_y;
-    }
-
-    if (ImGui::IsMouseDown(0) == 0) {
-        line.do_refresh = 0;
-    }
-
-    ImGui::End();
-#endif
+    idb.refresh_flag = 0;
+    imgui_rended_processing_panel(db);
+    imgui_render_viewport(db, &line);
 
     implot_wrapper(db, &line);
 
@@ -295,5 +356,5 @@ int imgui_wrapper(th_db_t * db)
 
     ImGui::End();
 
-    return ret;
+    return idb.refresh_flag;
 }
