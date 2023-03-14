@@ -21,6 +21,7 @@
 #include "main_cli.h"
 #include "opengl_helper.h"
 #include "imgui_wrapper.h"
+#include "version.h"
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
@@ -45,11 +46,14 @@ static void glfw_error_callback(int error, const char *description)
 // Main code
 int main(int argc, char **argv)
 {
+    char wtitle[40];
 
     memset(&db, 0, sizeof(th_db));
 
     parse_options(argc, argv, &(db.p));
     main_cli(&db);
+
+    snprintf(wtitle, 39, "Thermal Processing Panel v%d.%d", VER_MAJOR, VER_MINOR);
 
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
@@ -79,7 +83,7 @@ int main(int argc, char **argv)
 #endif
 
     // Create window with graphics context
-    GLFWwindow *window = glfwCreateWindow(1300, 1200, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, wtitle, NULL, NULL);
     if (window == NULL)
         return 1;
     glfwMakeContextCurrent(window);
@@ -160,7 +164,9 @@ int main(int argc, char **argv)
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        imgui_wrapper(&db);
+        if (imgui_wrapper(&db) == RET_EXIT) {
+            break;
+        }
 
         // Rendering
         ImGui::Render();

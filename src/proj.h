@@ -16,11 +16,14 @@
 #define                   FT_DTV  1
 #define                  FT_RJPG  2
 
-#define    RET_OK_REFRESH_NEEDED  1
 #define                   RET_OK  0
-#define              RET_FAILURE  -1
+#define    RET_OK_REFRESH_NEEDED  0x1
+#define              RET_FAILURE  0x4
+#define                 RET_EXIT  0x8
 
 #define                   RJPG_K  273.15
+#define             WINDOW_WIDTH  1300
+#define            WINDOW_HEIGHT  1200
 
 #ifdef __cplusplus
 extern "C" {

@@ -11,13 +11,13 @@
 #include "imfilebrowser.h"
 #include "opengl_helper.h"
 #include "main_cli.h"
+#include "version.h"
 #include "implot_wrapper.h"
 #include "imgui_wrapper.h"
 
-
 struct idb_t {
     uint8_t actual_zoom;
-    uint8_t refresh_flag;
+    uint8_t return_state;
     unsigned int vp_width = 0;
     unsigned int vp_height = 0;
     unsigned int vp_texture = 0;
@@ -26,9 +26,76 @@ struct idb_t {
 struct idb_t idb;
 
 extern ImGui::FileBrowser fileDialog;
-extern ImGuiContext* GImGui;
+extern ImGuiContext *GImGui;
 
-void imgui_init_docking(void)
+// Helper to display a little (?) mark which shows a tooltip when hovered.
+// In your own code you may want to display an actual icon if you are using a merged icon fonts (see docs/FONTS.md)
+static void HelpMarker(const char *desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort) && ImGui::BeginTooltip()) {
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
+void imgui_show_about(bool *p_open)
+{
+    if (!ImGui::Begin("About ThPP", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::End();
+        return;
+    }
+
+    ImGui::Text("Thermal processing panel v%d.%d build %d commit #%d", VER_MAJOR, VER_MINOR, BUILD,
+                COMMIT);
+    ImGui::Separator();
+    ImGui::Text("copyright Petre Rodan, 2023");
+    ImGui::Text("ThPP is licensed under the GPLv3 License, see LICENSE for more information.");
+    ImGui::End();
+}
+
+void imgui_show_properties(bool *p_open, th_db_t *db)
+{
+    rjpg_header_t *h;
+
+    if (!ImGui::Begin("file properties", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::End();
+        return;
+    }
+
+    switch (db->in_th->type) {
+        case TH_FLIR_RJPG:
+            h = db->in_th->head.rjpg;
+            ImGui::Text("emissivity: %f", h->emissivity);
+            ImGui::Text("object distance: %f", h->distance);
+            ImGui::Text("relative humidity: %f", h->rh);
+            ImGui::Text("atmospheric trans Alpha1: %f", h->alpha1);
+            ImGui::Text("atmospheric trans Alpha2: %f", h->alpha2);
+            ImGui::Text("atmospheric trans Beta1: %f", h->beta1);
+            ImGui::Text("atmospheric trans Beta2: %f", h->beta2);
+            ImGui::Text("planck r1: %f", h->planckR1);
+            ImGui::Text("planck r2: %f", h->planckR2);
+            ImGui::Text("planck b: %f", h->planckB);
+            ImGui::Text("planck f: %f", h->planckF);
+            ImGui::Text("planck o: %f", h->planckO);
+            ImGui::Text("atmospheric TransX: %f", h->atm_trans_X);
+            ImGui::Text("atmospheric temperature: %f", h->air_temp);
+            ImGui::Text("reflected apparent temperature: %f", h->refl_temp);
+            ImGui::Text("raw thermal image width: %u", h->raw_th_img_width);
+            ImGui::Text("raw thermal image height: %u", h->raw_th_img_height);
+            break;
+        case TH_IRTIS_DTV:
+            ImGui::Text("to be implemented");
+            break;
+    }
+    
+
+    ImGui::End();
+}
+
+int imgui_init_docking(th_db_t * db)
 {
     // add docking
     //ImGuiIO& io = ImGui::GetIO();
@@ -42,6 +109,11 @@ void imgui_init_docking(void)
 
     static bool opt_fullscreen = true;
     static bool opt_padding = false;
+    static bool opt_open = false;
+    bool opt_exit = false;
+    static bool show_about = false;
+    static bool show_properties = false;
+    bool opt_ignore;
     static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
     // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
@@ -87,24 +159,73 @@ void imgui_init_docking(void)
         ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
     }
+
+    if (ImGui::BeginMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Open ..")) {
+                fileDialog.Open();
+                opt_open = 1;
+            }
+            ImGui::MenuItem("Properties", NULL, &show_properties, 1);
+            ImGui::Separator();
+            ImGui::MenuItem("Exit", NULL, &opt_exit, 1);
+            ImGui::EndMenu();
+        }
+        HelpMarker
+            ("When docking is enabled, you can ALWAYS dock MOST window into another! Try it now!"
+             "\n" "- Drag from window title bar or their tab to dock/undock." "\n"
+             "- Drag from window menu button (upper-left button) to undock an entire node (all windows)."
+             "\n" "- Hold SHIFT to disable docking (if io.ConfigDockingWithShift == false, default)"
+             "\n" "- Hold SHIFT to enable docking (if io.ConfigDockingWithShift == true)" "\n"
+             "This demo app has nothing to do with enabling docking!" "\n\n"
+             "This demo app only demonstrate the use of ImGui::DockSpace() which allows you to manually create a docking node _within_ another window."
+             "\n\n" "Read comments in ShowExampleAppDockSpace() for more details.");
+
+        ImGui::MenuItem("About", NULL, &show_about);
+        ImGui::EndMenuBar();
+    }
+
+    if (opt_open) {
+        fileDialog.Display();
+
+        if (fileDialog.HasSelected()) {
+            printf("Selected filename %s\n", fileDialog.GetSelected().string().c_str());
+            fileDialog.ClearSelected();
+            opt_open = 0;
+        }
+    }
+
+    if (show_about) {
+        imgui_show_about(&show_about);
+    }
+
+    if (show_properties) {
+        imgui_show_properties(&show_properties, db);
+    }
+
+    if (opt_exit) {
+        idb.return_state = RET_EXIT;
+        return RET_EXIT;
+    }
+    return 0;
 }
 
 void imgui_init_preferences(void)
 {
     // window decorations, theme
-    ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiStyle & style = ImGui::GetStyle();
     ImGui::StyleColorsClassic();
     style.FrameBorderSize = 1.0f;
 }
 
-void imgui_render_viewport(th_db_t * db, linedef_t *line)
+void imgui_render_viewport(th_db_t * db, linedef_t * line)
 {
     ImGuiIO & io = ImGui::GetIO();
 
     ImGui::Begin("viewport");
     ImVec2 screen_pos = ImGui::GetCursorScreenPos();
 
-    if ((idb.vp_texture == 0) || (idb.refresh_flag == RET_OK_REFRESH_NEEDED)) {
+    if ((idb.vp_texture == 0) || (idb.return_state == RET_OK_REFRESH_NEEDED)) {
         //load_texture_from_file(db->p.out_file, &idb.vp_texture, &vp_width, &vp_height);
         idb.actual_zoom = db->p.zoom;
         idb.vp_width = db->rgba.width;
@@ -119,12 +240,21 @@ void imgui_render_viewport(th_db_t * db, linedef_t *line)
     static int16_t prev_img_pos_x, prev_img_pos_y;
     img_pos_x = (io.MousePos.x - screen_pos.x) / idb.actual_zoom;
     img_pos_y = (io.MousePos.y - screen_pos.y) / idb.actual_zoom;
+    ImGuiContext & g = *GImGui;
     static uint8_t pointer_inside_image = 0;
+    uint8_t pointer_over_viewport = 0;
+
+    if (g.HoveredWindow) {
+        if (strstr(g.HoveredWindow->Name, "viewport") != NULL) {
+            pointer_over_viewport = 1;
+        }
+    }
 
     switch (db->in_th->type) {
     case TH_FLIR_RJPG:
         if ((img_pos_x > 0) && (img_pos_x < db->in_th->head.rjpg->raw_th_img_width) &&
-            (img_pos_y > 0) && (img_pos_y < db->in_th->head.rjpg->raw_th_img_height)) {
+            (img_pos_y > 0) && (img_pos_y < db->in_th->head.rjpg->raw_th_img_height) &&
+            pointer_over_viewport) {
             ImGui::Text("spot %.2f°C",
                         db->temp_arr[img_pos_y * db->in_th->head.rjpg->raw_th_img_width +
                                      img_pos_x]);
@@ -135,7 +265,7 @@ void imgui_render_viewport(th_db_t * db, linedef_t *line)
         break;
     case TH_IRTIS_DTV:
         if ((img_pos_x > 0) && (img_pos_x < db->in_th->head.dtv->nst) &&
-            (img_pos_y > 0) && (img_pos_y < db->in_th->head.dtv->nstv)) {
+            (img_pos_y > 0) && (img_pos_y < db->in_th->head.dtv->nstv) && pointer_over_viewport) {
             ImGui::Text("spot %.2f°C",
                         db->temp_arr[img_pos_y * db->in_th->head.dtv->nst + img_pos_x]);
             pointer_inside_image = 1;
@@ -145,16 +275,8 @@ void imgui_render_viewport(th_db_t * db, linedef_t *line)
         break;
     }
 
-    ImGuiContext& g = *GImGui;
-    uint8_t pointer_over_viewport = 0;
-
-    if (g.HoveredWindow) {
-        if (strstr(g.HoveredWindow->Name,"viewport") != NULL) {
-            pointer_over_viewport = 1;
-        }
-    }
-
-    if (pointer_inside_image && ImGui::IsMouseDown(0) && (line->do_refresh == 0) && pointer_over_viewport) {
+    if (pointer_inside_image && ImGui::IsMouseDown(0) && (line->do_refresh == 0)
+        && pointer_over_viewport) {
         prev_img_pos_x = img_pos_x;
         prev_img_pos_y = img_pos_y;
         line->do_refresh = 1;
@@ -177,25 +299,13 @@ void imgui_render_viewport(th_db_t * db, linedef_t *line)
     }
 }
 
-void imgui_rended_processing_panel(th_db_t *db)
+void imgui_rended_processing_panel(th_db_t * db)
 {
     double t_min, t_max;
     static uint8_t reset_changes = 0;
     static int show_apply_button = 0;
 
     ImGui::Begin("processing");
-
-    // open file dialog when user clicks this button
-    if (ImGui::Button("open ...")) {
-        fileDialog.Open();
-    }
-
-    fileDialog.Display();
-
-    if (fileDialog.HasSelected()) {
-        printf("Selected filename %s\n", fileDialog.GetSelected().string().c_str());
-        fileDialog.ClearSelected();
-    }
 
     ImGui::Separator();
     ImGui::Text("input parameters");
@@ -210,9 +320,8 @@ void imgui_rended_processing_panel(th_db_t *db)
         show_apply_button = 1;
     }
 
-    // zoom level
+    // target zoom level
     static int s_zoom = db->p.zoom;
-    //actual_zoom = s_zoom;
     ImGui::SliderInt("zoom [1..10]", &s_zoom, 1, 10);
     if (s_zoom != db->p.zoom) {
         db->p.zoom = s_zoom;
@@ -298,7 +407,6 @@ void imgui_rended_processing_panel(th_db_t *db)
         }
         ImGui::DragFloat("atm temp [C]", &s_atm_temp, 1.0f, -20.1f, 300.0f, "%0.2f C");
         if (fabs(s_atm_temp - h->air_temp + RJPG_K) > 0.001) {
-            printf("diff at %f\n", fabs(s_atm_temp - h->air_temp + RJPG_K));
             db->p.flags |= OPT_SET_NEW_AT | OPT_SET_DISTANCE_COMP;
             db->p.atm_temp = s_atm_temp;
             show_apply_button = 1;
@@ -310,7 +418,6 @@ void imgui_rended_processing_panel(th_db_t *db)
         }
         ImGui::DragFloat("rel humidity [%]", &s_rh, 1.0f, 0.1f, 100.0f, "%.0f %rH");
         if (fabs(s_rh / 100.0 - h->rh) > 0.001) {
-            printf("diff rH %f\n", fabs(s_rh / 100.0 - h->rh));
             db->p.flags |= OPT_SET_NEW_RH | OPT_SET_DISTANCE_COMP;
             db->p.rh = s_rh / 100.0;
             show_apply_button = 1;
@@ -328,7 +435,7 @@ void imgui_rended_processing_panel(th_db_t *db)
         db->p.flags = 0;
         main_cli(db);
         show_apply_button = 0;
-        idb.refresh_flag = RET_OK_REFRESH_NEEDED;
+        idb.return_state = RET_OK_REFRESH_NEEDED;
         reset_changes = 1;
     }
 
@@ -339,7 +446,7 @@ void imgui_rended_processing_panel(th_db_t *db)
             main_cli(db);
             show_apply_button = 0;
             idb.actual_zoom = db->p.zoom;
-            idb.refresh_flag = RET_OK_REFRESH_NEEDED;
+            idb.return_state = RET_OK_REFRESH_NEEDED;
         }
     }
     ImGui::End();
@@ -349,19 +456,21 @@ int imgui_wrapper(th_db_t * db)
 {
     static linedef_t line;
 
-    imgui_init_docking();
+    if (imgui_init_docking(db) == RET_EXIT) {
+        return RET_EXIT;
+    }
     imgui_init_preferences();
 
-    idb.refresh_flag = 0;
+    idb.return_state = 0;
     imgui_rended_processing_panel(db);
     imgui_render_viewport(db, &line);
 
     implot_wrapper(db, &line);
 
+    ImGui::ShowDemoWindow();
     //ImPlot::ShowDemoWindow();
-    //ImGui::ShowDemoWindow();
 
     ImGui::End();
 
-    return idb.refresh_flag;
+    return idb.return_state;
 }
