@@ -94,6 +94,10 @@ int main_cli(th_db_t * db)
 
     file_type = get_file_type(db->p.in_file);
 
+    if (lstat(db->p.in_file, &db->sb) == -1) {
+        errExit("lstat");
+    }
+
     setup_sighandler();
 
     if (file_type == FT_DTV) {

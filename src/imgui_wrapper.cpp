@@ -56,7 +56,7 @@ void imgui_show_about(bool *p_open)
     ImGui::End();
 }
 
-void imgui_show_properties(bool *p_open, th_db_t *db)
+void imgui_show_properties(bool *p_open, th_db_t * db)
 {
     rjpg_header_t *h;
 
@@ -66,31 +66,30 @@ void imgui_show_properties(bool *p_open, th_db_t *db)
     }
 
     switch (db->in_th->type) {
-        case TH_FLIR_RJPG:
-            h = db->in_th->head.rjpg;
-            ImGui::Text("emissivity: %f", h->emissivity);
-            ImGui::Text("object distance: %f", h->distance);
-            ImGui::Text("relative humidity: %f", h->rh);
-            ImGui::Text("atmospheric trans Alpha1: %f", h->alpha1);
-            ImGui::Text("atmospheric trans Alpha2: %f", h->alpha2);
-            ImGui::Text("atmospheric trans Beta1: %f", h->beta1);
-            ImGui::Text("atmospheric trans Beta2: %f", h->beta2);
-            ImGui::Text("planck r1: %f", h->planckR1);
-            ImGui::Text("planck r2: %f", h->planckR2);
-            ImGui::Text("planck b: %f", h->planckB);
-            ImGui::Text("planck f: %f", h->planckF);
-            ImGui::Text("planck o: %f", h->planckO);
-            ImGui::Text("atmospheric TransX: %f", h->atm_trans_X);
-            ImGui::Text("atmospheric temperature: %f", h->air_temp);
-            ImGui::Text("reflected apparent temperature: %f", h->refl_temp);
-            ImGui::Text("raw thermal image width: %u", h->raw_th_img_width);
-            ImGui::Text("raw thermal image height: %u", h->raw_th_img_height);
-            break;
-        case TH_IRTIS_DTV:
-            ImGui::Text("to be implemented");
-            break;
+    case TH_FLIR_RJPG:
+        h = db->in_th->head.rjpg;
+        ImGui::Text("emissivity: %f", h->emissivity);
+        ImGui::Text("object distance: %f", h->distance);
+        ImGui::Text("relative humidity: %f", h->rh);
+        ImGui::Text("atmospheric trans Alpha1: %f", h->alpha1);
+        ImGui::Text("atmospheric trans Alpha2: %f", h->alpha2);
+        ImGui::Text("atmospheric trans Beta1: %f", h->beta1);
+        ImGui::Text("atmospheric trans Beta2: %f", h->beta2);
+        ImGui::Text("planck r1: %f", h->planckR1);
+        ImGui::Text("planck r2: %f", h->planckR2);
+        ImGui::Text("planck b: %f", h->planckB);
+        ImGui::Text("planck f: %f", h->planckF);
+        ImGui::Text("planck o: %f", h->planckO);
+        ImGui::Text("atmospheric TransX: %f", h->atm_trans_X);
+        ImGui::Text("atmospheric temperature: %f", h->air_temp);
+        ImGui::Text("reflected apparent temperature: %f", h->refl_temp);
+        ImGui::Text("raw thermal image width: %u", h->raw_th_img_width);
+        ImGui::Text("raw thermal image height: %u", h->raw_th_img_height);
+        break;
+    case TH_IRTIS_DTV:
+        ImGui::Text("to be implemented");
+        break;
     }
-    
 
     ImGui::End();
 }
@@ -218,6 +217,78 @@ void imgui_init_preferences(void)
     style.FrameBorderSize = 1.0f;
 }
 
+void render_prop_table(th_db_t * db)
+{
+    struct tm t;
+    static ImGuiTableFlags flags =
+        ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders |
+        ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+
+    localtime_r(&(db->sb.st_mtime), &t);
+
+    if (ImGui::BeginTable("prop_table", 2, flags)) {
+        ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableHeadersRow();
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("IR: Date Of Creation");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%d/%02d/%02d", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday);
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("IR: Time Of Creation");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%02d:%02d:%02d", t.tm_hour, t.tm_min, t.tm_sec);
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("IR: File Name");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s", basename(db->p.in_file));
+
+        switch (db->in_th->type) {
+
+        case TH_IRTIS_DTV:
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("IR: Min");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%.02f C", db->in_th->head.dtv->tsc[1]);
+
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("IR: Max");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%.02f C", db->in_th->head.dtv->tsc[1] + 256.0 * db->in_th->head.dtv->tsc[0]);
+            break;
+        case TH_FLIR_RJPG:
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("IR: Min");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%.02f C", db->out_th->head.rjpg->t_min);
+
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("IR: Max");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%.02f C", db->out_th->head.rjpg->t_max);
+            break;
+        }
+#if 0
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("IR: Spot");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("33 dC");
+#endif
+        ImGui::EndTable();
+    }
+}
+
 void imgui_render_viewport(th_db_t * db, linedef_t * line)
 {
     ImGuiIO & io = ImGui::GetIO();
@@ -248,6 +319,11 @@ void imgui_render_viewport(th_db_t * db, linedef_t * line)
         if (strstr(g.HoveredWindow->Name, "viewport") != NULL) {
             pointer_over_viewport = 1;
         }
+    }
+
+    if (ImGui::TreeNode("properties table")) {
+        render_prop_table(db);
+        ImGui::TreePop();
     }
 
     switch (db->in_th->type) {

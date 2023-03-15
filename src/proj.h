@@ -2,6 +2,7 @@
 #ifndef __PROJ_H__
 #define __PROJ_H__
 
+#include <sys/stat.h>
 #include "thermogram.h"
 
 #define          OPT_SET_NEW_MIN  0x01
@@ -53,6 +54,7 @@ typedef th_rgba th_rgba_t;
 
 struct th_db {
     th_custom_param_t p;
+    struct stat sb;
     tgram_t *in_th;
     tgram_t *out_th;
     th_rgba_t rgba;
@@ -67,6 +69,7 @@ void show_usage(void);
 void show_version(void);
 uint8_t parse_options(int argc, char *argv[], th_custom_param_t * p);
 int proj_main(th_db_t *db);
+uint8_t localhost_is_le(void);
 
 #ifdef __cplusplus
 }

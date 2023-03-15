@@ -20,7 +20,7 @@
 #define                  RJPG_BUF_SIZE  2048
 #define    RJPG_EXIFTOOL_BASE64_PREFIX  7       ///< number of bytes that need to be skipped during base64_decode
 
-//#define   RJPG_CREATE_INTERMEDIATE_PNG_FILE
+#define   RJPG_CREATE_INTERMEDIATE_PNG_FILE
 
 extern uint8_t vpl_data[12][768];
 
@@ -57,6 +57,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     int decode_len;
     unsigned x, y;
     unsigned err = 0;
+    char *model;
 
     rjpg_header_t *h = th->head.rjpg;
 
@@ -90,6 +91,13 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     h->refl_temp = strtof(get(item_obj, "ReflectedApparentTemperature"), NULL) + RJPG_K;
     h->raw_th_img_width = strtol(get(item_obj, "RawThermalImageWidth"), NULL, 10);
     h->raw_th_img_height = strtol(get(item_obj, "RawThermalImageHeight"), NULL, 10);
+    model = get(item_obj, "Model"); 
+
+    if (memcmp(model, ID_THERMACAM_E25, min(strlen(model), strlen(ID_THERMACAM_E25))) == 0) {
+        th->subtype = TH_FLIR_THERMACAM_E25;
+    } else if (memcmp(model, ID_FLIR_E5, min(strlen(model), strlen(ID_FLIR_E5))) == 0) {
+        th->subtype = TH_FLIR_E5;
+    }
 
     // fill raw_th_img
     decode_len =
@@ -131,8 +139,8 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
 
     h->raw_th_img_sz = h->raw_th_img_width * h->raw_th_img_height;
 
-    // th->frame gets allocated by lodepng_decode_memory()
-    err = lodepng_decode_memory(&(th->frame), &x, &y, png_contents, decode_len, LCT_GREY, 8);
+    // th->framew gets allocated by lodepng_decode_memory()
+    err = lodepng_decode_memory((uint8_t **)&(th->framew), &x, &y, png_contents, decode_len, LCT_GREY, 16);
     if (err) {
         fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
         goto cleanup;
@@ -238,6 +246,7 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id,
 uint8_t rjpg_rescale(th_db_t *d)
 {
     ssize_t i;
+    uint8_t framew_needs_flippage = 0;
     double raw_refl;
     double ep_raw_refl;
     double raw_obj;
@@ -310,6 +319,16 @@ uint8_t rjpg_rescale(th_db_t *d)
         l_rh = h->rh;
     }
 
+    if (src_th->subtype == TH_FLIR_THERMACAM_E25) {
+        if (localhost_is_le()) {
+            framew_needs_flippage = 1;
+        }
+    } else {
+        if (!localhost_is_le()) {
+            framew_needs_flippage = 1;
+        }
+    }
+
     if (p->flags & OPT_SET_DISTANCE_COMP) {
         h2o = l_rh * exp(1.5587 + 0.06939 * l_atm_temp - 0.00027816 * pow(l_atm_temp,2) + 0.00000068455 * pow(l_atm_temp,3)); //  # 8.563981576
         tau = h->atm_trans_X * exp(-sqrt(l_distance) * (h->alpha1 + h->beta1 * sqrt(h2o))) + (1 - h->atm_trans_X) * 
@@ -320,7 +339,11 @@ uint8_t rjpg_rescale(th_db_t *d)
         epsilon_tau_raw_refl = raw_refl * (1 - l_emissivity) * tau;
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
-            temp = src_th->frame[i] << 8;
+            if (framew_needs_flippage) {
+                temp = htons(src_th->framew[i]);
+            } else {
+                temp = src_th->framew[i];
+            }
             raw_obj = (temp - tau_raw_atm - epsilon_tau_raw_refl) / l_emissivity / tau;
             t_obj_c = h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) - RJPG_K;
             d->temp_arr[i] = t_obj_c;
@@ -339,7 +362,12 @@ uint8_t rjpg_rescale(th_db_t *d)
         ep_raw_refl = raw_refl * (1 - l_emissivity);
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
-            temp = src_th->frame[i] << 8;
+            if (framew_needs_flippage) {
+                // data in the exif-png gets here in big endian words
+                temp = htons(src_th->framew[i]);
+            } else {
+                temp = src_th->framew[i];
+            }
             raw_obj = 1.0 * (temp - ep_raw_refl) / l_emissivity;
             t_obj_c =
                 h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) -
@@ -397,6 +425,10 @@ void rjpg_close(tgram_t * thermo)
         if (thermo->frame) {
             free(thermo->frame);
             thermo->frame = NULL;
+        }
+        if (thermo->framew) {
+            free(thermo->framew);
+            thermo->framew = NULL;
         }
         if (thermo->head.rjpg) {
             free(thermo->head.rjpg);

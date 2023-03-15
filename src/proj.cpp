@@ -155,6 +155,13 @@ uint8_t get_file_type(const char *in_file)
     return ret;
 }
 
+// return true if current system is little endian
+uint8_t localhost_is_le(void)
+{
+    uint32_t n = 1;
+    return (*(char *)&n == 1);
+}
+
 void print_buf(uint8_t * data, const uint16_t size)
 {
     uint16_t bytes_remaining = size;
