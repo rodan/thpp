@@ -11,6 +11,7 @@
 #include <imfilebrowser.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <math.h>
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -22,6 +23,8 @@
 #include "opengl_helper.h"
 #include "imgui_wrapper.h"
 #include "version.h"
+
+#define   FRAMES_TO_RENDER_AFTER_ACTIVITY  3
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
@@ -37,11 +40,34 @@
 
 extern th_db db;
 ImGui::FileBrowser fileDialog;
+unsigned int FrameCountSinceLastInput = 0;
+double MaxWaitBeforeNextFrame = 1.0;
 
 static void glfw_error_callback(int error, const char *description)
 {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
+
+static void glfw_cursor_pos_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    FrameCountSinceLastInput = 0;
+    // make sure to also trigger imgui's callback
+    ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+}
+
+void SetMaxWaitBeforeNextFrame(double time)
+{
+    MaxWaitBeforeNextFrame = std::min(MaxWaitBeforeNextFrame, time);
+}
+
+double GetEventWaitingTime()
+{
+    if (FrameCountSinceLastInput > FRAMES_TO_RENDER_AFTER_ACTIVITY) {
+        return std::max(0.0, MaxWaitBeforeNextFrame);
+    }
+    return 0.0;
+}
+
 
 // Main code
 int main(int argc, char **argv)
@@ -142,6 +168,9 @@ int main(int argc, char **argv)
     fileDialog.SetTitle("exploder");
     fileDialog.SetTypeFilters({ ".dtv", ".jpg" });
 
+    glfwSetCursorPosCallback(window, glfw_cursor_pos_callback);
+    SetMaxWaitBeforeNextFrame(3.0);
+
     // Main loop
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
@@ -152,6 +181,20 @@ int main(int argc, char **argv)
     while (!glfwWindowShouldClose(window))
 #endif
     {
+        // if there is no mouse/keyboard activity then render only at most one frame every MaxWaitBeforeNextFrame seconds
+        // if there is such activity make sure to render FRAMES_TO_RENDER_AFTER_ACTIVITY in quick succession (every vsync period)
+        // code based on https://github.com/ocornut/imgui/pull/2749
+        bool window_is_hidden = !glfwGetWindowAttrib(window, GLFW_VISIBLE) || glfwGetWindowAttrib(window, GLFW_ICONIFIED);
+        double waiting_time = window_is_hidden ? INFINITY : GetEventWaitingTime();
+
+        if (waiting_time > 0.0) {
+            if (isinf(waiting_time)) {
+                glfwWaitEvents();
+            } else {
+                glfwWaitEventsTimeout(waiting_time);
+            }
+        }
+
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
@@ -167,6 +210,8 @@ int main(int argc, char **argv)
         if (imgui_wrapper(&db) == RET_EXIT) {
             break;
         }
+
+        FrameCountSinceLastInput++;
 
         // Rendering
         ImGui::Render();
