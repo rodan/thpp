@@ -68,9 +68,9 @@ void imgui_show_properties(bool *p_open, th_db_t * db)
     switch (db->in_th->type) {
     case TH_FLIR_RJPG:
         h = db->in_th->head.rjpg;
-        ImGui::Text("emissivity: %f", h->emissivity);
-        ImGui::Text("object distance: %f", h->distance);
-        ImGui::Text("relative humidity: %f", h->rh);
+        ImGui::Text("emissivity: %.02f", h->emissivity);
+        ImGui::Text("object distance: %.02f m", h->distance);
+        ImGui::Text("relative humidity: %.02f rH", h->rh);
         ImGui::Text("atmospheric trans Alpha1: %f", h->alpha1);
         ImGui::Text("atmospheric trans Alpha2: %f", h->alpha2);
         ImGui::Text("atmospheric trans Beta1: %f", h->beta1);
@@ -80,11 +80,11 @@ void imgui_show_properties(bool *p_open, th_db_t * db)
         ImGui::Text("planck b: %f", h->planckB);
         ImGui::Text("planck f: %f", h->planckF);
         ImGui::Text("planck o: %f", h->planckO);
-        ImGui::Text("atmospheric TransX: %f", h->atm_trans_X);
-        ImGui::Text("atmospheric temperature: %f", h->air_temp);
-        ImGui::Text("reflected apparent temperature: %f", h->refl_temp);
-        ImGui::Text("raw thermal image width: %u", h->raw_th_img_width);
-        ImGui::Text("raw thermal image height: %u", h->raw_th_img_height);
+        ImGui::Text("atmospheric TransX: %.02f", h->atm_trans_X);
+        ImGui::Text("atmospheric temperature: %.02f K", h->air_temp);
+        ImGui::Text("reflected apparent temperature: %.02f K", h->refl_temp);
+        ImGui::Text("raw thermal image width: %u px", h->raw_th_img_width);
+        ImGui::Text("raw thermal image height: %u px", h->raw_th_img_height);
         break;
     case TH_IRTIS_DTV:
         ImGui::Text("to be implemented");

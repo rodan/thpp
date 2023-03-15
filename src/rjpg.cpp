@@ -91,7 +91,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     h->refl_temp = strtof(get(item_obj, "ReflectedApparentTemperature"), NULL) + RJPG_K;
     h->raw_th_img_width = strtol(get(item_obj, "RawThermalImageWidth"), NULL, 10);
     h->raw_th_img_height = strtol(get(item_obj, "RawThermalImageHeight"), NULL, 10);
-    model = get(item_obj, "Model"); 
+    model = get(item_obj, "CameraModel");
 
     if (memcmp(model, ID_THERMACAM_E25, min(strlen(model), strlen(ID_THERMACAM_E25))) == 0) {
         th->subtype = TH_FLIR_THERMACAM_E25;
