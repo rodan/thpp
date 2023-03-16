@@ -58,7 +58,9 @@ uint8_t parse_options(int argc, char *argv[], th_custom_param_t * p)
             getopt_long(argc, argv, "i:o:p:z:l:a:d:e:r:t:vkh", long_options, &option_index)) != -1) {
         switch (opt) {
         case 'i':
-            p->in_file = optarg;
+            p->in_file = (char *) calloc(strlen(optarg) + 1, sizeof (char));
+            memcpy(p->in_file, optarg, strlen(optarg) + 1);
+            //p->in_file = optarg; // we can't do this since in_file needs to be free-able and reallocated later
             break;
         case 'o':
             p->out_file = optarg;

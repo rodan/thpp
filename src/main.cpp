@@ -217,13 +217,15 @@ int main(int argc, char **argv)
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
+        FrameCountSinceLastInput++;
+
         ImGui::NewFrame();
 
         if (imgui_wrapper(&db) == RET_EXIT) {
             break;
         }
 
-        FrameCountSinceLastInput++;
+        ImGui::End();
 
         // Rendering
         ImGui::Render();

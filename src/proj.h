@@ -19,6 +19,7 @@
 
 #define                   RET_OK  0
 #define    RET_OK_REFRESH_NEEDED  0x1
+#define                  RET_RST  0x2
 #define              RET_FAILURE  0x4
 #define                 RET_EXIT  0x8
 

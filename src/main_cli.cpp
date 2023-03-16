@@ -90,19 +90,18 @@ void setup_sighandler(void)
 
 int main_cli(th_db_t * db)
 {
-
     unsigned err = 0;
     uint16_t th_width;
     uint16_t th_height;
     uint8_t file_type = FT_UNK;
+
+    setup_sighandler();
 
     file_type = get_file_type(db->p.in_file);
 
     if (lstat(db->p.in_file, &db->sb) == -1) {
         errExit("lstat");
     }
-
-    setup_sighandler();
 
     if (file_type == FT_DTV) {
 

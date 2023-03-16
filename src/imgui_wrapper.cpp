@@ -94,26 +94,17 @@ void imgui_show_properties(bool *p_open, th_db_t * db)
     ImGui::End();
 }
 
-int imgui_init_docking(th_db_t * db)
+uint8_t imgui_init_docking(th_db_t * db)
 {
-    // add docking
-    //ImGuiIO& io = ImGui::GetIO();
-
-    //if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-    //    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    //}
-
-    //DockSpaceOverViewport();
-    //ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
-
     static bool opt_fullscreen = true;
     static bool opt_padding = false;
     static bool opt_open = false;
     bool opt_exit = false;
     static bool show_about = false;
     static bool show_properties = false;
-    //bool opt_ignore;
     static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+    uint8_t ret = RET_OK;
+    uint16_t path_size = 0;
 
     // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
     // because it would be confusing to have two docking targets within each others.
@@ -188,9 +179,19 @@ int imgui_init_docking(th_db_t * db)
         fileDialog.Display();
 
         if (fileDialog.HasSelected()) {
-            printf("Selected filename %s\n", fileDialog.GetSelected().string().c_str());
+            path_size = strlen(fileDialog.GetSelected().string().c_str());
+            //printf("Selected filename %s %d\n", fileDialog.GetSelected().string().c_str(), path_size);
+            cleanup();
+            if (db->p.in_file) {
+                free(db->p.in_file);
+            }
+            db->p.in_file = (char *) calloc(path_size + 1, sizeof(char));
+            memcpy(db->p.in_file, fileDialog.GetSelected().string().c_str(), path_size + 1);
+            db->p.in_file[path_size] = 0;
             fileDialog.ClearSelected();
             opt_open = 0;
+            idb.return_state = RET_RST;
+            ret = RET_RST;
         }
     }
 
@@ -206,7 +207,8 @@ int imgui_init_docking(th_db_t * db)
         idb.return_state = RET_EXIT;
         return RET_EXIT;
     }
-    return 0;
+
+    return ret;
 }
 
 void render_prop_table(th_db_t * db)
@@ -288,7 +290,7 @@ void imgui_render_viewport(th_db_t * db, linedef_t * line)
     ImGui::Begin("viewport");
     ImVec2 screen_pos = ImGui::GetCursorScreenPos();
 
-    if ((idb.vp_texture == 0) || (idb.return_state == RET_OK_REFRESH_NEEDED)) {
+    if ((idb.vp_texture == 0) || (idb.return_state == RET_OK_REFRESH_NEEDED) || (idb.return_state == RET_RST)) {
         //load_texture_from_file(db->p.out_file, &idb.vp_texture, &vp_width, &vp_height);
         idb.actual_zoom = db->p.zoom;
         idb.vp_width = db->rgba.width;
@@ -342,6 +344,12 @@ void imgui_render_viewport(th_db_t * db, linedef_t * line)
         }
         break;
     }
+    ImGui::End();
+
+    if (idb.return_state != RET_OK) {
+        memset(&line, 0, sizeof(linedef_t));
+        return;
+    }
 
     if (pointer_inside_image && ImGui::IsMouseDown(0) && (line->do_refresh == 0)
         && pointer_over_viewport) {
@@ -351,26 +359,32 @@ void imgui_render_viewport(th_db_t * db, linedef_t * line)
     }
 
     if (pointer_inside_image && ImGui::IsMouseDown(0) && pointer_over_viewport) {
-        line->x1 = prev_img_pos_x;
-        line->y1 = prev_img_pos_y;
-        line->x2 = img_pos_x;
-        line->y2 = img_pos_y;
+        if ((prev_img_pos_x == img_pos_x) && (prev_img_pos_y == img_pos_y)) {
+            // do not activate the line plot after a doubleclick on the viewport
+            line->active = 0;
+        } else {
+            line->x1 = prev_img_pos_x;
+            line->y1 = prev_img_pos_y;
+            line->x2 = img_pos_x;
+            line->y2 = img_pos_y;
+            line->active = 1;
+        }
     }
 
     if (ImGui::IsMouseDown(0) == 0) {
         line->do_refresh = 0;
     }
-    ImGui::End();
 
     if (line->do_refresh) {
         ImGui::SetNextItemOpen(1, 0);
     }
 }
 
-void imgui_rended_processing_panel(th_db_t * db)
+void imgui_render_processing_panel(th_db_t * db)
 {
     double t_min, t_max;
-    static uint8_t reset_changes = 0;
+    static uint8_t reset_changes_but = 0; // becomes true after the 'reset changes' button is pressed
+    uint8_t reset_changes = idb.return_state || reset_changes_but;
     static int show_apply_button = 0;
 
     ImGui::Begin("processing");
@@ -381,6 +395,9 @@ void imgui_rended_processing_panel(th_db_t * db)
 
     // palette picker
     static int s_pal = db->p.pal;
+    if (reset_changes) {
+        s_pal = db->p.pal;
+    }
     ImGui::Combo("palette", &s_pal,
                  "256\0color\0grey\0hmetal0\0hmetal1\0hmetal2\0hotblue1\0hotblue2\0iron\0per_true\0pericolor\0rainbow\0rainbow0\0\0");
     if (s_pal != db->p.pal) {
@@ -390,6 +407,9 @@ void imgui_rended_processing_panel(th_db_t * db)
 
     // target zoom level
     static int s_zoom = db->p.zoom;
+    if (reset_changes) {
+        s_zoom = db->p.zoom;
+    }
     ImGui::SliderInt("zoom [1..10]", &s_zoom, 1, 10);
     if (s_zoom != db->p.zoom) {
         db->p.zoom = s_zoom;
@@ -411,6 +431,7 @@ void imgui_rended_processing_panel(th_db_t * db)
         }
         ImGui::DragFloatRange2("rescale [C]", &s_d_begin, &s_d_end, 0.5f, -20.0f, 300.0f,
                                "min: %.1fC", "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
+
         if ((fabs(s_d_begin - t_min) > 0.001) || (fabs(s_d_end - t_max) > 0.001)) {
             db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
             db->p.t_min = s_d_begin;
@@ -434,6 +455,7 @@ void imgui_rended_processing_panel(th_db_t * db)
         }
         ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC",
                                "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
+
         if ((fabs(s_begin - t_min) > 0.001) || (fabs(s_end - t_max) > 0.001)) {
             db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
             db->p.t_min = s_begin;
@@ -495,8 +517,8 @@ void imgui_rended_processing_panel(th_db_t * db)
 
     ImGui::Separator();
 
-    if (reset_changes) {
-        reset_changes = 0;
+    if (reset_changes_but) {
+        reset_changes_but = 0;
     }
 
     if (ImGui::Button("reset changes")) {
@@ -504,7 +526,7 @@ void imgui_rended_processing_panel(th_db_t * db)
         main_cli(db);
         show_apply_button = 0;
         idb.return_state = RET_OK_REFRESH_NEEDED;
-        reset_changes = 1;
+        reset_changes_but = 1;
     }
 
     ImGui::SameLine();
@@ -524,20 +546,27 @@ int imgui_wrapper(th_db_t * db)
 {
     static linedef_t line;
 
-    if (imgui_init_docking(db) == RET_EXIT) {
+    idb.return_state = RET_OK;
+
+    imgui_init_docking(db);
+
+    if (idb.return_state == RET_EXIT) {
         return RET_EXIT;
+    } else if (idb.return_state == RET_RST) {
+        // we get here after the file/open dialog has closed and most of db has been freed
+        main_cli(db);
+        memset(&line, 0, sizeof(linedef_t));
     }
 
-    idb.return_state = 0;
-    imgui_rended_processing_panel(db);
+    imgui_render_processing_panel(db);
     imgui_render_viewport(db, &line);
 
-    implot_wrapper(db, &line);
+    if ((idb.return_state == RET_OK) && line.active) {
+        implot_wrapper(db, &line);
+    }
 
     //ImGui::ShowDemoWindow();
     //ImPlot::ShowDemoWindow();
-
-    ImGui::End();
 
     return idb.return_state;
 }

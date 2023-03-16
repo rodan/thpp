@@ -63,6 +63,8 @@ void line_plot(th_db_t * db, linedef_t *line)
     double x2 = line->x2;
     double y2 = line->y2;
     static ImVec4 color = ImVec4(1,1,0,1);
+    double ymin = 0.0;
+    double ymax = 0.0;
 
     if (line->do_refresh) {
 
@@ -111,13 +113,18 @@ void line_plot(th_db_t * db, linedef_t *line)
         ImPlot::SetNextLineStyle(color, 2);
         switch (db->in_th->type) {
         case TH_FLIR_RJPG:
-            ImPlot::SetupAxesLimits(0, 10, db->out_th->head.rjpg->t_min - 5.0, db->out_th->head.rjpg->t_max + 5.0);
-            ImPlot::SetupAxes("pixel","temp [C]",ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoDecorations,ImPlotAxisFlags_RangeFit);
+            ymin = db->out_th->head.rjpg->t_min - 5.0;
+            ymax = db->out_th->head.rjpg->t_max + 5.0;
+            //ImPlot::SetupAxesLimits(0, 10, ymin, ymax, ImPlotCond_Always);
+            ImPlot::SetupAxesLimits(0, data_len, ymin, ymax, ImPlotCond_Always);
+            ImPlot::SetupAxes("pixel","temp [C]",ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_AutoFit);
             ImPlot::PlotLine("", xdata, ydata, data_len);
             break;
         case TH_IRTIS_DTV:
-            ImPlot::SetupAxesLimits(0, 10, db->in_th->head.dtv->tsc[1], db->in_th->head.dtv->tsc[1] + db->in_th->head.dtv->tsc[0] * 256 );
-            ImPlot::SetupAxes("pixel","temp [C]",ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoDecorations,ImPlotAxisFlags_RangeFit);
+            ymin = db->in_th->head.dtv->tsc[1];
+            ymax = db->in_th->head.dtv->tsc[1] + db->in_th->head.dtv->tsc[0] * 256.0;
+            ImPlot::SetupAxesLimits(0, data_len, ymin, ymax, ImPlotCond_Always);
+            ImPlot::SetupAxes("pixel","temp [C]",ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_AutoFit);
             ImPlot::PlotLine("", xdata, ydata, data_len);
             break;
         }
@@ -199,10 +206,12 @@ void implot_wrapper(th_db_t * db, linedef_t * ld)
     ImGui::Begin("plots window");
     ImGui::BeginTabItem("plots");
 
-    if (ImGui::TreeNodeEx("line plot")) {
-        line_plot(db, ld);
-        ImGui::Text("%d %d -> %d %d", ld->x1, ld->y1, ld->x2, ld->y2);
-        ImGui::TreePop();
+    if (ld->active) {
+        if (ImGui::TreeNodeEx("line plot")) {
+            line_plot(db, ld);
+            ImGui::Text("%d %d -> %d %d", ld->x1, ld->y1, ld->x2, ld->y2);
+            ImGui::TreePop();
+        }
     }
 
     if (ImGui::TreeNodeEx("histogram")) {
