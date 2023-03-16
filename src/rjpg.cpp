@@ -202,7 +202,7 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
 
 uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id, const uint8_t zoom)
 {
-    uint16_t i = 0;
+    ssize_t i = 0;
     uint16_t row = 0;
     uint16_t th_width = th->head.rjpg->raw_th_img_width;
     uint16_t th_height = th->head.rjpg->raw_th_img_height;
