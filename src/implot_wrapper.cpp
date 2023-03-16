@@ -129,10 +129,12 @@ void line_plot_free(void)
 {
     if (xdata != NULL) {
         free(xdata);
+        xdata = NULL;
     }
 
     if (ydata != NULL) {
         free(ydata);
+        ydata = NULL;
     }
 }
 

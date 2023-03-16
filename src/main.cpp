@@ -40,12 +40,19 @@
 
 extern th_db db;
 ImGui::FileBrowser fileDialog;
-unsigned int FrameCountSinceLastInput = 0;
-double MaxWaitBeforeNextFrame = 1.0;
+volatile unsigned int FrameCountSinceLastInput = 0;
+double MaxWaitBeforeNextFrame = 3;
 
 static void glfw_error_callback(int error, const char *description)
 {
     fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
+
+static void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    FrameCountSinceLastInput = 0;
+    // make sure to also trigger imgui's callback
+    ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 }
 
 static void glfw_cursor_pos_callback(GLFWwindow* window, double xpos, double ypos)
@@ -130,7 +137,8 @@ int main(int argc, char **argv)
     io.FontGlobalScale = 2.0;
 
     // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsDark();
+    ImGui::StyleColorsClassic();
     //ImGui::StyleColorsLight();
 
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
@@ -139,6 +147,7 @@ int main(int argc, char **argv)
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
+    style.FrameBorderSize = 1.0f;
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -169,6 +178,7 @@ int main(int argc, char **argv)
     fileDialog.SetTypeFilters({ ".dtv", ".jpg" });
 
     glfwSetCursorPosCallback(window, glfw_cursor_pos_callback);
+    glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
     SetMaxWaitBeforeNextFrame(3.0);
 
     // Main loop
@@ -191,7 +201,9 @@ int main(int argc, char **argv)
             if (isinf(waiting_time)) {
                 glfwWaitEvents();
             } else {
-                glfwWaitEventsTimeout(waiting_time);
+                if (FrameCountSinceLastInput > FRAMES_TO_RENDER_AFTER_ACTIVITY) {
+                    glfwWaitEventsTimeout(waiting_time);
+                }
             }
         }
 

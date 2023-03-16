@@ -32,6 +32,7 @@ void cleanup(void)
             default:
                 break;
         }
+        db.in_th = NULL;
     }
 
     if (db.out_th != NULL) {
@@ -45,14 +46,17 @@ void cleanup(void)
             default:
                 break;
         }
+        db.out_th = NULL;
     }
 
     if (db.rgba.data != NULL) {
         free(db.rgba.data);
+        db.rgba.data = NULL;
     }
 
     if (db.temp_arr != NULL) {
         free(db.temp_arr);
+        db.temp_arr = NULL;
     }
 
     line_plot_free();

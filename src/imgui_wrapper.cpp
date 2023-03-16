@@ -209,14 +209,6 @@ int imgui_init_docking(th_db_t * db)
     return 0;
 }
 
-void imgui_init_preferences(void)
-{
-    // window decorations, theme
-    ImGuiStyle & style = ImGui::GetStyle();
-    ImGui::StyleColorsClassic();
-    style.FrameBorderSize = 1.0f;
-}
-
 void render_prop_table(th_db_t * db)
 {
     struct tm t;
@@ -535,7 +527,6 @@ int imgui_wrapper(th_db_t * db)
     if (imgui_init_docking(db) == RET_EXIT) {
         return RET_EXIT;
     }
-    imgui_init_preferences();
 
     idb.return_state = 0;
     imgui_rended_processing_panel(db);
