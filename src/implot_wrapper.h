@@ -16,7 +16,7 @@ typedef linedef linedef_t;
 //extern "C" {
 #endif
 
-void implot_wrapper(th_db_t *db, linedef_t *line);
+void implot_wrapper(th_db_t *db, linedef_t *line, struct idb_t *idb);
 void line_plot_free();
 
 #ifdef __cplusplus

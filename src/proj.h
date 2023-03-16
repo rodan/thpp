@@ -62,6 +62,14 @@ struct th_db {
     double *temp_arr;
 };
 
+struct idb_t {
+    uint8_t actual_zoom;
+    uint8_t return_state;
+    unsigned int vp_width = 0;
+    unsigned int vp_height = 0;
+    unsigned int vp_texture = 0;
+};
+
 typedef struct th_db th_db_t;
 
 uint8_t get_file_type(const char *in_file);

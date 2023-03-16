@@ -200,13 +200,14 @@ void histogram(th_db_t * db)
     }
 }
 
-void implot_wrapper(th_db_t * db, linedef_t * ld)
+void implot_wrapper(th_db_t * db, linedef_t * ld, struct idb_t * idb)
 {
 
     ImGui::Begin("plots window");
     ImGui::BeginTabItem("plots");
 
-    if (ld->active) {
+    if (ld->active && (idb->return_state == RET_OK)) {
+        ImGui::SetNextItemOpen(1, 0);
         if (ImGui::TreeNodeEx("line plot")) {
             line_plot(db, ld);
             ImGui::Text("%d %d -> %d %d", ld->x1, ld->y1, ld->x2, ld->y2);
@@ -214,9 +215,11 @@ void implot_wrapper(th_db_t * db, linedef_t * ld)
         }
     }
 
-    if (ImGui::TreeNodeEx("histogram")) {
-        histogram(db);
-        ImGui::TreePop();
+    if (idb->return_state == RET_OK) {
+        if (ImGui::TreeNodeEx("histogram")) {
+            histogram(db);
+            ImGui::TreePop();
+        }
     }
 
     ImGui::EndTabItem();

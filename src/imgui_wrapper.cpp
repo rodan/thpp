@@ -15,14 +15,6 @@
 #include "implot_wrapper.h"
 #include "imgui_wrapper.h"
 
-struct idb_t {
-    uint8_t actual_zoom;
-    uint8_t return_state;
-    unsigned int vp_width = 0;
-    unsigned int vp_height = 0;
-    unsigned int vp_texture = 0;
-};
-
 struct idb_t idb;
 
 extern ImGui::FileBrowser fileDialog;
@@ -374,10 +366,6 @@ void imgui_render_viewport(th_db_t * db, linedef_t * line)
     if (ImGui::IsMouseDown(0) == 0) {
         line->do_refresh = 0;
     }
-
-    if (line->do_refresh) {
-        ImGui::SetNextItemOpen(1, 0);
-    }
 }
 
 void imgui_render_processing_panel(th_db_t * db)
@@ -386,6 +374,7 @@ void imgui_render_processing_panel(th_db_t * db)
     static uint8_t reset_changes_but = 0; // becomes true after the 'reset changes' button is pressed
     uint8_t reset_changes = idb.return_state || reset_changes_but;
     static int show_apply_button = 0;
+    uint8_t value_changed;
 
     ImGui::Begin("processing");
 
@@ -398,9 +387,9 @@ void imgui_render_processing_panel(th_db_t * db)
     if (reset_changes) {
         s_pal = db->p.pal;
     }
-    ImGui::Combo("palette", &s_pal,
+    value_changed = ImGui::Combo("palette", &s_pal,
                  "256\0color\0grey\0hmetal0\0hmetal1\0hmetal2\0hotblue1\0hotblue2\0iron\0per_true\0pericolor\0rainbow\0rainbow0\0\0");
-    if (s_pal != db->p.pal) {
+    if (value_changed) {
         db->p.pal = s_pal;
         show_apply_button = 1;
     }
@@ -410,8 +399,8 @@ void imgui_render_processing_panel(th_db_t * db)
     if (reset_changes) {
         s_zoom = db->p.zoom;
     }
-    ImGui::SliderInt("zoom [1..10]", &s_zoom, 1, 10);
-    if (s_zoom != db->p.zoom) {
+    value_changed = ImGui::SliderInt("zoom [1..10]", &s_zoom, 1, 10);
+    if (value_changed) {
         db->p.zoom = s_zoom;
         show_apply_button = 1;
     }
@@ -429,10 +418,10 @@ void imgui_render_processing_panel(th_db_t * db)
             s_d_begin = t_min;
             s_d_end = t_max;
         }
-        ImGui::DragFloatRange2("rescale [C]", &s_d_begin, &s_d_end, 0.5f, -20.0f, 300.0f,
+        value_changed = ImGui::DragFloatRange2("rescale [C]", &s_d_begin, &s_d_end, 0.5f, -20.0f, 300.0f,
                                "min: %.1fC", "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
 
-        if ((fabs(s_d_begin - t_min) > 0.001) || (fabs(s_d_end - t_max) > 0.001)) {
+        if (value_changed) {
             db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
             db->p.t_min = s_d_begin;
             db->p.t_max = s_d_end;
@@ -453,10 +442,10 @@ void imgui_render_processing_panel(th_db_t * db)
             s_begin = t_min;
             s_end = t_max;
         }
-        ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC",
+        value_changed = ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC",
                                "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
 
-        if ((fabs(s_begin - t_min) > 0.001) || (fabs(s_end - t_max) > 0.001)) {
+        if (value_changed) {
             db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
             db->p.t_min = s_begin;
             db->p.t_max = s_end;
@@ -473,8 +462,8 @@ void imgui_render_processing_panel(th_db_t * db)
         if (reset_changes) {
             s_distance = h->distance;
         }
-        ImGui::DragFloat("distance [m]", &s_distance, 0.2f, 0.2f, 100.0f, "%0.2f m");
-        if (fabs(s_distance - h->distance) > 0.001) {
+        value_changed = ImGui::DragFloat("distance [m]", &s_distance, 0.2f, 0.2f, 100.0f, "%0.2f m");
+        if (value_changed) {
             db->p.flags |= OPT_SET_DISTANCE_COMP | OPT_SET_NEW_DISTANCE;
             db->p.distance = s_distance;
             show_apply_button = 1;
@@ -484,8 +473,8 @@ void imgui_render_processing_panel(th_db_t * db)
         if (reset_changes) {
             s_emissivity = h->emissivity;
         }
-        ImGui::DragFloat("emissivity", &s_emissivity, 0.01f, 0.1f, 1.0f, "%0.2f");
-        if (fabs(s_emissivity - h->emissivity) > 0.001) {
+        value_changed = ImGui::DragFloat("emissivity", &s_emissivity, 0.01f, 0.1f, 1.0f, "%0.2f");
+        if (value_changed) {
             db->p.flags |= OPT_SET_NEW_EMISSIVITY;
             db->p.emissivity = s_emissivity;
             show_apply_button = 1;
@@ -495,8 +484,8 @@ void imgui_render_processing_panel(th_db_t * db)
         if (reset_changes) {
             s_atm_temp = h->air_temp - RJPG_K;
         }
-        ImGui::DragFloat("atm temp [C]", &s_atm_temp, 1.0f, -20.1f, 300.0f, "%0.2f C");
-        if (fabs(s_atm_temp - h->air_temp + RJPG_K) > 0.001) {
+        value_changed = ImGui::DragFloat("atm temp [C]", &s_atm_temp, 1.0f, -20.1f, 300.0f, "%0.2f C");
+        if (value_changed) {
             db->p.flags |= OPT_SET_NEW_AT | OPT_SET_DISTANCE_COMP;
             db->p.atm_temp = s_atm_temp;
             show_apply_button = 1;
@@ -506,8 +495,8 @@ void imgui_render_processing_panel(th_db_t * db)
         if (reset_changes) {
             s_rh = h->rh * 100.0;
         }
-        ImGui::DragFloat("rel humidity [%]", &s_rh, 1.0f, 0.1f, 100.0f, "%.0f %rH");
-        if (fabs(s_rh / 100.0 - h->rh) > 0.001) {
+        value_changed = ImGui::DragFloat("rel humidity [%]", &s_rh, 1.0f, 0.1f, 100.0f, "%.0f %rH");
+        if (value_changed) {
             db->p.flags |= OPT_SET_NEW_RH | OPT_SET_DISTANCE_COMP;
             db->p.rh = s_rh / 100.0;
             show_apply_button = 1;
@@ -561,9 +550,9 @@ int imgui_wrapper(th_db_t * db)
     imgui_render_processing_panel(db);
     imgui_render_viewport(db, &line);
 
-    if ((idb.return_state == RET_OK) && line.active) {
-        implot_wrapper(db, &line);
-    }
+    //if ((idb.return_state == RET_OK) && line.active) {
+        implot_wrapper(db, &line, &idb);
+    //}
 
     //ImGui::ShowDemoWindow();
     //ImPlot::ShowDemoWindow();
