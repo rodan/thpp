@@ -43,7 +43,7 @@ void draw_pixel(canvas_t * c, uint16_t x, uint16_t y, const uint32_t color)
    @param    color   Binary (on or off) color to fill with
 */
 /**************************************************************************/
-void draw_raw_vline(canvas_t * c, uint16_t x, uint16_t y, uint16_t h, const uint32_t color)
+void draw_raw_vline(canvas_t * c, const uint16_t x, const uint16_t y, const uint16_t h, const uint32_t color)
 {
     uint16_t i;
     uint32_t *ptr;
@@ -65,7 +65,7 @@ void draw_raw_vline(canvas_t * c, uint16_t x, uint16_t y, uint16_t h, const uint
    @param    color   Binary (on or off) color to fill with
 */
 /**************************************************************************/
-void draw_raw_hline(canvas_t * c, uint16_t x, uint16_t y, uint16_t w, const uint32_t color)
+void draw_raw_hline(canvas_t * c, const uint16_t x, const uint16_t y, const uint16_t w, const uint32_t color)
 {
     uint16_t i;
     uint16_t start = y * c->width + x;
