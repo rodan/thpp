@@ -54,9 +54,26 @@ void cleanup(void)
         db.rgba.data = NULL;
     }
 
+#if 0
+    if (db.rgba.overlay != NULL) {
+        free(db.rgba.overlay);
+        db.rgba.overlay = NULL;
+    }
+#endif
+
     if (db.temp_arr != NULL) {
         free(db.temp_arr);
         db.temp_arr = NULL;
+    }
+
+    if (db.scale.data != NULL) {
+        free(db.scale.data);
+        db.scale.data = NULL;
+    }
+
+    if (db.scale.overlay != NULL) {
+        free(db.scale.overlay);
+        db.scale.overlay = NULL;
     }
 
     line_plot_free();
@@ -112,9 +129,9 @@ int main_cli(th_db_t * db)
 
         th_width = db->in_th->head.dtv->nst;
         th_height = db->in_th->head.dtv->nstv;
-        printf("%dx%d image, %d frames\n", th_width, th_height, db->in_th->head.dtv->frn);
-        printf("src temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", db->in_th->head.dtv->tsc[1],
-               db->in_th->head.dtv->tsc[0], db->in_th->head.dtv->tsc[1] + 256 * db->in_th->head.dtv->tsc[0]);
+        //printf("%dx%d image, %d frames\n", th_width, th_height, db->in_th->head.dtv->frn);
+        //printf("src temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", db->in_th->head.dtv->tsc[1],
+        //       db->in_th->head.dtv->tsc[0], db->in_th->head.dtv->tsc[1] + 256 * db->in_th->head.dtv->tsc[0]);
 
         if (db->rgba.data) {
             free(db->rgba.data);
@@ -128,24 +145,13 @@ int main_cli(th_db_t * db)
         db->rgba.width = th_width * db->p.zoom;
         db->rgba.height = th_height * db->p.zoom;
 
-        if (db->p.flags) {
+        dtv_new(&(db->out_th));
+        dtv_rescale(db);
+        dtv_transfer(db->out_th, db->rgba.data, db->p.pal, db->p.zoom);
 
-            dtv_new(&(db->out_th));
-
-            if (db->p.flags & (OPT_SET_NEW_MIN | OPT_SET_NEW_MAX)) {
-                dtv_rescale(db);
-            } else {
-                memcpy(db->out_th, db->in_th, sizeof(tgram_t));
-            }
-
-            dtv_transfer(db->out_th, db->rgba.data, db->p.pal, db->p.zoom);
-
-            printf("dst temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", db->out_th->head.dtv->tsc[1],
-                   db->out_th->head.dtv->tsc[0],
-                   db->out_th->head.dtv->tsc[1] + 256.0 * db->out_th->head.dtv->tsc[0]);
-        } else {
-            dtv_transfer(db->in_th, db->rgba.data, db->p.pal, db->p.zoom);
-        }
+        //printf("dst temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", db->out_th->head.dtv->tsc[1],
+        //        db->out_th->head.dtv->tsc[0],
+        //        db->out_th->head.dtv->tsc[1] + 256.0 * db->out_th->head.dtv->tsc[0]);
 
         err =
             lodepng_encode32_file(db->p.out_file, db->rgba.data, th_width * db->p.zoom,

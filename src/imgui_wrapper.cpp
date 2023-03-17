@@ -11,6 +11,7 @@
 #include "imfilebrowser.h"
 #include "opengl_helper.h"
 #include "main_cli.h"
+#include "proj.h"
 #include "version.h"
 #include "implot_wrapper.h"
 #include "imgui_wrapper.h"
@@ -205,6 +206,7 @@ uint8_t imgui_init_docking(th_db_t * db)
 
 void render_prop_table(th_db_t * db)
 {
+    double t_min, t_max;
     struct tm t;
     static ImGuiTableFlags flags =
         ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders |
@@ -235,35 +237,20 @@ void render_prop_table(th_db_t * db)
         ImGui::TableSetColumnIndex(1);
         ImGui::Text("%s", basename(db->p.in_file));
 
-        switch (db->in_th->type) {
+        get_min_max(db->out_th, &t_min, &t_max);
 
-        case TH_IRTIS_DTV:
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("IR: Min");
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%.02f C", db->in_th->head.dtv->tsc[1]);
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("IR: Min");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%.02f C", t_min);
 
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("IR: Max");
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%.02f C", db->in_th->head.dtv->tsc[1] + 256.0 * db->in_th->head.dtv->tsc[0]);
-            break;
-        case TH_FLIR_RJPG:
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("IR: Min");
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%.02f C", db->out_th->head.rjpg->t_min);
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("IR: Max");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%.02f C", t_max);
 
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("IR: Max");
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%.02f C", db->out_th->head.rjpg->t_max);
-            break;
-        }
 #if 0
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
@@ -273,6 +260,28 @@ void render_prop_table(th_db_t * db)
 #endif
         ImGui::EndTable();
     }
+}
+
+void imgui_render_scale(th_db_t * db)
+{
+    ImGui::Begin("scale");
+    if ((idb.si_texture == 0) || (idb.return_state == RET_OK_REFRESH_NEEDED) || (idb.return_state == RET_RST)) {
+        db->scale.width = SCALE_WIDTH;
+        db->scale.height = SCALE_HEIGHT;
+        db->scale.pal_id = db->p.pal;
+
+
+        db->scale.t_min = -20.0;
+        db->scale.t_max = 44.0;
+        idb.si_width = SCALE_WIDTH;
+        idb.si_height = SCALE_HEIGHT;
+        generate_scale(&db->scale);
+        load_texture_from_mem(db->scale.overlay, &idb.si_texture, idb.si_width, idb.si_height);
+    } else {
+        ImGui::Image((void *)(intptr_t) idb.si_texture, ImVec2(idb.si_width, idb.si_height));
+    }
+
+    ImGui::End();
 }
 
 void imgui_render_viewport(th_db_t * db, linedef_t * line)
@@ -405,54 +414,28 @@ void imgui_render_processing_panel(th_db_t * db)
         show_apply_button = 1;
     }
 
-    if (db->in_th->type == TH_IRTIS_DTV) {
+    get_min_max(db->out_th, &t_min, &t_max);
+    static float s_begin = t_min;
+    static float s_end = t_max;
+    if (reset_changes) {
+        s_begin = t_min;
+        s_end = t_max;
+    }
+    value_changed = ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC",
+                           "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
 
-        dtv_header_t *hd;
-        hd = db->in_th->head.dtv;
+    if (value_changed) {
+        db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
+        db->p.t_min = s_begin;
+        db->p.t_max = s_end;
+        show_apply_button = 1;
+    }
 
-        t_min = hd->tsc[1];
-        t_max = hd->tsc[1] + 256.0 * hd->tsc[0];
-        static float s_d_begin = t_min;
-        static float s_d_end = t_max;
-        if (reset_changes) {
-            s_d_begin = t_min;
-            s_d_end = t_max;
-        }
-        value_changed = ImGui::DragFloatRange2("rescale [C]", &s_d_begin, &s_d_end, 0.5f, -20.0f, 300.0f,
-                               "min: %.1fC", "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::Separator();
 
-        if (value_changed) {
-            db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
-            db->p.t_min = s_d_begin;
-            db->p.t_max = s_d_end;
-            show_apply_button = 1;
-        }
-
-        ImGui::Separator();
-
-    } else if (db->in_th->type == TH_FLIR_RJPG) {
+    if (db->in_th->type == TH_FLIR_RJPG) {
         rjpg_header_t *h;
         h = db->out_th->head.rjpg;
-
-        t_min = h->t_min;
-        t_max = h->t_max;
-        static float s_begin = t_min;
-        static float s_end = t_max;
-        if (reset_changes) {
-            s_begin = t_min;
-            s_end = t_max;
-        }
-        value_changed = ImGui::DragFloatRange2("rescale [C]", &s_begin, &s_end, 0.5f, -20.0f, 300.0f, "min: %.1fC",
-                               "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
-
-        if (value_changed) {
-            db->p.flags |= OPT_SET_NEW_MIN | OPT_SET_NEW_MAX;
-            db->p.t_min = s_begin;
-            db->p.t_max = s_end;
-            show_apply_button = 1;
-        }
-
-        ImGui::Separator();
 
         // temperature compensation
         ImGui::Text("temperature compensation");
@@ -558,6 +541,7 @@ int imgui_wrapper(th_db_t * db)
     }
 
     imgui_render_viewport(db, &line);
+    imgui_render_scale(db);
     implot_wrapper(db, &line, &idb);
 
     //ImGui::ShowDemoWindow();

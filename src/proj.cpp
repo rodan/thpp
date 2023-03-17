@@ -8,7 +8,9 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include "tlpi_hdr.h"
+#include "palette.h"
 #include "version.h"
+#include "graphics.h"
 #include "proj.h"
 
 #define BUF_SIZE  32
@@ -162,6 +164,68 @@ uint8_t localhost_is_le(void)
 {
     uint32_t n = 1;
     return (*(char *)&n == 1);
+}
+
+uint8_t get_min_max(tgram_t *th, double *t_min, double *t_max)
+{
+    if (th == NULL) {
+        return EXIT_FAILURE;
+    }
+
+    switch (th->type) {
+        case TH_FLIR_RJPG:
+            *t_min = th->head.rjpg->t_min;
+            *t_max = th->head.rjpg->t_max;
+            break;
+        case TH_IRTIS_DTV:
+            *t_min = th->head.dtv->tsc[1];
+            *t_max = th->head.dtv->tsc[1] + 256.0 * th->head.dtv->tsc[0];
+            break;
+        default:
+            *t_min = 0.0;
+            *t_max = 0.0;
+            return EXIT_FAILURE;
+    }
+    
+    return EXIT_SUCCESS;
+}
+
+void generate_scale(scale_t *scale)
+{
+    canvas_t c;
+
+    if (scale->data) {
+        free(scale->data);
+    }
+
+    scale->data = (uint8_t *) calloc (scale->width * scale->height * 4, sizeof(uint8_t));
+    if (scale->data == NULL) {
+        errExit("allocating buffer");
+    }
+
+    if (scale->overlay) {
+        free(scale->overlay);
+    }
+
+    scale->overlay = (uint8_t *) calloc (scale->width * scale->height * 4, sizeof(uint8_t));
+    if (scale->overlay == NULL) {
+        errExit("allocating buffer");
+    }
+
+    pal_transfer(scale->data, scale->pal_id, scale->width, scale->height);
+
+    // draw grid onto the overlay
+    memset(&c, 0, sizeof(canvas_t));
+
+    c.width = scale->width;
+    c.height = scale->height;
+    c.rotation = 0;
+    c.data = (uint32_t *) scale->overlay;
+
+    draw_hline(&c, 10, 10, 100, WHITE);
+    draw_vline(&c, 20, 10, 1000, WHITE);
+
+    // write temperature values onto the overlay
 }
 
 void print_buf(uint8_t * data, const uint16_t size)

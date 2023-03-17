@@ -27,6 +27,9 @@
 #define             WINDOW_WIDTH  1300
 #define            WINDOW_HEIGHT  1200
 
+#define              SCALE_WIDTH  128
+#define             SCALE_HEIGHT  1024
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -50,8 +53,20 @@ struct th_rgba {
     uint16_t width;
     uint16_t height;
     uint8_t *data;
+    uint8_t *overlay;
 };
 typedef th_rgba th_rgba_t;
+
+struct scale {
+    uint8_t pal_id;
+    uint16_t width;
+    uint16_t height;
+    double t_min;
+    double t_max;
+    uint8_t *data;
+    uint8_t *overlay;
+};
+typedef scale scale_t;
 
 struct th_db {
     th_custom_param_t p;
@@ -59,6 +74,7 @@ struct th_db {
     tgram_t *in_th;
     tgram_t *out_th;
     th_rgba_t rgba;
+    scale_t scale;
     double *temp_arr;
 };
 
@@ -67,7 +83,10 @@ struct idb_t {
     uint8_t return_state;
     unsigned int vp_width = 0;
     unsigned int vp_height = 0;
-    unsigned int vp_texture = 0;
+    unsigned int vp_texture = 0;    ///< texture of the thermal image
+    unsigned int si_width = 0;
+    unsigned int si_height = 0;
+    unsigned int si_texture = 0;     ///< texture of the scale image
 };
 
 typedef struct th_db th_db_t;
@@ -79,6 +98,8 @@ void show_version(void);
 uint8_t parse_options(int argc, char *argv[], th_custom_param_t * p);
 int proj_main(th_db_t *db);
 uint8_t localhost_is_le(void);
+void generate_scale(scale_t *scale);
+uint8_t get_min_max(tgram_t *th, double *t_min, double *t_max);
 
 #ifdef __cplusplus
 }

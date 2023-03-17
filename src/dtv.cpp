@@ -116,6 +116,10 @@ uint8_t dtv_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id, 
     uint8_t color[4];
     uint8_t *pal_rgb;
 
+    if ((th == NULL) || (image == NULL)) {
+        return EXIT_FAILURE;
+    }
+
     pal_rgb = pal_init_lut(pal_id, PAL_8BPP);
     if (pal_rgb == NULL) {
         fprintf(stderr, "palette generation error\n");
@@ -149,6 +153,8 @@ uint8_t dtv_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id, 
     return EXIT_SUCCESS;
 }
 
+
+// function that allocates and populates d->out_th->frame based on d->in_th->frame
 uint8_t dtv_rescale(th_db_t *d)
 {
     ssize_t frame_sz;
@@ -161,14 +167,13 @@ uint8_t dtv_rescale(th_db_t *d)
 
     // populate dst thermo header
     memcpy(dst_th->head.dtv, src_th->head.dtv, DTV_HEADER_SZ);
+    dst_th->type = src_th->type;
 
     frame_sz = src_th->head.dtv->nst * src_th->head.dtv->nstv * src_th->head.dtv->frn;
     if (frame_sz < 256 * 248) {
         fprintf(stderr, "warning: unexpected image size %dx%dx%d\n", src_th->head.dtv->nst,
                 src_th->head.dtv->nstv, src_th->head.dtv->frn);
     }
-    dst_th->head.dtv->tsc[1] = p->t_min;
-    dst_th->head.dtv->tsc[0] = (p->t_max - p->t_min) / 256.0;
 
     // dst thermo frame
     dst_th->frame = (uint8_t *) calloc(frame_sz, sizeof(uint8_t));
@@ -176,18 +181,26 @@ uint8_t dtv_rescale(th_db_t *d)
         errExit("allocating buffer");
     }
 
-    for (i = 0; i < frame_sz; i++) {
-        ft = ((src_th->head.dtv->tsc[0] * src_th->frame[i] + src_th->head.dtv->tsc[1] -
-               dst_th->head.dtv->tsc[1]) / dst_th->head.dtv->tsc[0]);
-        ft += 0.5;
-        if (ft < 0) {
-            ut = 0;
-        } else if (ft > 255) {
-            ut = 255;
-        } else {
-            ut = (uint8_t) ft;
+    if ((p->flags & OPT_SET_NEW_MIN) || (p->flags & OPT_SET_NEW_MAX)) {
+        dst_th->head.dtv->tsc[1] = p->t_min;
+        dst_th->head.dtv->tsc[0] = (p->t_max - p->t_min) / 256.0;
+
+        for (i = 0; i < frame_sz; i++) {
+            ft = ((src_th->head.dtv->tsc[0] * src_th->frame[i] + src_th->head.dtv->tsc[1] -
+                   dst_th->head.dtv->tsc[1]) / dst_th->head.dtv->tsc[0]);
+            ft += 0.5;
+            if (ft < 0) {
+                ut = 0;
+            } else if (ft > 255) {
+                ut = 255;
+            } else {
+                ut = (uint8_t) ft;
+            }
+            dst_th->frame[i] = ut;
         }
-        dst_th->frame[i] = ut;
+    } else {
+        // min and max do not change, so copy the raw thermal values verbatim
+        memcpy(dst_th->frame, src_th->frame, frame_sz);
     }
 
     return EXIT_SUCCESS;

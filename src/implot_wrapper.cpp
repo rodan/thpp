@@ -111,23 +111,14 @@ void line_plot(th_db_t * db, linedef_t *line)
     if (ImPlot::BeginPlot("current line transient")) {
         ImPlot::SetupAxes("x", "y");
         ImPlot::SetNextLineStyle(color, 2);
-        switch (db->in_th->type) {
-        case TH_FLIR_RJPG:
-            ymin = db->out_th->head.rjpg->t_min - 5.0;
-            ymax = db->out_th->head.rjpg->t_max + 5.0;
-            //ImPlot::SetupAxesLimits(0, 10, ymin, ymax, ImPlotCond_Always);
-            ImPlot::SetupAxesLimits(0, data_len, ymin, ymax, ImPlotCond_Always);
-            ImPlot::SetupAxes("pixel","temp [C]",ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_AutoFit);
-            ImPlot::PlotLine("", xdata, ydata, data_len);
-            break;
-        case TH_IRTIS_DTV:
-            ymin = db->in_th->head.dtv->tsc[1];
-            ymax = db->in_th->head.dtv->tsc[1] + db->in_th->head.dtv->tsc[0] * 256.0;
-            ImPlot::SetupAxesLimits(0, data_len, ymin, ymax, ImPlotCond_Always);
-            ImPlot::SetupAxes("pixel","temp [C]",ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_AutoFit);
-            ImPlot::PlotLine("", xdata, ydata, data_len);
-            break;
-        }
+
+        get_min_max(db->out_th, &ymin, &ymax);
+        ymin -= 5.0;
+        ymax += 5.0;
+        ImPlot::SetupAxesLimits(0, data_len, ymin, ymax, ImPlotCond_Always);
+        ImPlot::SetupAxes("pixel","temp [C]",ImPlotAxisFlags_AutoFit | ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_AutoFit);
+        ImPlot::PlotLine("", xdata, ydata, data_len);
+
         ImPlot::EndPlot();
     }
 }

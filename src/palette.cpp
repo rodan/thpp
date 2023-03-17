@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
+#include "tlpi_hdr.h"
 #include "palette.h"
 
 #define  PAL_STOPS  13
@@ -217,6 +219,9 @@ uint8_t *pal_init_lut(const uint8_t id, const uint8_t bpp)
     pal_sz = (1 << bpp);
 
     pal = (uint8_t *) calloc (pal_sz * 3, sizeof(uint8_t));
+    if (pal == NULL) {
+        errExit("allocating buffer");
+    }
 
     // printf("%u allocated\n", pal_sz * 3);
 
@@ -287,6 +292,32 @@ void pal_free(void)
     }
     pal = NULL;
 }
+
+// generate image used by the scale
+// use power of two dimensions for width/height
+void pal_transfer(uint8_t *image, const uint8_t pal_id, const uint16_t width, const uint16_t height)
+{
+    float fbpp;              ///< depth of color for the palette (bits per pixel)
+    uint8_t bpp;
+    uint8_t *pal_rgb;       ///< the palette in 32bit RGBA format
+    int16_t x, y;       ///< counters
+    uint8_t color[4];
+
+    fbpp = floor(log(height) / log(2.0)); // 1024 -> 10
+    bpp = fbpp;
+    pal_rgb = pal_init_lut(pal_id, bpp);
+
+    //printf("bpp %d\n", bpp);
+
+    for (y = height; y > 0; y--) {
+        memcpy(color, &(pal_rgb[(height - y - 1) * 3]), 3);
+        color[3] = 255; // alpha channel
+        for (x = width; x > 0; x--) {
+            memcpy(image + (((y - 1) * width + x - 1) * 4), color, 4);
+        }
+    }
+}
+
 
 uint8_t *pal_get_p(void)
 {
