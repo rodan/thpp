@@ -1,6 +1,8 @@
- * open new file functionality
- * add scale (with palette, text and grid)
- * selectable theme (for switching between dark mode for visualisation and white mode for printing)
- * add overlay image containing spot targets and measurement lines
- * add configurable properties table with image info, up to 1 spot, 1 line
- * implement my palettes into a palette selector widget
+ [x] open new file functionality
+ [ ] add scale (with palette, text and grid)
+ [ ] selectable theme (for switching between dark mode for visualisation and white mode for printing)
+ [ ] add overlay image containing spot targets and measurement lines
+ [ ] add configurable properties table with image info, up to 1 spot, 1 line
+ [ ] implement my palettes into a palette selector widget
+ [ ] zoom based on linear/cubic interpolation
+ [ ] zoom based on image oversampling techniques

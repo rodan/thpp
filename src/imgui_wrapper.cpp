@@ -501,7 +501,6 @@ void imgui_render_processing_panel(th_db_t * db)
             db->p.rh = s_rh / 100.0;
             show_apply_button = 1;
         }
-
     }
 
     ImGui::Separator();
@@ -540,19 +539,26 @@ int imgui_wrapper(th_db_t * db)
     imgui_init_docking(db);
 
     if (idb.return_state == RET_EXIT) {
+        // file/exit was pressed
         return RET_EXIT;
     } else if (idb.return_state == RET_RST) {
-        // we get here after the file/open dialog has closed and most of db has been freed
+        // file/open dialog has closed with a file selection
+        // and most of db has been freed
         main_cli(db);
         memset(&line, 0, sizeof(linedef_t));
     }
 
     imgui_render_processing_panel(db);
-    imgui_render_viewport(db, &line);
 
-    //if ((idb.return_state == RET_OK) && line.active) {
-        implot_wrapper(db, &line, &idb);
-    //}
+    if (idb.return_state == RET_OK_REFRESH_NEEDED) {
+        // the 'apply changes' button was pressed
+        // temperatures inside the image are bound to change
+        // so invalidate the line plot
+        memset(&line, 0, sizeof(linedef_t));
+    }
+
+    imgui_render_viewport(db, &line);
+    implot_wrapper(db, &line, &idb);
 
     //ImGui::ShowDemoWindow();
     //ImPlot::ShowDemoWindow();

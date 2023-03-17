@@ -43,7 +43,7 @@ camera | image type
 --- | ---
 Irtis 2000 | DTV 256x248 pixel, single frame
 Flir ThermaCAM E25 | radiometric JPG 160x120
-Flir E5 | radiometric JPG 320x240
+Flir E5 | radiometric JPG 120x90, 320x240
 
 currently supported functions:
 
