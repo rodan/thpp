@@ -297,14 +297,14 @@ void pal_free(void)
 // use power of two dimensions for width/height
 void pal_transfer(uint8_t *image, const uint8_t pal_id, const uint16_t width, const uint16_t height)
 {
-    float fbpp;              ///< depth of color for the palette (bits per pixel)
+    float f;
     uint8_t bpp;
     uint8_t *pal_rgb;       ///< the palette in 32bit RGBA format
     int16_t x, y;       ///< counters
     uint8_t color[4];
 
-    fbpp = floor(log(height) / log(2.0)); // 1024 -> 10
-    bpp = fbpp;
+    f = floor(log(height) / log(2.0)); // 1024 -> 10
+    bpp = f;
     pal_rgb = pal_init_lut(pal_id, bpp);
 
     //printf("bpp %d\n", bpp);
@@ -313,6 +313,28 @@ void pal_transfer(uint8_t *image, const uint8_t pal_id, const uint16_t width, co
         memcpy(color, &(pal_rgb[(height - y - 1) * 3]), 3);
         color[3] = 255; // alpha channel
         for (x = width; x > 0; x--) {
+#if 0
+            if (x < 16) {
+                f = 15.9375 * x + 0.5;
+                color[3] = f;
+            } else if (x < 64) {
+                color[3] = 255;
+            } else if (x < 80) {
+                f = -15.9375 * x + 1275 + 0.5;
+                color[3] = f;
+#else
+            if (x < 8) {
+                f = 31.875 * x + 0.5;
+                color[3] = f;
+            } else if (x < 64) {
+                color[3] = 255;
+            } else if (x < 72) {
+                f = -31.875 * x + 2295 + 0.5;
+                color[3] = f;
+#endif
+            } else {
+                color[3] = 0;
+            }
             memcpy(image + (((y - 1) * width + x - 1) * 4), color, 4);
         }
     }

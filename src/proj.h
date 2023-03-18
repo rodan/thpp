@@ -65,6 +65,7 @@ struct scale {
     double t_max;
     uint8_t *data;
     uint8_t *overlay;
+    uint8_t *combo;
 };
 typedef scale scale_t;
 

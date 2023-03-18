@@ -76,6 +76,11 @@ void cleanup(void)
         db.scale.overlay = NULL;
     }
 
+    if (db.scale.combo != NULL) {
+        free(db.scale.combo);
+        db.scale.combo = NULL;
+    }
+
     line_plot_free();
 }
 
