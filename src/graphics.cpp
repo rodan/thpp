@@ -6,6 +6,8 @@
 #include "graphics.h"
 #include "font_int.h"
 
+style_t style;
+
 void draw_pixel(canvas_t * c, const uint16_t x, const uint16_t y, const uint32_t color)
 {
     if (!c->data) {
@@ -92,15 +94,15 @@ void draw_fillrect(canvas_t * c, const uint16_t x, const uint16_t y,
 
 void draw_major_tick(canvas_t * c, const uint16_t y)
 {
-    draw_hline(c, 16, y + 2, 100, WHITE);
-    draw_hline(c, 16, y - 2, 100, WHITE);
-    draw_vline(c, 116, y - 2, 4, WHITE);
-    draw_vline(c, 16, y - 2, 4, WHITE);
+    draw_hline(c, 16, y + 2, 100, style.ovl_highlight_color);
+    draw_hline(c, 16, y - 2, 100, style.ovl_highlight_color);
+    draw_vline(c, 116, y - 2, 4, style.ovl_highlight_color);
+    draw_vline(c, 16, y - 2, 4, style.ovl_highlight_color);
 }
 
 void draw_minor_tick(canvas_t * c, const uint16_t y)
 {
-    draw_hline(c, 16, y, 40, WHITE);
+    draw_hline(c, 16, y, 40, style.ovl_highlight_color);
 }
 
 // Draw a character
@@ -178,3 +180,27 @@ uint32_t highlight_color(const uint32_t color, const uint32_t color_highlight)
             ((255 - ((color & 0xff00) >> 8)) << 8) | 255;
     }
 }
+
+void set_style(uint8_t theme)
+{
+    switch (theme) {
+        case STYLE_DARK:
+            style.theme = theme;
+            style.ovl_text_color = 0xccccccff;
+            style.ovl_highlight_color = 0xddddddff;
+            style.plot_line_color = 0xffff00ff;
+            break;
+        case STYLE_LIGHT:
+            style.theme = theme;
+            style.ovl_text_color = 0x333333ff;
+            style.ovl_highlight_color = 0x222222ff;
+            style.plot_line_color = 0x111100ff;
+            break;
+    } 
+}
+
+style_t *get_style_ptr(void)
+{
+    return &style;
+}
+

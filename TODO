@@ -1,7 +1,7 @@
  [x] open new file functionality
- [ ] add scale (with palette, text and grid)
- [ ] selectable theme (for switching between dark mode for visualisation and white mode for printing)
+ [x] add scale (with palette, text and grid)
  [ ] add overlay image containing spot targets and measurement lines
+ [ ] selectable theme (for switching between dark mode for visualisation and white mode for printing)
  [ ] add configurable properties table with image info, up to 1 spot, 1 line
  [ ] mouse-based pan and scroll-wheel zoom of the image
  [ ] zoom based on linear/cubic interpolation

@@ -199,6 +199,7 @@ void draw_scale_overlay(scale_t *scale, const double major, const double minor, 
     char text[12];
     double t = 950;
     canvas_t c;
+    style_t *style = get_style_ptr();
 
     // draw grid onto the overlay
     memset(&c, 0, sizeof(canvas_t));
@@ -213,22 +214,22 @@ void draw_scale_overlay(scale_t *scale, const double major, const double minor, 
         switch (precission){
             case 1:
                 snprintf(text, 11, "%3.01f", i * major);
-                draw_text(&c, 80, t - 22, &text[0], WHITE, 2);
+                draw_text(&c, 80, t - 22, &text[0], style->ovl_text_color, 2);
                 break;
             case 2:
                 snprintf(text, 11, "%3.02f", i * major);
-                draw_text(&c, 80, t - 22, &text[0], WHITE, 2);
+                draw_text(&c, 80, t - 22, &text[0], style->ovl_text_color, 2);
                 break;
             default:
                 snprintf(text, 11, "%3.0f", i * major);
-                draw_text(&c, 80, t - 22, &text[0], WHITE, 2);
+                draw_text(&c, 80, t - 22, &text[0], style->ovl_text_color, 2);
                 break;
         } 
         draw_major_tick(&c, (uint16_t) t);
     }
 
     snprintf(text, 11, "dC");
-    draw_text(&c, 30, t - 22, text, WHITE, 2);
+    draw_text(&c, 30, t - 22, text, style->ovl_text_color, 2);
 
     // minor tick marks
     for (i = (int16_t) scale->t_max / minor; i > (int16_t) scale->t_min / minor; i--) {
@@ -273,17 +274,19 @@ void generate_scale(scale_t *scale)
     if (delta < 1.0) {
         draw_scale_overlay(scale, 0.1, 0.05, 1);
     } else if (delta < 5.0) {
-        draw_scale_overlay(scale, 0.5, 0.1, 1); // 4-10
+        draw_scale_overlay(scale, 0.5, 0.5, 1); // 4-10 10
     } else if (delta < 10.0) {
-        draw_scale_overlay(scale, 1.0, 0.5, 0); // 5-10
+        draw_scale_overlay(scale, 1.0, 0.5, 0); // 5-10 20
     } else if (delta < 20.0) {
-        draw_scale_overlay(scale, 2.0, 0.5, 0); // 5-10
+        draw_scale_overlay(scale, 2.0, 1.0, 0); // 5-10 20
+    } else if (delta < 35.0) {
+        draw_scale_overlay(scale, 5.0, 1.0, 0); // 7-10 35
     } else if (delta < 50.0) {
-        draw_scale_overlay(scale, 5.0, 1.0, 0); // 4-10
+        draw_scale_overlay(scale, 5.0, 5.0, 0); // 3.5-10 10
     } else if (delta < 100) {
-        draw_scale_overlay(scale, 10.0, 5.0, 0); // 5-10
+        draw_scale_overlay(scale, 10.0, 5.0, 0); // 5-10 20
     } else if (delta < 200) {
-        draw_scale_overlay(scale, 20.0, 10.0, 0); // 5-10
+        draw_scale_overlay(scale, 20.0, 10.0, 0); // 5-10 20
     } else {
         draw_scale_overlay(scale, 50.0, 10.0, 0);
     }
@@ -296,7 +299,7 @@ void generate_scale(scale_t *scale)
     for (j = 0; j < scale->width * scale->height; j++) {
         if (*(overlay_ptr + j)) {
             //inv = *(data_ptr + j);
-            *(combo_ptr + j) = highlight_color(*(data_ptr + j), WHITE);
+            *(combo_ptr + j) = highlight_color(*(data_ptr + j), *(overlay_ptr + j));
             //printf("%08x %08x\n", inv, *(combo_ptr + j));
         } else {
             *(combo_ptr + j) = *(data_ptr + j);

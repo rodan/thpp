@@ -4,13 +4,23 @@
 #define WHITE 0xffffffff  ///< color in RGBA
 #define BLACK 0x000000ff  ///< color in RGBA
 
+#define   STYLE_DARK  0
+#define  STYLE_LIGHT  1
+
 struct canvas {
     uint16_t width;
     uint16_t height;
     uint32_t *data; ///< canvas buffer, in RGBA format (4 bytes per pixel)
 };
-
 typedef struct canvas canvas_t;
+
+struct style {
+    uint8_t theme; // 0 - classic dark, 1 - light
+    uint32_t ovl_text_color;
+    uint32_t ovl_highlight_color;
+    uint32_t plot_line_color;
+};
+typedef style style_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,6 +40,9 @@ void draw_char(canvas_t * c, const uint16_t x, const uint16_t y,
                 const uint8_t size);
 void draw_text(canvas_t *c, const uint16_t x, const uint16_t y, 
                 char *text, const uint32_t color, const uint8_t size);
+
+style_t *get_style_ptr(void);
+void set_style(uint8_t theme);
 
 #ifdef __cplusplus
 }

@@ -22,6 +22,7 @@
 #include "main_cli.h"
 #include "opengl_helper.h"
 #include "imgui_wrapper.h"
+#include "graphics.h"
 #include "version.h"
 
 #define   FRAMES_TO_RENDER_AFTER_ACTIVITY  3
@@ -148,6 +149,7 @@ int main(int argc, char **argv)
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
     style.FrameBorderSize = 1.0f;
+    set_style(STYLE_DARK);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);

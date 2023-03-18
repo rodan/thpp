@@ -548,7 +548,7 @@ int imgui_wrapper(th_db_t * db)
     imgui_render_scale(db);
     implot_wrapper(db, &line, &idb);
 
-    //ImGui::ShowDemoWindow();
+    ImGui::ShowDemoWindow();
     //ImPlot::ShowDemoWindow();
 
     return idb.return_state;
