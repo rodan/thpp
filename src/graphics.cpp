@@ -181,6 +181,11 @@ uint32_t highlight_color(const uint32_t color, const uint32_t color_highlight)
     }
 }
 
+void init_style(void)
+{
+    memset(&style, 0, sizeof(style_t));
+}
+
 void set_style(uint8_t theme)
 {
     switch (theme) {

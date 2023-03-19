@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <GLFW/glfw3.h>
 #include "proj.h"
 #include "lodepng.h"
 #include "opengl_helper.h"

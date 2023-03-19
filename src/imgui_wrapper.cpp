@@ -13,7 +13,11 @@
 #include "main_cli.h"
 #include "proj.h"
 #include "version.h"
-#include "implot_wrapper.h"
+#include "tool_scale.h"
+#include "tool_profile.h"
+#include "tool_histogram.h"
+#include "help_about.h"
+#include "file_properties.h"
 #include "imgui_wrapper.h"
 
 struct idb_t idb;
@@ -32,59 +36,6 @@ static void HelpMarker(const char *desc)
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
     }
-}
-
-void imgui_show_about(bool *p_open)
-{
-    if (!ImGui::Begin("About ThPP", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::End();
-        return;
-    }
-
-    ImGui::Text("Thermal processing panel v%d.%d build %d commit #%d", VER_MAJOR, VER_MINOR, BUILD,
-                COMMIT);
-    ImGui::Separator();
-    ImGui::Text("copyright Petre Rodan, 2023");
-    ImGui::Text("ThPP is licensed under the GPLv3 License, see LICENSE for more information.");
-    ImGui::End();
-}
-
-void imgui_show_properties(bool *p_open, th_db_t * db)
-{
-    rjpg_header_t *h;
-
-    if (!ImGui::Begin("file properties", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::End();
-        return;
-    }
-
-    switch (db->in_th->type) {
-    case TH_FLIR_RJPG:
-        h = db->in_th->head.rjpg;
-        ImGui::Text("emissivity: %.02f", h->emissivity);
-        ImGui::Text("object distance: %.02f m", h->distance);
-        ImGui::Text("relative humidity: %.02f rH", h->rh);
-        ImGui::Text("atmospheric trans Alpha1: %f", h->alpha1);
-        ImGui::Text("atmospheric trans Alpha2: %f", h->alpha2);
-        ImGui::Text("atmospheric trans Beta1: %f", h->beta1);
-        ImGui::Text("atmospheric trans Beta2: %f", h->beta2);
-        ImGui::Text("planck r1: %f", h->planckR1);
-        ImGui::Text("planck r2: %f", h->planckR2);
-        ImGui::Text("planck b: %f", h->planckB);
-        ImGui::Text("planck f: %f", h->planckF);
-        ImGui::Text("planck o: %f", h->planckO);
-        ImGui::Text("atmospheric TransX: %.02f", h->atm_trans_X);
-        ImGui::Text("atmospheric temperature: %.02f K", h->air_temp);
-        ImGui::Text("reflected apparent temperature: %.02f K", h->refl_temp);
-        ImGui::Text("raw thermal image width: %u px", h->raw_th_img_width);
-        ImGui::Text("raw thermal image height: %u px", h->raw_th_img_height);
-        break;
-    case TH_IRTIS_DTV:
-        ImGui::Text("to be implemented");
-        break;
-    }
-
-    ImGui::End();
 }
 
 uint8_t imgui_init_docking(th_db_t * db)
@@ -189,11 +140,11 @@ uint8_t imgui_init_docking(th_db_t * db)
     }
 
     if (show_about) {
-        imgui_show_about(&show_about);
+        help_about(&show_about);
     }
 
     if (show_properties) {
-        imgui_show_properties(&show_properties, db);
+        file_properties(&show_properties, db);
     }
 
     if (opt_exit) {
@@ -260,32 +211,6 @@ void render_prop_table(th_db_t * db)
 #endif
         ImGui::EndTable();
     }
-}
-
-void imgui_render_scale(th_db_t * db)
-{
-    ImGui::Begin("scale");
-    if ((idb.si_texture == 0) || (idb.return_state == RET_OK_REFRESH_NEEDED) || (idb.return_state == RET_RST)) {
-        db->scale.width = SCALE_WIDTH;
-        db->scale.height = SCALE_HEIGHT;
-        db->scale.pal_id = db->p.pal;
-
-        if (db->p.flags & (OPT_SET_NEW_MIN | OPT_SET_NEW_MAX)) {
-            db->scale.t_min = db->p.t_min;
-            db->scale.t_max = db->p.t_max;
-        } else {
-            get_min_max(db->out_th, &db->scale.t_min, &db->scale.t_max);
-        }
-        idb.si_width = SCALE_WIDTH;
-        idb.si_height = SCALE_HEIGHT;
-        generate_scale(&db->scale);
-        //load_texture_from_mem(db->scale.overlay, &idb.si_texture, idb.si_width, idb.si_height);
-        load_texture_from_mem(db->scale.combo, &idb.si_texture, idb.si_width, idb.si_height);
-    } else {
-        ImGui::Image((void *)(intptr_t) idb.si_texture, ImVec2(idb.si_width, idb.si_height));
-    }
-
-    ImGui::End();
 }
 
 void imgui_render_viewport(th_db_t * db, linedef_t * line)
@@ -545,8 +470,12 @@ int imgui_wrapper(th_db_t * db)
     }
 
     imgui_render_viewport(db, &line);
-    imgui_render_scale(db);
-    implot_wrapper(db, &line, &idb);
+
+    tool_scale(db, &idb);
+    tool_profile(db, &line, &idb);
+    if (idb.return_state == RET_OK) {
+        tool_histogram(db);
+    }
 
     //ImGui::ShowDemoWindow();
     //ImPlot::ShowDemoWindow();

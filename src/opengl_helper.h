@@ -1,6 +1,8 @@
 #ifndef __opengl_helper_h__
 #define __opengl_helper_h__
 
+#include <GLFW/glfw3.h>
+
 /// selector size in GL units
 #define GL_SELSIZE 0.05
 #define GL_BOXSIZE 1.0

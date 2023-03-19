@@ -149,6 +149,7 @@ int main(int argc, char **argv)
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
     style.FrameBorderSize = 1.0f;
+    init_style();
     set_style(STYLE_DARK);
 
     // Setup Platform/Renderer backends

@@ -19,6 +19,7 @@ struct style {
     uint32_t ovl_text_color;
     uint32_t ovl_highlight_color;
     uint32_t plot_line_color;
+    //GFXfont font;
 };
 typedef style style_t;
 
@@ -43,6 +44,7 @@ void draw_text(canvas_t *c, const uint16_t x, const uint16_t y,
 
 style_t *get_style_ptr(void);
 void set_style(uint8_t theme);
+void init_style(void);
 
 #ifdef __cplusplus
 }

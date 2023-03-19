@@ -14,7 +14,7 @@
 #include "palette.h"
 #include "processing.h"
 #include "version.h"
-#include "implot_wrapper.h"
+#include "tool_profile.h"
 #include "main_cli.h"
 
 th_db_t db;
