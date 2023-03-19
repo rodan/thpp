@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <GLFW/glfw3.h>         // Will drag system OpenGL headers
+#include <GLFW/glfw3.h>
 #include "proj.h"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -320,7 +320,7 @@ void imgui_render_viewport(th_db_t * db, linedef_t * line)
         }
     }
 
-    if (ImGui::TreeNode("properties table")) {
+    if (ImGui::TreeNode("properties")) {
         render_prop_table(db);
         ImGui::TreePop();
     }
@@ -548,7 +548,7 @@ int imgui_wrapper(th_db_t * db)
     imgui_render_scale(db);
     implot_wrapper(db, &line, &idb);
 
-    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
     //ImPlot::ShowDemoWindow();
 
     return idb.return_state;

@@ -108,7 +108,7 @@ void line_plot(th_db_t * db, linedef_t *line)
         line_plot_calc(db, line, ydata, data_len);
     }
 
-    if (ImPlot::BeginPlot("current line transient")) {
+    if (ImPlot::BeginPlot("profile")) {
         ImPlot::SetupAxes("x", "y");
         ImPlot::SetNextLineStyle(color, 2);
 

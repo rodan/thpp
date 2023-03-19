@@ -1,8 +1,15 @@
  [x] open new file functionality
- [x] add scale (with palette, text and grid)
+ [x] add scale (with palette and overlay containing text and grid)
  [ ] add overlay image containing spot targets and measurement lines
- [ ] selectable theme (for switching between dark mode for visualisation and white mode for printing)
- [ ] add configurable properties table with image info, up to 1 spot, 1 line
+ [ ] selectable theme (for switching between dark mode for visualisation and white mode for printing) in preference dialog
+ [ ] add configurable properties table with image info, up to 1 spot, 1 profile, scaled temp ranges 
  [ ] mouse-based pan and scroll-wheel zoom of the image
  [ ] zoom based on linear/cubic interpolation
  [ ] zoom based on image oversampling techniques
+ [ ] change temperature unit in preference dialog
+ [ ] custom font for the temperature scale - needs to contain the degree char
+ [ ] capture to file functionality for creating reports
+ [ ] read initial parent window size from imgui.ini
+ [ ] a more portable way of defining a temp path for tmp_json[]
+ [ ] actually test application on a big endian system
+ [ ] replace exiftool functionality with C code
