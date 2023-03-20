@@ -136,13 +136,18 @@ void line_plot_free(void)
     }
 }
 
-void tool_profile(th_db_t * db, linedef_t * ld, struct idb_t * idb)
+void tool_profile(th_db_t * db, linedef_t * ld)
 {
 
     ImGui::Begin("profile");
-    //ImGui::BeginTabItem("plots");
 
-    if (ld->active && (idb->return_state == RET_OK)) {
+    if ((db->in_th == NULL) || (db->out_th == NULL))  {
+        ImGui::Text("file not opened");
+        ImGui::End();
+        return;
+    }
+
+    if (ld->active && (db->fe.return_state == RET_OK)) {
         ImGui::SetNextItemOpen(1, 0);
         if (ImGui::TreeNodeEx("line plot")) {
             line_plot(db, ld);
@@ -150,8 +155,6 @@ void tool_profile(th_db_t * db, linedef_t * ld, struct idb_t * idb)
             ImGui::TreePop();
         }
     }
-
-    //ImGui::EndTabItem();
 
     ImGui::End();
 }

@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void tool_scale(th_db_t * db, idb_t *idb);
+void tool_scale(th_db_t * db);
 
 #ifdef __cplusplus
 }

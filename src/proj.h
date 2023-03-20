@@ -69,6 +69,18 @@ struct scale {
 };
 typedef scale scale_t;
 
+struct frontend {
+    uint8_t actual_zoom;
+    uint8_t return_state;
+    uint16_t vp_width;
+    uint16_t vp_height;
+    uint32_t vp_texture;     ///< texture of the thermal image
+    uint16_t si_width;
+    uint16_t si_height;
+    uint32_t si_texture;     ///< texture of the scale image
+};
+typedef struct frontend frontend_t;
+
 struct th_db {
     th_custom_param_t p;
     struct stat sb;
@@ -76,20 +88,9 @@ struct th_db {
     tgram_t *out_th;
     th_rgba_t rgba;
     scale_t scale;
+    frontend_t fe;
     double *temp_arr;
 };
-
-struct idb_t {
-    uint8_t actual_zoom;
-    uint8_t return_state;
-    unsigned int vp_width = 0;
-    unsigned int vp_height = 0;
-    unsigned int vp_texture = 0;    ///< texture of the thermal image
-    unsigned int si_width = 0;
-    unsigned int si_height = 0;
-    unsigned int si_texture = 0;     ///< texture of the scale image
-};
-
 typedef struct th_db th_db_t;
 
 uint8_t get_file_type(const char *in_file);

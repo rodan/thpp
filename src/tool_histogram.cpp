@@ -19,6 +19,13 @@ void tool_histogram(th_db_t * db)
 
 
     ImGui::Begin("histogram");
+
+    if (db->in_th == NULL) {
+        ImGui::Text("file not opened");
+        ImGui::End();
+        return;
+    }
+
     //ImGui::SetNextItemWidth(200);
     if (ImGui::RadioButton("N Bins", bins >= 0)) {
         bins = 50;

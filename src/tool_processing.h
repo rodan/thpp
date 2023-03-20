@@ -1,6 +1,6 @@
 
-#ifndef __PROCESSING_H__
-#define __PROCESSING_H__
+#ifndef __TOOL_PROCESSING_H__
+#define __TOOL_PROCESSING_H__
 
 struct proc_limits {
     uint8_t umin;
@@ -17,7 +17,8 @@ typedef struct proc_limits proc_limits_t;
 extern "C" {
 #endif
 
-uint8_t proc_get_limits(tgram_t *th, proc_limits_t *data);
+//uint8_t proc_get_limits(tgram_t *th, proc_limits_t *data);
+void tool_processing(th_db_t * db);
 
 #ifdef __cplusplus
 }

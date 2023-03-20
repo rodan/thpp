@@ -12,7 +12,7 @@
 #include "dtv.h"
 #include "rjpg.h"
 #include "palette.h"
-#include "processing.h"
+//#include "processing.h"
 #include "version.h"
 #include "tool_profile.h"
 #include "main_cli.h"

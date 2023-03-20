@@ -15,7 +15,7 @@ typedef linedef linedef_t;
 extern "C" {
 #endif
 
-void tool_profile(th_db_t * db, linedef_t * ld, struct idb_t * idb);
+void tool_profile(th_db_t * db, linedef_t * ld);
 void line_plot_free();
 
 #ifdef __cplusplus

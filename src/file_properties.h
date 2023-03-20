@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 void file_properties(bool *p_open, th_db_t * db);
+void file_properties_extra(bool *p_open, th_db_t * db);
 
 #ifdef __cplusplus
 }

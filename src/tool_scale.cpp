@@ -10,10 +10,17 @@
 #include "tool_scale.h"
 
 
-void tool_scale(th_db_t * db, idb_t *idb)
+void tool_scale(th_db_t * db)
 {
     ImGui::Begin("scale");
-    if ((idb->si_texture == 0) || (idb->return_state == RET_OK_REFRESH_NEEDED) || (idb->return_state == RET_RST)) {
+
+    if (db->out_th == NULL) {
+        ImGui::Text("file not opened");
+        ImGui::End();
+        return;
+    }
+
+    if ((db->fe.si_texture == 0) || (db->fe.return_state == RET_OK_REFRESH_NEEDED) || (db->fe.return_state == RET_RST)) {
         db->scale.width = SCALE_WIDTH;
         db->scale.height = SCALE_HEIGHT;
         db->scale.pal_id = db->p.pal;
@@ -24,13 +31,13 @@ void tool_scale(th_db_t * db, idb_t *idb)
         } else {
             get_min_max(db->out_th, &db->scale.t_min, &db->scale.t_max);
         }
-        idb->si_width = SCALE_WIDTH;
-        idb->si_height = SCALE_HEIGHT;
+        db->fe.si_width = SCALE_WIDTH;
+        db->fe.si_height = SCALE_HEIGHT;
         generate_scale(&db->scale);
-        //load_texture_from_mem(db->scale.overlay, &idb.si_texture, idb.si_width, idb.si_height);
-        load_texture_from_mem(db->scale.combo, &idb->si_texture, idb->si_width, idb->si_height);
+        //load_texture_from_mem(db->scale.overlay, &db->fe.si_texture, db->fe.si_width, db->fe.si_height);
+        load_texture_from_mem(db->scale.combo, &db->fe.si_texture, db->fe.si_width, db->fe.si_height);
     } else {
-        ImGui::Image((void *)(intptr_t) idb->si_texture, ImVec2(idb->si_width, idb->si_height));
+        ImGui::Image((void *)(intptr_t) db->fe.si_texture, ImVec2(db->fe.si_width, db->fe.si_height));
     }
 
     ImGui::End();
