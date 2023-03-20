@@ -330,7 +330,7 @@ void pal_transfer(uint8_t *image, const uint8_t pal_id, const uint16_t width, co
                 color[3] = 255;
             } else if (x < 72) {
                 f = -31.875 * x + 2295 + 0.5;
-                color[3] = f;
+                color[3] = (uint8_t) f;
 #endif
             } else {
                 color[3] = 0;

@@ -202,19 +202,26 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
 
 uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id, const uint8_t zoom)
 {
-    ssize_t i = 0;
+    uint32_t i = 0;
     uint16_t row = 0;
-    uint16_t th_width = th->head.rjpg->raw_th_img_width;
-    uint16_t th_height = th->head.rjpg->raw_th_img_height;
+    uint16_t th_width;
+    uint16_t th_height;
     uint8_t zc;
     uint8_t color[4];
     uint8_t *pal_rgb;
     
+    if ((th == NULL) || (image == NULL)) {
+        return EXIT_FAILURE;
+    }
+
     pal_rgb = pal_init_lut(pal_id, PAL_8BPP);
     if (pal_rgb == NULL) {
         fprintf(stderr, "palette generation error\n");
         exit(EXIT_FAILURE);
     }
+
+    th_width = th->head.rjpg->raw_th_img_width;
+    th_height = th->head.rjpg->raw_th_img_height;
 
     if (zoom == 1) {
         for (i = 0; i < th_width * th_height; i++) {

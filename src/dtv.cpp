@@ -110,8 +110,8 @@ uint8_t dtv_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id, 
 {
     uint16_t i = 0;
     uint16_t row = 0;
-    uint16_t th_width = th->head.dtv->nst;
-    uint16_t th_height = th->head.dtv->nstv;
+    uint16_t th_width;
+    uint16_t th_height;
     uint8_t zc;
     uint8_t color[4];
     uint8_t *pal_rgb;
@@ -125,6 +125,9 @@ uint8_t dtv_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id, 
         fprintf(stderr, "palette generation error\n");
         exit(EXIT_FAILURE);
     }
+
+    th_width = th->head.dtv->nst;
+    th_height = th->head.dtv->nstv;
 
     if (zoom == 1) {
         for (i = 0; i < th_width * th_height; i++) {
