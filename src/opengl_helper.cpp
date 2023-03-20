@@ -6,9 +6,9 @@
 #include "lodepng.h"
 #include "opengl_helper.h"
 
-unsigned int fbo;
-unsigned int texture;
-unsigned int rbo;
+uint32_t fbo;
+uint32_t texture;
+uint32_t rbo;
 
 uint8_t load_texture_from_mem(uint8_t * rgba_data, GLuint * out_texture,
                               const unsigned int image_width, const unsigned int image_height)
@@ -36,7 +36,7 @@ uint8_t load_texture_from_mem(uint8_t * rgba_data, GLuint * out_texture,
     return EXIT_SUCCESS;
 }
 
-uint8_t load_texture_from_file(const char *filename, GLuint * out_texture, unsigned int *out_width,
+uint8_t load_texture_from_file(const char *filename, GLuint *out_texture, unsigned int *out_width,
                                unsigned int *out_height)
 {
     unsigned int image_width = 0;
@@ -46,7 +46,7 @@ uint8_t load_texture_from_file(const char *filename, GLuint * out_texture, unsig
     //unsigned char *image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
     lodepng_decode32_file(&image_data, &image_width, &image_height, filename);
     if (image_data == NULL) {
-        return false;
+        return EXIT_FAILURE;
     }
 
     load_texture_from_mem(image_data, out_texture, image_width, image_height);

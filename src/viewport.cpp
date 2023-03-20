@@ -26,9 +26,13 @@ void viewport_render(th_db_t * db)
     static int16_t prev_img_pos_x, prev_img_pos_y;
     static uint8_t pointer_inside_image = 0;
     uint8_t pointer_over_viewport = 0;
+    ImGuiWindowClass window_class;
 
     ImGuiIO & io = ImGui::GetIO();
     ImGuiContext & g = *GImGui;
+
+    window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_CentralNode;
+    ImGui::SetNextWindowClass(&window_class);
 
     ImGui::Begin("viewport");
     ImVec2 screen_pos = ImGui::GetCursorScreenPos();

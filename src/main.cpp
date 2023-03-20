@@ -24,6 +24,7 @@
 #include "imgui_wrapper.h"
 #include "viewport.h"
 #include "graphics.h"
+#include "file_library.h"
 #include "version.h"
 
 #define   FRAMES_TO_RENDER_AFTER_ACTIVITY  3
@@ -186,6 +187,7 @@ int main(int argc, char **argv)
     SetMaxWaitBeforeNextFrame(3.0);
 
     viewport_refresh_vp(&db);
+    file_library_init();
 
     // Main loop
 #ifdef __EMSCRIPTEN__
