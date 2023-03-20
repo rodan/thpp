@@ -8,7 +8,6 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "implot.h"
-#include <imfilebrowser.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
@@ -42,7 +41,6 @@
 #endif
 
 extern th_db db;
-ImGui::FileBrowser fileDialog;
 volatile unsigned int FrameCountSinceLastInput = 0;
 double MaxWaitBeforeNextFrame = 3;
 
@@ -177,10 +175,6 @@ int main(int argc, char **argv)
 
     // Our state
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-    // (optional) set browser properties
-    fileDialog.SetTitle("exploder");
-    fileDialog.SetTypeFilters({ ".dtv", ".jpg" });
 
     glfwSetCursorPosCallback(window, glfw_cursor_pos_callback);
     glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);

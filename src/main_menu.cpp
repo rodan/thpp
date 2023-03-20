@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include "imgui.h"
 #include "imgui_internal.h"
-#include "imfilebrowser.h"
 #include "proj.h"
 #include "imgui_wrapper.h"
 #include "main_cli.h"
@@ -18,8 +17,6 @@
 #include "help_about.h"
 
 #include "main_menu.h"
-
-extern ImGui::FileBrowser fileDialog;
 
 struct window_open {
     bool bhelp_about;
@@ -39,11 +36,9 @@ uint8_t main_menu(th_db_t * db)
 {
     static bool opt_fullscreen = true;
     static bool opt_padding = false;
-    static bool opt_open = false;
     bool opt_exit = false;
     static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
     uint8_t ret = RET_OK;
-    uint16_t path_size = 0;
 
     // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
     // because it would be confusing to have two docking targets within each others.
@@ -87,39 +82,10 @@ uint8_t main_menu(th_db_t * db)
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
         ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-
-#if 0
-        static auto first_time = true;
-        ImGuiViewport* viewport = ImGui::GetMainViewport();
-
-        if (first_time)
-        {
-            first_time = false;
-
-            ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-            ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-            ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
-
-            // split the dockspace into 2 nodes -- DockBuilderSplitNode takes in the following args in the following order
-            //   window ID to split, direction, fraction (between 0 and 1), the final two setting let's us choose which id we want (which ever one we DON'T set as NULL, will be returned by the function)
-            //                                                              out_id_at_dir is the id of the node in the direction we specified earlier, out_id_at_opposite_dir is in the opposite direction
-            auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.2f, nullptr, &dockspace_id);
-            auto dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 1.0f, nullptr, &dockspace_id);
-
-            // we now dock our windows into the docking node we made above
-            ImGui::DockBuilderDockWindow("scale", dock_id_right);
-            ImGui::DockBuilderDockWindow("viewport", dock_id_left);
-            ImGui::DockBuilderFinish(dockspace_id);
-        }
-#endif
     }
 
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("file")) {
-            if (ImGui::MenuItem("open ..")) {
-                fileDialog.Open();
-                opt_open = 1;
-            }
             ImGui::MenuItem("library", NULL, &wo.bfile_library, 1);
             ImGui::MenuItem("properties", NULL, &wo.bfile_properties, 1);
             ImGui::MenuItem("properties extra", NULL, &wo.bfile_properties_extra, 1);
@@ -146,26 +112,6 @@ uint8_t main_menu(th_db_t * db)
         }
         ImGui::MenuItem("about", NULL, &wo.bhelp_about);
         ImGui::EndMenuBar();
-    }
-
-    if (opt_open) {
-        fileDialog.Display();
-
-        if (fileDialog.HasSelected()) {
-            path_size = strlen(fileDialog.GetSelected().string().c_str());
-            //printf("Selected filename %s %d\n", fileDialog.GetSelected().string().c_str(), path_size);
-            cleanup();
-            if (db->p.in_file) {
-                free(db->p.in_file);
-            }
-            db->p.in_file = (char *) calloc(path_size + 1, sizeof(char));
-            memcpy(db->p.in_file, fileDialog.GetSelected().string().c_str(), path_size + 1);
-            db->p.in_file[path_size] = 0;
-            fileDialog.ClearSelected();
-            opt_open = 0;
-            db->fe.return_state = RET_RST;
-            ret = RET_RST;
-        }
     }
 
     if (wo.bhelp_about) {
