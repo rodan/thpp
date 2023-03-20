@@ -10,9 +10,12 @@
 #include "tool_scale.h"
 
 
-void tool_scale(th_db_t * db)
+void tool_scale(bool *p_open, th_db_t * db)
 {
-    ImGui::Begin("scale");
+    if (!ImGui::Begin("scale", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::End();
+        return;
+    }
 
     if (db->out_th == NULL) {
         ImGui::Text("file not opened");

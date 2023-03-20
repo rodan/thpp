@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 //uint8_t proc_get_limits(tgram_t *th, proc_limits_t *data);
-void tool_processing(th_db_t * db);
+void tool_processing(bool *p_open, th_db_t * db);
 
 #ifdef __cplusplus
 }

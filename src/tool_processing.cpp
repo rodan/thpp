@@ -7,6 +7,7 @@
 #include "proj.h"
 #include "thermogram.h"
 #include "main_cli.h"
+#include "viewport.h"
 #include "tool_processing.h"
 
 uint8_t check_th(tgram_t *th)
@@ -89,7 +90,7 @@ uint8_t proc_get_limits(tgram_t *th, proc_limits_t *data)
     return EXIT_SUCCESS;
 }
 
-void tool_processing(th_db_t * db)
+void tool_processing(bool *p_open, th_db_t * db)
 {
     double t_min, t_max;
     static uint8_t reset_changes_but = 0; // becomes true after the 'reset changes' button is pressed
@@ -97,7 +98,10 @@ void tool_processing(th_db_t * db)
     static int show_apply_button = 0;
     uint8_t value_changed;
 
-    ImGui::Begin("processing");
+    if (!ImGui::Begin("processing", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::End();
+        return;
+    }
 
     if ((db->in_th == NULL) || (db->out_th == NULL))  {
         ImGui::Text("file not opened");
@@ -213,6 +217,7 @@ void tool_processing(th_db_t * db)
     if (ImGui::Button("reset changes")) {
         db->p.flags = 0;
         main_cli(db);
+        viewport_refresh_vp(db);
         show_apply_button = 0;
         db->fe.return_state = RET_OK_REFRESH_NEEDED;
         reset_changes_but = 1;
@@ -223,6 +228,7 @@ void tool_processing(th_db_t * db)
     if (show_apply_button) {
         if (ImGui::Button("apply changes")) {
             main_cli(db);
+            viewport_refresh_vp(db);
             show_apply_button = 0;
             db->fe.actual_zoom = db->p.zoom;
             db->fe.return_state = RET_OK_REFRESH_NEEDED;

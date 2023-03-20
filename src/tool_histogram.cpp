@@ -10,15 +10,18 @@
 
 #define MAX_HIST_BINS  100
 
-void tool_histogram(th_db_t * db)
+void tool_histogram(bool *p_open, th_db_t * db)
 {
     static ImPlotHistogramFlags hist_flags = ImPlotHistogramFlags_Density;
     static int bins = 50;
     static double mu = 5;
     static double sigma = 2;
 
-
-    ImGui::Begin("histogram");
+    //if (!ImGui::Begin("histogram", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (!ImGui::Begin("histogram", p_open, 0)) {
+        ImGui::End();
+        return;
+    }
 
     if (db->in_th == NULL) {
         ImGui::Text("file not opened");

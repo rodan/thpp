@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void tool_histogram(th_db_t * db);
+void tool_histogram(bool *p_open, th_db_t * db);
 
 #ifdef __cplusplus
 }

@@ -81,6 +81,16 @@ struct frontend {
 };
 typedef struct frontend frontend_t;
 
+struct profile {
+    uint8_t do_refresh;
+    uint8_t active;
+    uint16_t x1;
+    uint16_t y1;
+    uint16_t x2;
+    uint16_t y2;
+};
+typedef profile profile_t;
+
 struct th_db {
     th_custom_param_t p;
     struct stat sb;
@@ -89,6 +99,7 @@ struct th_db {
     th_rgba_t rgba;
     scale_t scale;
     frontend_t fe;
+    profile_t pr;
     double *temp_arr;
 };
 typedef struct th_db th_db_t;

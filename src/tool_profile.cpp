@@ -11,7 +11,7 @@
 double *xdata = NULL;
 double *ydata = NULL;
 
-void line_plot_calc(th_db_t * db, linedef_t * line, double *data, const uint16_t data_len)
+void line_plot_calc(th_db_t * db, double *data, const uint16_t data_len)
 {
     double x1, y1, x2, y2;
     double slope, offset;
@@ -22,10 +22,10 @@ void line_plot_calc(th_db_t * db, linedef_t * line, double *data, const uint16_t
     uint16_t points_remaining = data_len;
     uint16_t points_c = 0;
 
-    x1 = line->x1;
-    y1 = line->y1;
-    x2 = line->x2;
-    y2 = line->y2;
+    x1 = db->pr.x1;
+    y1 = db->pr.y1;
+    x2 = db->pr.x2;
+    y2 = db->pr.y2;
 
     qx = (x2 - x1) / data_len;
     slope = (y2 - y1)/(x2 - x1);
@@ -51,21 +51,21 @@ void line_plot_calc(th_db_t * db, linedef_t * line, double *data, const uint16_t
     }
 }
 
-void line_plot(th_db_t * db, linedef_t *line)
+void line_plot(th_db_t * db)
 {
     uint16_t i;
     static uint16_t data_len = 0;
     double len;
-    double x1 = line->x1;
-    double y1 = line->y1;
-    double x2 = line->x2;
-    double y2 = line->y2;
+    double x1 = db->pr.x1;
+    double y1 = db->pr.y1;
+    double x2 = db->pr.x2;
+    double y2 = db->pr.y2;
     static ImVec4 color = ImVec4(1,1,0,1);
     double ymin = 0.0;
     double ymax = 0.0;
 
 
-    if (line->do_refresh) {
+    if (db->pr.do_refresh) {
 
         if (xdata != NULL) {
             free(xdata);
@@ -104,7 +104,7 @@ void line_plot(th_db_t * db, linedef_t *line)
             xdata[i] = i;
         }
 
-        line_plot_calc(db, line, ydata, data_len);
+        line_plot_calc(db, ydata, data_len);
     }
 
     if (ImPlot::BeginPlot("profile")) {
@@ -136,10 +136,13 @@ void line_plot_free(void)
     }
 }
 
-void tool_profile(th_db_t * db, linedef_t * ld)
+void tool_profile(bool *p_open, th_db_t * db)
 {
 
-    ImGui::Begin("profile");
+    if (!ImGui::Begin("profile", p_open, 0)) {
+        ImGui::End();
+        return;
+    }
 
     if ((db->in_th == NULL) || (db->out_th == NULL))  {
         ImGui::Text("file not opened");
@@ -147,11 +150,11 @@ void tool_profile(th_db_t * db, linedef_t * ld)
         return;
     }
 
-    if (ld->active && (db->fe.return_state == RET_OK)) {
+    if (db->pr.active && (db->fe.return_state == RET_OK)) {
         ImGui::SetNextItemOpen(1, 0);
         if (ImGui::TreeNodeEx("line plot")) {
-            line_plot(db, ld);
-            ImGui::Text("%d %d -> %d %d", ld->x1, ld->y1, ld->x2, ld->y2);
+            line_plot(db);
+            ImGui::Text("%d %d -> %d %d", db->pr.x1, db->pr.y1, db->pr.x2, db->pr.y2);
             ImGui::TreePop();
         }
     }

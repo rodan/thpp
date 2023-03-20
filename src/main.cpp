@@ -22,6 +22,7 @@
 #include "main_cli.h"
 #include "opengl_helper.h"
 #include "imgui_wrapper.h"
+#include "viewport.h"
 #include "graphics.h"
 #include "version.h"
 
@@ -183,6 +184,8 @@ int main(int argc, char **argv)
     glfwSetCursorPosCallback(window, glfw_cursor_pos_callback);
     glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
     SetMaxWaitBeforeNextFrame(3.0);
+
+    viewport_refresh_vp(&db);
 
     // Main loop
 #ifdef __EMSCRIPTEN__

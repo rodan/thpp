@@ -23,7 +23,7 @@ IMPLOT_OBJ = $(addsuffix .o, $(basename $(IMPLOT_SRC)))
 IMGUI_FILEB_DIR = ../lib/imgui-filebrowser/
 
 INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I $(IMPLOT_DIR) -I $(IMGUI_FILEB_DIR) -I `apr-1-config --includedir` 
-LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp json_helper.cpp dtv.cpp rjpg.cpp graphics.cpp main_menu.cpp tool_processing.cpp tool_histogram.cpp tool_profile.cpp tool_scale.cpp help_about.cpp file_properties.cpp # $(wildcard *.cpp)
+LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp json_helper.cpp dtv.cpp rjpg.cpp graphics.cpp main_menu.cpp viewport.cpp tool_processing.cpp tool_histogram.cpp tool_profile.cpp tool_scale.cpp help_about.cpp file_library.cpp file_properties.cpp # $(wildcard *.cpp)
 LOCAL_SRC_C := # $(wildcard *.c)
 SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C)
 #EXOBJECT   = $(PROJ).o
