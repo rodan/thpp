@@ -20,7 +20,7 @@
 #include "proj.h"
 #include "main_cli.h"
 #include "opengl_helper.h"
-#include "imgui_wrapper.h"
+#include "main_menu.h"
 #include "viewport.h"
 #include "graphics.h"
 #include "file_library.h"
@@ -223,7 +223,12 @@ int main(int argc, char **argv)
 
         ImGui::NewFrame();
 
-        if (imgui_wrapper(&db) == RET_EXIT) {
+        db.fe.return_state = RET_OK;
+
+        main_menu(&db);
+
+        if (db.fe.return_state == RET_EXIT) {
+            // file/exit was pressed
             break;
         }
 

@@ -24,25 +24,3 @@ void HelpMarker(const char *desc)
     }
 }
 
-int imgui_wrapper(th_db_t * db)
-{
-
-    db->fe.return_state = RET_OK;
-
-    main_menu(db);
-
-    if (db->fe.return_state == RET_EXIT) {
-        // file/exit was pressed
-        return RET_EXIT;
-    } else if (db->fe.return_state == RET_RST) {
-        // file/open dialog has closed with a file selection
-        // and most of db has been freed
-        main_cli(db);
-        viewport_refresh_vp(db);
-    }
-
-    //ImGui::ShowDemoWindow();
-    //ImPlot::ShowDemoWindow();
-
-    return db->fe.return_state;
-}

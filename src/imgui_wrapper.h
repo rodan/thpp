@@ -5,7 +5,6 @@
 extern "C" {
 #endif
 
-int imgui_wrapper(th_db_t *db);
 void HelpMarker(const char *desc);
 
 #ifdef __cplusplus
