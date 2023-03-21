@@ -12,73 +12,78 @@
 #include "dtv.h"
 #include "rjpg.h"
 #include "palette.h"
-//#include "processing.h"
+#include "opengl_helper.h"
 #include "version.h"
 #include "tool_profile.h"
+#include "file_library.h"
 #include "main_cli.h"
 
 th_db_t db;
 
-void cleanup(void)
+void cleanup(th_db_t *db)
 {
-    if (db.in_th != NULL) {
-        switch (db.in_th->type) {
+    if (db->in_th != NULL) {
+        switch (db->in_th->type) {
             case TH_IRTIS_DTV:
-                dtv_close(db.in_th);
+                dtv_close(db->in_th);
                 break;
             case TH_FLIR_RJPG:
-                rjpg_close(db.in_th);
+                rjpg_close(db->in_th);
                 break;
             default:
                 break;
         }
-        db.in_th = NULL;
+        db->in_th = NULL;
     }
 
-    if (db.out_th != NULL) {
-        switch (db.out_th->type) {
+    if (db->out_th != NULL) {
+        switch (db->out_th->type) {
             case TH_IRTIS_DTV:
-                dtv_close(db.out_th);
+                dtv_close(db->out_th);
                 break;
             case TH_FLIR_RJPG:
-                rjpg_close(db.out_th);
+                rjpg_close(db->out_th);
                 break;
             default:
                 break;
         }
-        db.out_th = NULL;
+        db->out_th = NULL;
     }
 
-    if (db.rgba.data != NULL) {
-        free(db.rgba.data);
-        db.rgba.data = NULL;
+    if (db->rgba.data != NULL) {
+        free(db->rgba.data);
+        db->rgba.data = NULL;
     }
 
 #if 0
-    if (db.rgba.overlay != NULL) {
-        free(db.rgba.overlay);
-        db.rgba.overlay = NULL;
+    if (db->rgba.overlay != NULL) {
+        free(db->rgba.overlay);
+        db->rgba.overlay = NULL;
     }
 #endif
 
-    if (db.temp_arr != NULL) {
-        free(db.temp_arr);
-        db.temp_arr = NULL;
+    if (db->temp_arr != NULL) {
+        free(db->temp_arr);
+        db->temp_arr = NULL;
     }
 
-    if (db.scale.data != NULL) {
-        free(db.scale.data);
-        db.scale.data = NULL;
+    if (db->scale.data != NULL) {
+        free(db->scale.data);
+        db->scale.data = NULL;
     }
 
-    if (db.scale.overlay != NULL) {
-        free(db.scale.overlay);
-        db.scale.overlay = NULL;
+    if (db->scale.overlay != NULL) {
+        free(db->scale.overlay);
+        db->scale.overlay = NULL;
     }
 
-    if (db.scale.combo != NULL) {
-        free(db.scale.combo);
-        db.scale.combo = NULL;
+    if (db->scale.combo != NULL) {
+        free(db->scale.combo);
+        db->scale.combo = NULL;
+    }
+
+    if (db->fe.vp_texture) {
+        free_textures(1, &db->fe.vp_texture);
     }
 
     line_plot_free();
@@ -86,7 +91,8 @@ void cleanup(void)
 
 void termination_handler(int)
 {
-    cleanup();
+    cleanup(&db);
+    file_library_free();
     _exit(EXIT_SUCCESS);
 }
 
@@ -110,14 +116,16 @@ void setup_sighandler(void)
     }
 }
 
-int main_cli(th_db_t * db)
+int main_cli(th_db_t * db, uint8_t flags)
 {
     unsigned err = 0;
     uint16_t th_width;
     uint16_t th_height;
     uint8_t file_type = FT_UNK;
 
-    setup_sighandler();
+    if (flags & SETUP_SIGHANDLER) {
+        setup_sighandler();
+    }
 
     file_type = get_file_type(db->p.in_file);
 
@@ -158,11 +166,13 @@ int main_cli(th_db_t * db)
         //        db->out_th->head.dtv->tsc[0],
         //        db->out_th->head.dtv->tsc[1] + 256.0 * db->out_th->head.dtv->tsc[0]);
 
-        err =
-            lodepng_encode32_file(db->p.out_file, db->rgba.data, th_width * db->p.zoom,
-                                  th_height * db->p.zoom);
-        if (err) {
-            fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
+        if (flags & GENERATE_OUT_FILE) {
+            err =
+                lodepng_encode32_file(db->p.out_file, db->rgba.data, th_width * db->p.zoom,
+                                      th_height * db->p.zoom);
+            if (err) {
+                fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
+            }
         }
 
     } else if (file_type == FT_RJPG) {
@@ -195,16 +205,18 @@ int main_cli(th_db_t * db)
         // create the output png file
         rjpg_transfer(db->out_th, db->rgba.data, db->p.pal, db->p.zoom);
 
-        err =
-            lodepng_encode32_file(db->p.out_file, db->rgba.data, th_width * db->p.zoom,
-                                  th_height * db->p.zoom);
-        if (err) {
-            fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
+        if (flags & GENERATE_OUT_FILE) {
+            err =
+                lodepng_encode32_file(db->p.out_file, db->rgba.data, th_width * db->p.zoom,
+                                      th_height * db->p.zoom);
+            if (err) {
+                fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
+            }
         }
 
     } else {
-        fprintf(stderr, "unknown input file type\n");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "warning: unknown input file type\n");
+        return EXIT_FAILURE;
     }
 
     pal_free();

@@ -30,6 +30,10 @@
 #define              SCALE_WIDTH  128
 #define             SCALE_HEIGHT  1024
 
+// main_cli() flags
+#define    SETUP_SIGHANDLER  0x1
+#define   GENERATE_OUT_FILE  0x2
+
 #ifdef __cplusplus
 extern "C" {
 #endif

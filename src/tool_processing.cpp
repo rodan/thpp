@@ -216,7 +216,7 @@ void tool_processing(bool *p_open, th_db_t * db)
 
     if (ImGui::Button("reset changes")) {
         db->p.flags = 0;
-        main_cli(db);
+        main_cli(db, 0);
         viewport_refresh_vp(db);
         show_apply_button = 0;
         db->fe.return_state = RET_OK_REFRESH_NEEDED;
@@ -227,7 +227,7 @@ void tool_processing(bool *p_open, th_db_t * db)
 
     if (show_apply_button) {
         if (ImGui::Button("apply changes")) {
-            main_cli(db);
+            main_cli(db, 0);
             viewport_refresh_vp(db);
             show_apply_button = 0;
             db->fe.actual_zoom = db->p.zoom;

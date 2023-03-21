@@ -58,3 +58,7 @@ uint8_t load_texture_from_file(const char *filename, GLuint *out_texture, unsign
     return EXIT_SUCCESS;
 }
 
+void free_textures(GLsizei n, const GLuint *textures)
+{
+    glDeleteTextures(n, textures);
+}

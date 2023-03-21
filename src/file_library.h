@@ -7,6 +7,7 @@ extern "C" {
 
 void file_library(bool *p_open, th_db_t * db);
 void file_library_init(void);
+void file_library_free(void);
 
 #ifdef __cplusplus
 }

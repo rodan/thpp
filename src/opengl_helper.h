@@ -38,23 +38,7 @@ uint8_t load_texture_from_mem(uint8_t * rgba_data, GLuint * out_texture,
 uint8_t load_texture_from_file(const char *filename, GLuint * out_texture,
                                unsigned int *out_width, unsigned int *out_height);
 
-void fb_create(const float width, const float height);
-
-void fb_free(void);
-
-unsigned int *fb_get_texture_ptr(void);
-unsigned int fb_get_texture(void);
-
-void fb_rescale(const float width, const float height);
-
-void fb_bind(void);
-
-void fb_unbind(void);
-
-void fb_init(void);
-
-void gll_init(void);
-void gll_draw_interface(void);
+void free_textures(GLsizei n, const GLuint *textures);
 
 #ifdef __cplusplus
 }

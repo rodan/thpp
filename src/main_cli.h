@@ -6,8 +6,8 @@
 extern "C" {
 #endif
 
-int main_cli(th_db_t *db);
-void cleanup(void);
+int main_cli(th_db_t *db, uint8_t flags);
+void cleanup(th_db_t *db);
 
 #ifdef __cplusplus
 }

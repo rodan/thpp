@@ -12,8 +12,112 @@
 #include "version.h"
 #include "file_library.h"
 
+#define          FNAME_MAX  256
+//possible flags
+#define      FL_FILE_READY  0x1
+#define    FL_FILE_INVALID  0x2
+
 uint32_t file_tx;
 uint32_t dir_tx;
+
+struct node {
+    uint16_t flags;
+    char fname[FNAME_MAX];
+    struct stat st;
+    uint32_t texture;
+    uint16_t width;
+    uint16_t height;
+    struct node *next;
+};
+typedef struct node node_t;
+
+node_t *head = NULL;
+
+th_db_t thumb;
+
+void ll_print(node_t * head);
+node_t *ll_find_tail(node_t * head);
+node_t *ll_add(node_t ** head, const uint8_t val);
+node_t *ll_remove(node_t ** head, const uint8_t val);
+
+void ll_print(node_t * head)
+{
+    node_t *p = head;
+
+    if (head == NULL) {
+        printf("ll is empty\n");
+        return;
+    }
+
+    while (NULL != p) {
+        printf("n %p, [%s]  next %p\n", (void *)p, p->fname, (void *)p->next);
+        if (p->next != NULL) {
+            p = p->next;
+        } else {
+            return;
+        }
+    }
+}
+
+node_t *ll_find_tail(node_t * head)
+{
+    node_t *p = head;
+
+    while (NULL != p) {
+        if (p->next != NULL) {
+            p = p->next;
+        } else {
+            return (p);
+        }
+    }
+
+    return (p);
+}
+
+void ll_free_all(node_t ** head)
+{
+    node_t *p = *head;
+    node_t *del;
+
+    while (NULL != p) {
+        //printf("remove node @%p\n", (void *)p);
+        del = p;
+        if (del->texture) {
+            free_textures(1, &del->texture);
+        }
+        p = p->next;
+        free(del);
+    }
+
+    *head = NULL;
+}
+
+node_t *ll_add(node_t ** head)
+{
+    node_t *p = ll_find_tail(*head);
+    node_t *new_node = NULL;
+
+    new_node = (node_t *) calloc(1, sizeof(node_t));
+    if (new_node == NULL) {
+        printf("malloc error\n");
+        return NULL;
+    } else {
+        //printf("new node @%p\n", (void *)new_node);
+    }
+
+    new_node->next = NULL;
+    //new_node->value = val;
+
+    if (p == NULL) {
+        *head = new_node;
+        //printf("new head @%p\n", (void *)new_node);
+    } else {
+        p->next = new_node;
+        //printf("new node added to @%p\n", (void *)p);
+    }
+
+    return new_node;
+}
 
 void file_library_init(void)
 {
@@ -29,11 +133,99 @@ void file_library_init(void)
     }
 }
 
-std::string str_tolower(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), 
-                   [](unsigned char c){ return std::tolower(c); } // correct
-                  );
+void file_library_free(void)
+{
+    ll_free_all(&head);
+    cleanup(&thumb);
+}
+
+std::string str_tolower(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(),[](unsigned char c) { return std::tolower(c);
+                   }            // correct
+    );
     return s;
+}
+
+uint8_t node_populate(node_t * node, const char *abs_path)
+{
+    if (stat(abs_path, &node->st) < 0) {
+        node->flags |= FL_FILE_INVALID;
+        return EXIT_FAILURE;
+    }
+
+    cleanup(&thumb);
+
+    if (thumb.p.in_file) {
+        free(thumb.p.in_file);
+    }
+
+    thumb.p.in_file = (char *)calloc(strlen(abs_path) + 1, sizeof(char));
+    strncpy(thumb.p.in_file, abs_path, strlen(abs_path));
+    thumb.p.pal = 6;
+    thumb.p.zoom = 1;
+
+    if (main_cli(&thumb, 0) == EXIT_SUCCESS) {
+        load_texture_from_mem(thumb.rgba.data, &node->texture, thumb.rgba.width, thumb.rgba.height);
+        printf("tex %u for %s\n", node->texture, abs_path);
+        node->width = thumb.rgba.width;
+        node->height = thumb.rgba.height;
+        node->flags = FL_FILE_READY;
+        return EXIT_SUCCESS;
+    }
+
+    return EXIT_FAILURE;
+}
+
+node *node_search_fname(const char *fname)
+{
+    node_t *search = head;
+    uint8_t cmp_sz = std::min((int)strlen(fname), FNAME_MAX - 1);
+
+    while (NULL != search) {
+        if (strncmp(fname, search->fname, cmp_sz) == 0) {
+            return search;
+        }
+        search = search->next;
+    }
+
+    return NULL;
+}
+
+// search for thermal images in pwd and populate a linked list with them
+void file_library_discovery(std::filesystem::path m_current_directory)
+{
+    //std::filesystem::path m_current_directory = std::filesystem::current_path();
+    node_t *node_ptr;
+    std::filesystem::path abs_path;
+
+    for (auto & directory_entry:std::filesystem::directory_iterator(m_current_directory)) {
+        const auto & path = directory_entry.path();
+        std::string filename_string = path.filename().string();
+        std::string filename_ext = path.extension().string();
+
+        if (!directory_entry.is_directory()) {
+            abs_path = m_current_directory;
+            abs_path /= filename_string;
+
+            if ((filename_ext.compare(".dtv") == 0) || (filename_ext.compare(".jpg") == 0)) {
+                // search if fname is present in the linked list
+                if (head == NULL) {
+                    node_ptr = ll_add(&head);
+                    strncpy(node_ptr->fname, filename_string.c_str(), FNAME_MAX - 1);
+                    node_populate(node_ptr, abs_path.c_str());
+                } else {
+                    if (node_search_fname(filename_string.c_str()) == NULL) {
+                        node_ptr = ll_add(&head);
+                        strncpy(node_ptr->fname, filename_string.c_str(), FNAME_MAX - 1);
+                        node_populate(node_ptr, abs_path.c_str());
+                    }
+                }
+            } else {
+                continue;
+            }
+        }
+    }
 }
 
 void file_library(bool *p_open, th_db_t * db)
@@ -42,36 +234,55 @@ void file_library(bool *p_open, th_db_t * db)
         ImGui::End();
         return;
     }
-
     uint32_t texture = 0;
     static float padding = 16.0f;
-    static float thumbnail_size = 128.0f;
-    float cell_size = thumbnail_size + padding;
+    static float thumbnail_size_x = 128.0f;
+    static float thumbnail_size_y = 128.0f;
+    float cell_size = thumbnail_size_x + padding;
     std::filesystem::path abs_path;
     uint16_t path_size = 0;
     uint8_t worthy_file = 0;
+    time_t current_time;
+    static time_t last_discovery = 0;
+    node_t *search = NULL;
+    uint32_t u;
 
     float panel_width = ImGui::GetContentRegionAvail().x;
     int column_count = (int)(panel_width / cell_size);
-    if (column_count < 1)
+
+    if (column_count < 1) {
         column_count = 1;
+    }
 
     ImGui::Columns(column_count, 0, false);
     static std::filesystem::path m_current_directory = std::filesystem::current_path();
 
-    ImVec4 bg_col = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);             // Black background
-    ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);           // No tint
+    ImVec4 bg_col = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);     // Black background
+    ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
 
     ImGui::PushID("../");
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    ImGui::ImageButton("", (void *)(intptr_t) dir_tx, {thumbnail_size, thumbnail_size}, {1, 0}, {0, 1}, bg_col, tint_col);
+    ImGui::ImageButton("", (void *)(intptr_t) dir_tx, {
+                       thumbnail_size_x, thumbnail_size_y}, {
+                       1, 0}, {
+                       0, 1}, bg_col, tint_col);
     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-	    m_current_directory = m_current_directory.parent_path();
-	}
+        m_current_directory = m_current_directory.parent_path();
+    }
     ImGui::Text("../");
     ImGui::NextColumn();
     ImGui::PopID();
 
+    current_time = time(NULL);
+
+    if ((current_time - last_discovery) > 1) {
+        file_library_discovery(m_current_directory);
+        last_discovery = current_time;
+    }
+
+    // add directories directly into the library
+    // files are added only after they are deemed ready by file_library_discovery()
+    // by that time their texture thumbnail has been generated
     for (auto & directory_entry:std::filesystem::directory_iterator(m_current_directory)) {
         const auto & path = directory_entry.path();
         std::string filename_string = path.filename().string();
@@ -83,19 +294,27 @@ void file_library(bool *p_open, th_db_t * db)
             texture = dir_tx;
         } else {
             texture = file_tx;
-            if (filename_ext.compare(".dtv") == 0) {
-                worthy_file = 1;
-            } else if (filename_ext.compare(".jpg") == 0) {
-                worthy_file = 1;
+            if ((search = node_search_fname(filename_string.c_str())) != NULL) {
+                if (search->flags & FL_FILE_READY) {
+                    worthy_file = 1;
+                    if (search->texture) {
+                        texture = search->texture;
+                        u = search->height * thumbnail_size_x / search->width;
+                        thumbnail_size_y = u;
+                    }
+                }
             }
             if (!worthy_file) {
-                continue;
+            //    continue;
             }
         }
 
         ImGui::PushID(filename_string.c_str());
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-        ImGui::ImageButton("",(void *)(intptr_t) texture, {thumbnail_size, thumbnail_size}, {1, 0}, {0, 1}, bg_col, tint_col);
+        ImGui::ImageButton("", (void *)(intptr_t) texture, {
+                           thumbnail_size_x, thumbnail_size_y}, {
+                           0, 0}, {
+                           1, 1}, bg_col, tint_col);
 
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
@@ -104,20 +323,23 @@ void file_library(bool *p_open, th_db_t * db)
             } else {
                 abs_path = m_current_directory;
                 abs_path /= filename_string;
-                //printf("file %s has been clicked\n", abs_path.c_str());
 
-                cleanup();
-                if (db->p.in_file) {
-                    free(db->p.in_file);
+                if (search && (search->flags & FL_FILE_READY)) {
+                    cleanup(db);
+                    if (db->p.in_file) {
+                        free(db->p.in_file);
+                    }
+
+                    path_size = strlen(abs_path.c_str());
+                    db->p.in_file = (char *)calloc(path_size + 1, sizeof(char));
+                    memcpy(db->p.in_file, abs_path.c_str(), path_size + 1);
+                    db->p.in_file[path_size] = 0;
+                    db->fe.return_state = RET_RST;
+                    main_cli(db, 0);
+                    viewport_refresh_vp(db);
+                } else {
+                    fprintf(stderr, "warning: unable to open %s\n", abs_path.c_str());
                 }
-
-                path_size = strlen(abs_path.c_str());
-                db->p.in_file = (char *) calloc(path_size + 1, sizeof(char));
-                memcpy(db->p.in_file, abs_path.c_str(), path_size + 1);
-                db->p.in_file[path_size] = 0;
-                db->fe.return_state = RET_RST;
-                main_cli(db);
-                viewport_refresh_vp(db);
             }
         }
 

@@ -85,7 +85,7 @@ int main(int argc, char **argv)
     memset(&db, 0, sizeof(th_db));
 
     parse_options(argc, argv, &(db.p));
-    main_cli(&db);
+    main_cli(&db, SETUP_SIGHANDLER);
 
     snprintf(wtitle, 39, "Thermal Processing Panel v%d.%d", VER_MAJOR, VER_MINOR);
 
@@ -260,7 +260,8 @@ int main(int argc, char **argv)
     EMSCRIPTEN_MAINLOOP_END;
 #endif
 
-    cleanup();
+    cleanup(&db);
+    file_library_free();
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
