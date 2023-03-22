@@ -223,3 +223,7 @@ int main_cli(th_db_t * db, uint8_t flags)
 
     return EXIT_SUCCESS;
 }
+
+th_db_t *get_db_ptr(void){
+    return &db;
+}

@@ -42,11 +42,7 @@ void viewport_render(th_db_t * db)
         return;
     }
 
-    //if ((db->fe.vp_texture == 0) || (db->fe.return_state == RET_OK_REFRESH_NEEDED) || (db->fe.return_state == RET_RST)) {
-    //    viewport_refresh_vp(db);
-    //} else {
-        ImGui::Image((void *)(intptr_t) db->fe.vp_texture, ImVec2(db->fe.vp_width, db->fe.vp_height));
-    //}
+    ImGui::Image((void *)(intptr_t) db->fe.vp_texture, ImVec2(db->fe.vp_width, db->fe.vp_height));
 
     img_pos_x = (io.MousePos.x - screen_pos.x) / db->fe.actual_zoom;
     img_pos_y = (io.MousePos.y - screen_pos.y) / db->fe.actual_zoom;

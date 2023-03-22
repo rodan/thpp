@@ -20,17 +20,6 @@ uint8_t load_texture_from_file(const char *filename, uint32_t * out_texture,
 
 void free_textures(int32_t n, const uint32_t *textures);
 
-void fb_create(const float width, const float height);
-void fb_free(void);
-unsigned int *fb_get_texture_ptr(void);
-unsigned int fb_get_texture(void);
-void fb_rescale(const float width, const float height);
-void fb_bind(void);
-void fb_unbind(void);
-void fb_init(void);
-
-uint8_t opengl_init(void);
-
 #ifdef __cplusplus
 }
 #endif
