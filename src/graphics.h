@@ -43,8 +43,8 @@ void draw_text(canvas_t *c, const uint16_t x, const uint16_t y,
                 char *text, const uint32_t color, const uint8_t size);
 
 style_t *get_style_ptr(void);
-void set_style(uint8_t theme);
-void init_style(void);
+void style_set(uint8_t theme);
+void style_init(void);
 
 #ifdef __cplusplus
 }

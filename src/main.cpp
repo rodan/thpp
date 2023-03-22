@@ -43,6 +43,7 @@
 extern th_db db;
 volatile unsigned int FrameCountSinceLastInput = 0;
 double MaxWaitBeforeNextFrame = 3;
+GLFWwindow *application_window;
 
 static void glfw_error_callback(int error, const char *description)
 {
@@ -90,8 +91,10 @@ int main(int argc, char **argv)
     snprintf(wtitle, 39, "Thermal Processing Panel v%d.%d", VER_MAJOR, VER_MINOR);
 
     glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit())
+    if (!glfwInit()) {
+        fprintf(stderr, "ERROR: could not start GLFW3\n");
         return 1;
+    }
 
     // Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -110,17 +113,21 @@ int main(int argc, char **argv)
 #else
     // GL 3.0 + GLSL 130
     const char *glsl_version = "#version 130";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
+    glfwWindowHint(GLFW_SAMPLES, 4);
 #endif
 
     // Create window with graphics context
-    GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, wtitle, NULL, NULL);
-    if (window == NULL)
+    application_window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, wtitle, NULL, NULL);
+    if (application_window == NULL) {
+        fprintf(stderr, "ERROR: could not open window with GLFW3\n");
+        glfwTerminate();
         return 1;
-    glfwMakeContextCurrent(window);
+    }
+    glfwMakeContextCurrent(application_window);
     glfwSwapInterval(1);        // Enable vsync
 
     // Setup Dear ImGui context
@@ -149,12 +156,14 @@ int main(int argc, char **argv)
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
     style.FrameBorderSize = 1.0f;
-    init_style();
-    set_style(STYLE_DARK);
+    style_init();
+    style_set(STYLE_DARK);
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplGlfw_InitForOpenGL(application_window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+
+    opengl_init();
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -176,8 +185,8 @@ int main(int argc, char **argv)
     // Our state
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    glfwSetCursorPosCallback(window, glfw_cursor_pos_callback);
-    glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
+    glfwSetCursorPosCallback(application_window, glfw_cursor_pos_callback);
+    glfwSetMouseButtonCallback(application_window, glfw_mouse_button_callback);
     SetMaxWaitBeforeNextFrame(3.0);
 
     viewport_refresh_vp(&db);
@@ -190,13 +199,13 @@ int main(int argc, char **argv)
     io.IniFilename = NULL;
     EMSCRIPTEN_MAINLOOP_BEGIN
 #else
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(application_window))
 #endif
     {
         // if there is no mouse/keyboard activity then render only at most one frame every MaxWaitBeforeNextFrame seconds
         // if there is such activity make sure to render FRAMES_TO_RENDER_AFTER_ACTIVITY in quick succession (every vsync period)
         // code based on https://github.com/ocornut/imgui/pull/2749
-        bool window_is_hidden = !glfwGetWindowAttrib(window, GLFW_VISIBLE) || glfwGetWindowAttrib(window, GLFW_ICONIFIED);
+        bool window_is_hidden = !glfwGetWindowAttrib(application_window, GLFW_VISIBLE) || glfwGetWindowAttrib(application_window, GLFW_ICONIFIED);
         double waiting_time = window_is_hidden ? INFINITY : GetEventWaitingTime();
 
         if (waiting_time > 0.0) {
@@ -237,7 +246,7 @@ int main(int argc, char **argv)
         // Rendering
         ImGui::Render();
         int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glfwGetFramebufferSize(application_window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w,
                      clear_color.z * clear_color.w, clear_color.w);
@@ -254,7 +263,7 @@ int main(int argc, char **argv)
             glfwMakeContextCurrent(backup_current_context);
         }
 
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(application_window);
     }
 #ifdef __EMSCRIPTEN__
     EMSCRIPTEN_MAINLOOP_END;
@@ -269,7 +278,7 @@ int main(int argc, char **argv)
     ImGui::DestroyContext();
     ImPlot::DestroyContext();
 
-    glfwDestroyWindow(window);
+    glfwDestroyWindow(application_window);
     glfwTerminate();
 
     return 0;
