@@ -7,7 +7,15 @@
 #include "tlpi_hdr.h"
 #include "palette.h"
 
-#define  PAL_STOPS  13
+#define       PAL_STOPS  13
+#define  PAL_CACHE_SIZE  3
+
+// use either floating point math or ints to calculate the palette transient
+#define USE_FLOATS
+//#define INT_PREC 16
+
+
+//static uint8_t *pal = NULL;
 
 struct palette {
     char name[16];
@@ -15,7 +23,6 @@ struct palette {
     uint16_t stop_offset[PAL_STOPS];
     uint8_t rgb[PAL_STOPS * 3];
 };
-
 typedef struct palette palette_t;
 
 static const palette_t pal_db[13] = {
@@ -188,13 +195,20 @@ static const palette_t pal_db[13] = {
      }
 };
 
-static uint8_t *pal = NULL;
+struct cached_palette {
+    uint8_t id;
+    uint8_t bpp;
+    uint32_t cache_hit_count;
+    uint8_t *data;
+};
+typedef struct cached_palette cached_palette_t;
 
-//#define USE_FLOATS
-#define INT_PREC 16
+cached_palette_t pal_cache[PAL_CACHE_SIZE];
+
 
 uint8_t *pal_init_lut(const uint8_t id, const uint8_t bpp)
 {
+    uint8_t *pal;
     uint32_t pal_sz;
     uint32_t i;
     uint8_t c;
@@ -202,6 +216,11 @@ uint8_t *pal_init_lut(const uint8_t id, const uint8_t bpp)
     uint16_t stop_begin = 0, stop_end = 0;
     uint32_t col_begin = 0, col_end = 0;
     uint8_t col_cur = 0;
+    int8_t j;
+    int8_t item_lowest_hit_count = -1;
+    int8_t item_wrong_id = -1;
+    int8_t item_pick = -1;
+    uint32_t min_cache_hit_count = 4294967295;
 
 #ifdef USE_FLOATS
     double fcol_cur = 0;
@@ -214,16 +233,30 @@ uint8_t *pal_init_lut(const uint8_t id, const uint8_t bpp)
         return NULL;
     }
 
-    pal_free();
+    // search for an already cached palette
+    for (j = 0; j<PAL_CACHE_SIZE; j++) {
+        if (pal_cache[j].data && (pal_cache[j].id == id) && (pal_cache[j].bpp == bpp)) {
+            //printf("reusing pal cache %d, %d\n", j, pal_cache[j].cache_hit_count);
+            pal_cache[j].cache_hit_count++;
+            return pal_cache[j].data;
+        }
+        if ((pal_cache[j].id) != id) {
+            item_wrong_id = j;
+        }
+        if (pal_cache[j].cache_hit_count < min_cache_hit_count) {
+            min_cache_hit_count = pal_cache[j].cache_hit_count;
+            item_lowest_hit_count = j;
+        }
+    }
 
+    // palette not found in cache
+    
     pal_sz = (1 << bpp);
 
     pal = (uint8_t *) calloc (pal_sz * 3, sizeof(uint8_t));
     if (pal == NULL) {
         errExit("allocating buffer");
     }
-
-    // printf("%u allocated\n", pal_sz * 3);
 
     for (i=0; i<pal_sz; i++) {
         // find interval that contains i
@@ -281,16 +314,47 @@ uint8_t *pal_init_lut(const uint8_t id, const uint8_t bpp)
             pal[ i * 3 + c] = col_cur;
         }
     }
+#define USE_FLOATS
+//#define INT_PREC 16
+
+    if (item_wrong_id > 0) {
+        item_pick = item_wrong_id;
+    } else {
+        item_pick = item_lowest_hit_count;
+    }
+
+    if (item_pick < 0) {
+        item_pick = 0;
+    }
+
+    //printf("creating pal cache for %d %d in %d\n", id, bpp, item_pick);
+
+    if (pal_cache[item_pick].data) {
+        free(pal_cache[item_pick].data);
+    }
+    pal_cache[item_pick].data = pal;
+    pal_cache[item_pick].id = id;
+    pal_cache[item_pick].bpp = bpp;
+    pal_cache[item_pick].cache_hit_count = 1;
 
     return pal;
 }
 
+void pal_init(void)
+{
+    memset(pal_cache, 0, PAL_CACHE_SIZE * sizeof(cached_palette_t));
+}
+
 void pal_free(void)
 {
-    if (pal) {
-        free(pal);
+    int8_t i;
+
+    for (i = PAL_CACHE_SIZE; i>0; i--) {
+        if (pal_cache[i].data) {
+            free(pal_cache[i].data);
+            pal_cache[i].data = NULL;
+        }
     }
-    pal = NULL;
 }
 
 // generate image used by the scale
@@ -307,22 +371,10 @@ void pal_transfer(uint8_t *image, const uint8_t pal_id, const uint16_t width, co
     bpp = f;
     pal_rgb = pal_init_lut(pal_id, bpp);
 
-    //printf("bpp %d\n", bpp);
-
     for (y = height; y > 0; y--) {
         memcpy(color, &(pal_rgb[(height - y - 1) * 3]), 3);
         color[3] = 255; // alpha channel
         for (x = width; x > 0; x--) {
-#if 0
-            if (x < 16) {
-                f = 15.9375 * x + 0.5;
-                color[3] = f;
-            } else if (x < 64) {
-                color[3] = 255;
-            } else if (x < 80) {
-                f = -15.9375 * x + 1275 + 0.5;
-                color[3] = f;
-#else
             if (x < 8) {
                 f = 31.875 * x + 0.5;
                 color[3] = f;
@@ -331,7 +383,6 @@ void pal_transfer(uint8_t *image, const uint8_t pal_id, const uint16_t width, co
             } else if (x < 72) {
                 f = -31.875 * x + 2295 + 0.5;
                 color[3] = (uint8_t) f;
-#endif
             } else {
                 color[3] = 0;
             }
@@ -340,9 +391,4 @@ void pal_transfer(uint8_t *image, const uint8_t pal_id, const uint16_t width, co
     }
 }
 
-
-uint8_t *pal_get_p(void)
-{
-    return pal;
-}
 

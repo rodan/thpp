@@ -219,8 +219,6 @@ int main_cli(th_db_t * db, uint8_t flags)
         return EXIT_FAILURE;
     }
 
-    pal_free();
-
     return EXIT_SUCCESS;
 }
 

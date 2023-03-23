@@ -30,7 +30,7 @@ extern "C" {
 uint8_t *pal_init_lut(const uint8_t palette_id, const uint8_t bits_per_pixel);
 void pal_free(void);
 void pal_transfer(uint8_t *image, const uint8_t pal_id, const uint16_t width, const uint16_t height);
-uint8_t *pal_get_p(void);
+void pal_init(void);
 
 #ifdef __cplusplus
 }

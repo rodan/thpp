@@ -23,6 +23,7 @@
 #include "main_menu.h"
 #include "viewport.h"
 #include "graphics.h"
+#include "palette.h"
 #include "file_library.h"
 #include "version.h"
 
@@ -85,6 +86,7 @@ int main(int argc, char **argv)
     memset(&db, 0, sizeof(th_db));
 
     parse_options(argc, argv, &(db.p));
+    pal_init();
     main_cli(&db, SETUP_SIGHANDLER);
 
     snprintf(wtitle, 39, "Thermal Processing Panel v%d.%d", VER_MAJOR, VER_MINOR);

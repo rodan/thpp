@@ -1,7 +1,7 @@
  [x] open new file functionality
  [x] add scale (with palette and overlay containing text and grid)
  [x] image library with thumbnails to replace open dialog
- [ ] better opengl viewport
+ [x] caching of palette transient
  [ ] add overlay image containing spot targets and measurement lines
  [ ] selectable theme (for switching between dark mode for visualisation and white mode for printing) in preference dialog
  [ ] add configurable properties table with image info, up to 1 spot, 1 profile, scaled temp ranges 

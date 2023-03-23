@@ -291,6 +291,7 @@ void file_library(bool *p_open, th_db_t * db)
         std::string filename_string = path.filename().string();
         std::string filename_ext = path.extension().string();
 
+        entry_is_dir = 0;
         worthy_file = 0;
         thumbnail_size_y = thumbnail_size;
 
