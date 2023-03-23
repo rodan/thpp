@@ -19,6 +19,7 @@
 #include "main_cli.h"
 
 th_db_t db;
+struct global_preferences gp;
 
 void cleanup(th_db_t *db)
 {

@@ -108,6 +108,28 @@ struct th_db {
 };
 typedef struct th_db th_db_t;
 
+#define           STYLE_DARK  0
+#define          STYLE_LIGHT  1
+#define        STYLE_CLASSIC  2
+#define            DEF_STYLE  2
+#define   DEF_THUMBNAIL_SIZE  128
+#define          DEF_PALETTE  6
+
+struct style {
+    uint8_t theme; // 0 - classic dark, 1 - light
+    uint32_t ovl_text_color;
+    uint32_t ovl_highlight_color;
+    uint32_t plot_line_color;
+    //GFXfont font;
+};
+typedef style style_t;
+
+struct global_preferences {
+    uint8_t palette_default;
+    uint16_t thumbnail_size;
+    style_t style;
+};
+
 uint8_t get_file_type(const char *in_file);
 void print_buf(uint8_t * data, const uint16_t size);
 void show_usage(void);
@@ -117,6 +139,12 @@ int proj_main(th_db_t *db);
 uint8_t localhost_is_le(void);
 void generate_scale(scale_t *scale);
 uint8_t get_min_max(tgram_t *th, double *t_min, double *t_max);
+
+style_t *style_get_ptr(void);
+void style_set(uint8_t theme);
+void style_init(void);
+
+void gp_init(void);
 
 #ifdef __cplusplus
 }

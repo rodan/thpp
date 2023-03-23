@@ -21,7 +21,7 @@ IMPLOT_SRC = $(IMPLOT_DIR)/implot.cpp $(IMPLOT_DIR)/implot_demo.cpp $(IMPLOT_DIR
 IMPLOT_OBJ = $(addsuffix .o, $(basename $(IMPLOT_SRC)))
 
 INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I $(IMPLOT_DIR) -I `apr-1-config --includedir` 
-LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp json_helper.cpp dtv.cpp rjpg.cpp graphics.cpp main_menu.cpp viewport.cpp tool_processing.cpp tool_histogram.cpp tool_profile.cpp tool_scale.cpp help_about.cpp file_library.cpp file_properties.cpp # $(wildcard *.cpp)
+LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp json_helper.cpp dtv.cpp rjpg.cpp graphics.cpp main_menu.cpp viewport.cpp tool_processing.cpp tool_histogram.cpp tool_profile.cpp tool_scale.cpp tool_preferences.cpp help_about.cpp file_library.cpp file_properties.cpp # $(wildcard *.cpp)
 LOCAL_SRC_C := # $(wildcard *.c)
 SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C)
 #EXOBJECT   = $(PROJ).o
@@ -32,8 +32,8 @@ LOCAL_OBJECTS     = $(LOCAL_SRC_CPP:%.cpp=%.o) $(LOCAL_SRC_C:%.c=%.o)
 # Append specific CFLAGS/LDFLAGS
 CFLAGS_REL	 += -O3
 LDFLAGS_REL	 += -Wl,-s
-CFLAGS_DBG	 += -O1 -ggdb -DNDEBUG
-LDFLAGS_DBG	 +=
+CFLAGS_DBG	 += -O1 -ggdb -DNDEBUG -pg
+LDFLAGS_DBG	 += -pg
 
 DEFAULT_FLAGS=-fPIC -pedantic -Wall -Wextra -Wa,-ahl=$(@:.o=.s)
 DEFAULT_LDFLAGS=-lm -ljson-c -lapr-1 -laprutil-1 -lGL `pkg-config --static --libs glfw3`

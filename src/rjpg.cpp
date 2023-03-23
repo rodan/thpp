@@ -20,7 +20,7 @@
 #define                  RJPG_BUF_SIZE  2048
 #define    RJPG_EXIFTOOL_BASE64_PREFIX  7       ///< number of bytes that need to be skipped during base64_decode
 
-#define   RJPG_CREATE_INTERMEDIATE_PNG_FILE
+//#define   RJPG_CREATE_INTERMEDIATE_PNG_FILE
 
 extern uint8_t vpl_data[12][768];
 
@@ -192,6 +192,7 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
                 if (rjpg_extract_json(th, tmp_json) == EXIT_FAILURE) {
                     return EXIT_FAILURE;
                 }
+                unlink(tmp_json);
                 return EXIT_SUCCESS;
             }
         }

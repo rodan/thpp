@@ -36,7 +36,7 @@ node_t *head = NULL;
 
 th_db_t thumb;
 
-float thumbnail_size = 128.0f;
+extern struct global_preferences gp;
 
 void ll_print(node_t * head);
 node_t *ll_find_tail(node_t * head);
@@ -236,8 +236,8 @@ void file_library(bool *p_open, th_db_t * db)
     }
     uint32_t texture = 0;
     static float padding = 32.0f;
-    float thumbnail_size_x = thumbnail_size;
-    float thumbnail_size_y = thumbnail_size;
+    float thumbnail_size_x = gp.thumbnail_size;
+    float thumbnail_size_y = gp.thumbnail_size;
     float cell_size = thumbnail_size_x + padding;
     std::filesystem::path abs_path;
     uint16_t path_size = 0;
@@ -293,7 +293,7 @@ void file_library(bool *p_open, th_db_t * db)
 
         entry_is_dir = 0;
         worthy_file = 0;
-        thumbnail_size_y = thumbnail_size;
+        thumbnail_size_y = gp.thumbnail_size;
 
         if (directory_entry.is_directory()) {
             texture = dir_tx;

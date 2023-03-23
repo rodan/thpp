@@ -86,8 +86,9 @@ int main(int argc, char **argv)
     memset(&db, 0, sizeof(th_db));
 
     parse_options(argc, argv, &(db.p));
+    gp_init();
     pal_init();
-    main_cli(&db, SETUP_SIGHANDLER);
+    main_cli(&db, SETUP_SIGHANDLER | GENERATE_OUT_FILE);
 
     snprintf(wtitle, 39, "Thermal Processing Panel v%d.%d", VER_MAJOR, VER_MINOR);
 
@@ -238,6 +239,8 @@ int main(int argc, char **argv)
             // file/exit was pressed
             break;
         }
+
+        ImGui::ShowDemoWindow(NULL);
 
         ImGui::End();
 

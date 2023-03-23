@@ -9,13 +9,15 @@
 #include <math.h>
 #include <getopt.h>
 #include "tlpi_hdr.h"
+#include "proj.h"
 #include "palette.h"
 #include "version.h"
 #include "graphics.h"
-#include "proj.h"
 
 #define BUF_SIZE  32
 #define  DEFAULT_PALETTE  6
+
+extern struct global_preferences gp;
 
 void show_usage(void)
 {
@@ -199,7 +201,7 @@ void draw_scale_overlay(scale_t *scale, const double major, const double minor, 
     char text[12];
     double t = 950;
     canvas_t c;
-    style_t *style = get_style_ptr();
+    style_t *style = style_get_ptr();
 
     // draw grid onto the overlay
     memset(&c, 0, sizeof(canvas_t));
@@ -306,6 +308,40 @@ void generate_scale(scale_t *scale)
         }
     }
 
+}
+
+void style_init(void)
+{
+}
+
+void gp_init(void)
+{
+    style_set(STYLE_DARK);
+    gp.thumbnail_size = DEF_THUMBNAIL_SIZE;
+
+}
+
+void style_set(uint8_t theme)
+{
+    switch (theme) {
+        case STYLE_DARK:
+            gp.style.theme = theme;
+            gp.style.ovl_text_color = 0xccccccff;
+            gp.style.ovl_highlight_color = 0xddddddff;
+            gp.style.plot_line_color = 0xffff00ff;
+            break;
+        case STYLE_LIGHT:
+            gp.style.theme = theme;
+            gp.style.ovl_text_color = 0x333333ff;
+            gp.style.ovl_highlight_color = 0x222222ff;
+            gp.style.plot_line_color = 0x111100ff;
+            break;
+    } 
+}
+
+style_t *style_get_ptr(void)
+{
+    return &gp.style;
 }
 
 void print_buf(uint8_t * data, const uint16_t size)
