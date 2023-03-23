@@ -391,7 +391,7 @@ uint8_t rjpg_rescale(th_db_t *d)
 
     h->t_res = (h->t_max - h->t_min) / 255;
 
-    printf("t_min %.2f, t_max %.2f, t_res %.2f\n", h->t_min, h->t_max, h->t_res);
+    //printf("t_min %.2f, t_max %.2f, t_res %.2f\n", h->t_min, h->t_max, h->t_res);
 
     if (p->flags & OPT_SET_NEW_MIN) {
         l_min = p->t_min;

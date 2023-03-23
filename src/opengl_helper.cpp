@@ -28,7 +28,7 @@ uint8_t load_texture_from_mem(uint8_t * rgba_data, GLuint * out_texture,
                  rgba_data);
     //glGenerateMipmap(GL_TEXTURE_2D);
 
-    printf("tex %d %dx%d\n", *out_texture, image_width, image_height);
+    //printf("tex %d %dx%d\n", *out_texture, image_width, image_height);
 
     // Setup filtering parameters for display
 

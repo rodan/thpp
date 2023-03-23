@@ -16,6 +16,7 @@
 //possible flags
 #define      FL_FILE_READY  0x1
 #define    FL_FILE_INVALID  0x2
+#define    FL_FILE_PREPARE  0x4
 
 uint32_t file_tx;
 uint32_t dir_tx;
@@ -34,6 +35,8 @@ typedef struct node node_t;
 node_t *head = NULL;
 
 th_db_t thumb;
+
+float thumbnail_size = 128.0f;
 
 void ll_print(node_t * head);
 node_t *ll_find_tail(node_t * head);
@@ -141,8 +144,7 @@ void file_library_free(void)
 
 std::string str_tolower(std::string s)
 {
-    std::transform(s.begin(), s.end(), s.begin(),[](unsigned char c) { return std::tolower(c);
-                   }            // correct
+    std::transform(s.begin(), s.end(), s.begin(),[](unsigned char c) { return std::tolower(c);} // correct
     );
     return s;
 }
@@ -167,11 +169,14 @@ uint8_t node_populate(node_t * node, const char *abs_path)
 
     if (main_cli(&thumb, 0) == EXIT_SUCCESS) {
         load_texture_from_mem(thumb.rgba.data, &node->texture, thumb.rgba.width, thumb.rgba.height);
-        printf("tex %u for %s\n", node->texture, abs_path);
+        //printf("tex %u for %s\n", node->texture, abs_path);
         node->width = thumb.rgba.width;
         node->height = thumb.rgba.height;
         node->flags = FL_FILE_READY;
         return EXIT_SUCCESS;
+    } else {
+        fprintf(stderr, "warning: %s can't be opened as a thermal image\n", abs_path);
+        node->flags = FL_FILE_INVALID;
     }
 
     return EXIT_FAILURE;
@@ -192,40 +197,35 @@ node *node_search_fname(const char *fname)
     return NULL;
 }
 
-// search for thermal images in pwd and populate a linked list with them
-void file_library_discovery(std::filesystem::path m_current_directory)
+uint8_t thumbnail_prepare(std::filesystem::path file)
 {
-    //std::filesystem::path m_current_directory = std::filesystem::current_path();
     node_t *node_ptr;
-    std::filesystem::path abs_path;
+    node_t *node_s;
 
-    for (auto & directory_entry:std::filesystem::directory_iterator(m_current_directory)) {
-        const auto & path = directory_entry.path();
-        std::string filename_string = path.filename().string();
-        std::string filename_ext = path.extension().string();
-
-        if (!directory_entry.is_directory()) {
-            abs_path = m_current_directory;
-            abs_path /= filename_string;
-
-            if ((filename_ext.compare(".dtv") == 0) || (filename_ext.compare(".jpg") == 0)) {
-                // search if fname is present in the linked list
-                if (head == NULL) {
-                    node_ptr = ll_add(&head);
-                    strncpy(node_ptr->fname, filename_string.c_str(), FNAME_MAX - 1);
-                    node_populate(node_ptr, abs_path.c_str());
-                } else {
-                    if (node_search_fname(filename_string.c_str()) == NULL) {
-                        node_ptr = ll_add(&head);
-                        strncpy(node_ptr->fname, filename_string.c_str(), FNAME_MAX - 1);
-                        node_populate(node_ptr, abs_path.c_str());
-                    }
-                }
-            } else {
-                continue;
+    if ((file.extension().string().compare(".dtv") == 0) || 
+        (file.extension().string().compare(".jpg") == 0)) {
+        if (head == NULL) {
+            node_ptr = ll_add(&head);
+            strncpy(node_ptr->fname, file.filename().c_str(), FNAME_MAX - 1);
+            node_ptr->flags = FL_FILE_PREPARE;
+            //node_populate(node_ptr, file.c_str());
+        } else {
+            if ((node_s = node_search_fname(file.filename().c_str())) == NULL) {
+                node_ptr = ll_add(&head);
+                strncpy(node_ptr->fname, file.filename().c_str(), FNAME_MAX - 1);
+                node_ptr->flags = FL_FILE_PREPARE;
+                //node_populate(node_ptr, file.c_str());
+            //} else {
+            //    if (node_s->flags == FL_FILE_PREPARE) {
+            //        node_populate(node_s, file.c_str());
+            //    }
             }
         }
+
+        return EXIT_SUCCESS;
     }
+
+    return EXIT_FAILURE;
 }
 
 void file_library(bool *p_open, th_db_t * db)
@@ -235,17 +235,18 @@ void file_library(bool *p_open, th_db_t * db)
         return;
     }
     uint32_t texture = 0;
-    static float padding = 16.0f;
-    static float thumbnail_size_x = 128.0f;
-    static float thumbnail_size_y = 128.0f;
+    static float padding = 32.0f;
+    float thumbnail_size_x = thumbnail_size;
+    float thumbnail_size_y = thumbnail_size;
     float cell_size = thumbnail_size_x + padding;
     std::filesystem::path abs_path;
     uint16_t path_size = 0;
     uint8_t worthy_file = 0;
-    time_t current_time;
-    static time_t last_discovery = 0;
+    //time_t current_time;
+    //static time_t last_discovery = 0;
     node_t *search = NULL;
     uint32_t u;
+    uint8_t entry_is_dir = 0;
 
     float panel_width = ImGui::GetContentRegionAvail().x;
     int column_count = (int)(panel_width / cell_size);
@@ -264,8 +265,8 @@ void file_library(bool *p_open, th_db_t * db)
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     ImGui::ImageButton("", (void *)(intptr_t) dir_tx, {
                        thumbnail_size_x, thumbnail_size_y}, {
-                       1, 0}, {
-                       0, 1}, bg_col, tint_col);
+                       0, 0}, {
+                       1, 1}, bg_col, tint_col);
     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
         m_current_directory = m_current_directory.parent_path();
     }
@@ -273,28 +274,36 @@ void file_library(bool *p_open, th_db_t * db)
     ImGui::NextColumn();
     ImGui::PopID();
 
+#if 0
     current_time = time(NULL);
 
     if ((current_time - last_discovery) > 1) {
-        file_library_discovery(m_current_directory);
+        //file_library_discovery(m_current_directory);
         last_discovery = current_time;
     }
+#endif
 
     // add directories directly into the library
     // files are added only after they are deemed ready by file_library_discovery()
     // by that time their texture thumbnail has been generated
-    for (auto & directory_entry:std::filesystem::directory_iterator(m_current_directory)) {
+ for (auto & directory_entry:std::filesystem::directory_iterator(m_current_directory)) {
         const auto & path = directory_entry.path();
         std::string filename_string = path.filename().string();
         std::string filename_ext = path.extension().string();
 
         worthy_file = 0;
+        thumbnail_size_y = thumbnail_size;
 
         if (directory_entry.is_directory()) {
             texture = dir_tx;
+            entry_is_dir = 1;
         } else {
             texture = file_tx;
+            abs_path = m_current_directory;
+            abs_path /= filename_string;
+
             if ((search = node_search_fname(filename_string.c_str())) != NULL) {
+                // if file has been already opened and a texture has been created for it's thumbnail
                 if (search->flags & FL_FILE_READY) {
                     worthy_file = 1;
                     if (search->texture) {
@@ -302,10 +311,18 @@ void file_library(bool *p_open, th_db_t * db)
                         u = search->height * thumbnail_size_x / search->width;
                         thumbnail_size_y = u;
                     }
+                } else if (search->flags & FL_FILE_PREPARE) {
+                    worthy_file = 1;
+                    node_populate(search, abs_path.c_str());
+                }
+            } else {
+                // file not present in the linked list
+                if (thumbnail_prepare(abs_path) == EXIT_SUCCESS) {
+                    worthy_file = 1;
                 }
             }
             if (!worthy_file) {
-            //    continue;
+                continue;
             }
         }
 
@@ -318,12 +335,9 @@ void file_library(bool *p_open, th_db_t * db)
 
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-            if (directory_entry.is_directory()) {
+            if (entry_is_dir) {
                 m_current_directory /= path.filename();
             } else {
-                abs_path = m_current_directory;
-                abs_path /= filename_string;
-
                 if (search && (search->flags & FL_FILE_READY)) {
                     cleanup(db);
                     if (db->p.in_file) {
