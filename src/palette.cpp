@@ -363,16 +363,16 @@ void pal_transfer(uint8_t *image, const uint8_t pal_id, const uint16_t width, co
 {
     float f;
     uint8_t bpp;
-    uint8_t *pal_rgb;       ///< the palette in 32bit RGBA format
+    uint8_t *pal_rgba;       ///< the palette in 32bit RGBA format
     int16_t x, y;       ///< counters
     uint8_t color[4];
 
     f = floor(log(height) / log(2.0)); // 1024 -> 10
     bpp = f;
-    pal_rgb = pal_init_lut(pal_id, bpp);
+    pal_rgba = pal_init_lut(pal_id, bpp);
 
     for (y = height; y > 0; y--) {
-        memcpy(color, &(pal_rgb[(height - y - 1) * 3]), 3);
+        memcpy(color, &(pal_rgba[(height - y - 1) * 3]), 3);
         color[3] = 255; // alpha channel
         for (x = width; x > 0; x--) {
             if (x < 8) {
