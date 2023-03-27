@@ -127,7 +127,6 @@ int main_cli(th_db_t * db, uint8_t flags)
     uint16_t th_width;
     uint16_t th_height;
     uint8_t file_type = FT_UNK;
-    global_preferences_t *pref = gp_get_ptr();
 
     if (flags & SETUP_SIGHANDLER) {
         setup_sighandler();
@@ -167,21 +166,6 @@ int main_cli(th_db_t * db, uint8_t flags)
         dtv_rescale(db);
         dtv_transfer(db->out_th, db->rgba[0].data, db->p.pal);
 
-        image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
-
-        //printf("dst temp: min %.2fdC  mult %.4fdC/q  max %.2fdC\n", db->out_th->head.dtv->tsc[1],
-        //        db->out_th->head.dtv->tsc[0],
-        //        db->out_th->head.dtv->tsc[1] + 256.0 * db->out_th->head.dtv->tsc[0]);
-
-        if (flags & GENERATE_OUT_FILE) {
-            err =
-                lodepng_encode32_file(db->p.out_file, db->rgba[1].data, th_width * pref->zoom_level,
-                                      th_height * pref->zoom_level);
-            if (err) {
-                fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
-            }
-        }
-
     } else if (file_type == FT_RJPG) {
 
         rjpg_new(&(db->in_th));
@@ -210,20 +194,26 @@ int main_cli(th_db_t * db, uint8_t flags)
         // create the output png file
         rjpg_transfer(db->out_th, db->rgba[0].data, db->p.pal);
 
-        image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
-
-        if (flags & GENERATE_OUT_FILE) {
-            err =
-                lodepng_encode32_file(db->p.out_file, db->rgba[1].data, th_width * pref->zoom_level,
-                                      th_height * pref->zoom_level);
-            if (err) {
-                fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
-            }
-        }
-
     } else {
         fprintf(stderr, "warning: unknown input file type\n");
         return EXIT_FAILURE;
+    }
+
+    if (db->p.zoom_level > 1) {
+        image_zoom(&db->rgba[1], &db->rgba[0], db->p.zoom_level, db->p.zoom_interpolation);
+        db->rgba_vp = &db->rgba[1];
+    } else {
+        db->rgba_vp = &db->rgba[0];
+    }
+
+    if (flags & GENERATE_OUT_FILE) {
+        err =
+            lodepng_encode32_file(db->p.out_file, db->rgba_vp->data, th_width * db->p.zoom_level,
+                                  th_height * db->p.zoom_level);
+
+        if (err) {
+            fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
+        }
     }
 
     return EXIT_SUCCESS;

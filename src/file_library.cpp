@@ -356,6 +356,7 @@ void file_library(bool *p_open, th_db_t * db)
                     memcpy(db->p.in_file, abs_path.c_str(), path_size + 1);
                     db->p.in_file[path_size] = 0;
                     db->fe.return_state = RET_RST;
+                    //db->p.zoom_level = 1;
                     main_cli(db, 0);
                     viewport_refresh_vp(db);
                 } else {

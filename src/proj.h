@@ -104,6 +104,7 @@ struct th_db {
     tgram_t *in_th;     ///< input thermogram
     tgram_t *out_th;    ///< processed thermogram
     th_rgba_t rgba[STAGE_CNT];   ///< processed image - 0 is the original, at 1x zoom
+    th_rgba_t *rgba_vp; ///< pointer to the rgba sctruct that will be used as a texture in the GUI
     scale_t scale;      ///< scale for the processed thermogram
     frontend_t fe;      ///< textures of the images used by the GUI
     profile_t pr;       ///< profile line
@@ -112,8 +113,7 @@ struct th_db {
 typedef struct th_db th_db_t;
 
 #define  ZOOM_INTERP_NEAREST  0
-#define   ZOOM_INTERP_LINEAR  1
-#define    ZOOM_INTERP_CUBIC  2
+#define   ZOOM_INTERP_REALSR  1
 
 
 #define           STYLE_DARK  0

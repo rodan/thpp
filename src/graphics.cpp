@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <sys/wait.h>
+
+#include "lodepng.h"
 #include "tlpi_hdr.h"
 #include "proj.h"
 #include "graphics.h"
@@ -188,6 +191,74 @@ uint32_t highlight_color(const uint32_t color, const uint32_t color_highlight)
     }
 }
 
+uint8_t image_zoom_realsr(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom)
+{
+    unsigned err = 0;
+    pid_t pid;
+    int status;
+    unsigned w, h;
+
+    if (zoom > 4) {
+        fprintf(stderr, "realsr upscaling method only goes up to 4x\n");
+        return EXIT_FAILURE;
+    }
+    
+    int fd_src, fd_dst;
+    char tmp_src[] = "/tmp/thpp_upscale_src_XXXXXX";
+    char tmp_dst[] = "/tmp/thpp_upscale_dst_XXXXXX";
+    fd_src = mkstemp(tmp_src);
+    fd_dst = mkstemp(tmp_dst);
+
+    char *tmp_dst_ext = (char *) calloc(strlen(tmp_dst) + 5, sizeof(char));
+
+    snprintf(tmp_dst_ext, strlen(tmp_dst) + 5, "%s.png", tmp_dst);
+
+    umask(077);
+
+    err = lodepng_encode32_file(tmp_src, src->data, src->width, src->height);
+    if (err) {
+        fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
+    }
+
+    switch (fork()) {
+    case -1:
+        errExit("fork");
+
+    case 0:
+        execlp("realesrgan-ncnn-vulkan", "realesrgan-ncnn-vulkan", "-i", tmp_src, "-o", tmp_dst_ext, "-s", "4", "-f", "png", (char *)NULL);
+        exit(EXIT_SUCCESS);
+    default:
+        for (;;) {
+            pid = waitpid(-1, &status, WUNTRACED);
+            if (pid == -1) {
+                errExit("during waitpid");
+            }
+
+            if (status != 0) {
+                fprintf(stderr, "realesrgan-ncnn-vulkan exited in error\n");
+                return EXIT_FAILURE;
+            }
+
+            if (WIFEXITED(status) || WIFSIGNALED(status)) {
+                // populated rjpg header with info from the json file
+                //if (rjpg_extract_json(th, tmp_json) == EXIT_FAILURE) {
+                //    return EXIT_FAILURE;
+                //}
+                //unlink(tmp_json);
+                err = lodepng_decode32_file(&dst->data, &w, &h, tmp_dst_ext);
+                if (err) {
+                    fprintf(stderr, "dencoder error %u: %s\n", err, lodepng_error_text(err));
+                }
+                free(tmp_dst_ext);
+
+                return EXIT_SUCCESS;
+            }
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
 uint8_t image_zoom_nearest(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom)
 {
     uint16_t w = src->width;
@@ -221,8 +292,11 @@ uint8_t image_zoom(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom_level, con
     uint16_t w = src->width;
     uint16_t h = src->height;
 
+    printf("zoom %d %d\n", zoom_level, interpolation);
+
     switch (interpolation) {
         case ZOOM_INTERP_NEAREST:
+        case ZOOM_INTERP_REALSR:
             if (dst->data) {
                 free(dst->data);
             }
@@ -241,6 +315,9 @@ uint8_t image_zoom(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom_level, con
     switch (interpolation) {
         case ZOOM_INTERP_NEAREST:
             ret = image_zoom_nearest(dst, src, zoom_level);
+            break;
+        case ZOOM_INTERP_REALSR:
+            ret = image_zoom_realsr(dst, src, zoom_level);
             break;
         default:
             break;

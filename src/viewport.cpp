@@ -17,14 +17,14 @@ uint8_t viewport_refresh_vp(th_db_t * db)
 
     //load_texture_from_file(db->p.out_file, &db->fe.vp_texture, &vp_width, &vp_height);
     db->fe.actual_zoom = pref->zoom_level;
-    db->fe.vp_width = db->rgba[1].width;
-    db->fe.vp_height = db->rgba[1].height;
+    db->fe.vp_width = db->rgba_vp->width;
+    db->fe.vp_height = db->rgba_vp->height;
 
     if (db->fe.vp_texture) {
         prev_texture = db->fe.vp_texture;
     }
 
-    load_texture_from_mem(db->rgba[1].data, &db->fe.vp_texture, db->fe.vp_width, db->fe.vp_height);
+    load_texture_from_mem(db->rgba_vp->data, &db->fe.vp_texture, db->fe.vp_width, db->fe.vp_height);
 
     // we should force at least one more frame to be rendered
 
@@ -125,14 +125,24 @@ void viewport_render(th_db_t * db)
     if (pointer_inside_image && (io.MouseWheel < 0)) {
         if (pref->zoom_level > 1) {
             pref->zoom_level--;
-            image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
-            viewport_refresh_vp(db);
+            db->p.zoom_level = pref->zoom_level;
+
+            if (pref->zoom_level == 1){
+                db->rgba_vp = &db->rgba[0];
+                viewport_refresh_vp(db);
+            } else {
+                db->rgba_vp = &db->rgba[1];
+                image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
+                viewport_refresh_vp(db);
+            }
         }
     }
 
     if (pointer_inside_image && (io.MouseWheel > 0)) {
         if (pref->zoom_level < 16) {
+            db->rgba_vp = &db->rgba[1];
             pref->zoom_level++;
+            db->p.zoom_level = pref->zoom_level;
             image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
             viewport_refresh_vp(db);
         }
