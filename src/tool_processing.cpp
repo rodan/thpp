@@ -97,6 +97,7 @@ void tool_processing(bool *p_open, th_db_t * db)
     uint8_t reset_changes = db->fe.return_state || reset_changes_but;
     static int show_apply_button = 0;
     uint8_t value_changed;
+    global_preferences_t *pref = gp_get_ptr();
 
     if (!ImGui::Begin("processing", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
@@ -122,17 +123,6 @@ void tool_processing(bool *p_open, th_db_t * db)
                  "256\0color\0grey\0hmetal0\0hmetal1\0hmetal2\0hotblue1\0hotblue2\0iron\0per_true\0pericolor\0rainbow\0rainbow0\0\0");
     if (value_changed) {
         db->p.pal = s_pal;
-        show_apply_button = 1;
-    }
-
-    // target zoom level
-    static int s_zoom = db->p.zoom;
-    if (reset_changes) {
-        s_zoom = db->p.zoom;
-    }
-    value_changed = ImGui::SliderInt("zoom [1..10]", &s_zoom, 1, 10);
-    if (value_changed) {
-        db->p.zoom = s_zoom;
         show_apply_button = 1;
     }
 
@@ -230,7 +220,7 @@ void tool_processing(bool *p_open, th_db_t * db)
             main_cli(db, 0);
             viewport_refresh_vp(db);
             show_apply_button = 0;
-            db->fe.actual_zoom = db->p.zoom;
+            db->fe.actual_zoom = pref->zoom_level;
             db->fe.return_state = RET_OK_REFRESH_NEEDED;
         }
     }

@@ -51,6 +51,15 @@ void tool_preferences(bool *p_open, th_db_t * db)
         pref->thumbnail_size = s_thumbnail_size;
     }
 
+    // target zoom level
+    int s_zoom = pref->zoom_level;
+    value_changed = ImGui::SliderInt("zoom [1..16]", &s_zoom, 1, 16);
+    if (value_changed) {
+        printf("changed\n");
+        pref->zoom_level = s_zoom;
+        db->fe.actual_zoom = s_zoom;
+    }
+
     ImGui::End();
 }
 

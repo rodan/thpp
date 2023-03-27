@@ -30,6 +30,8 @@ void draw_char(canvas_t * c, const uint16_t x, const uint16_t y,
 void draw_text(canvas_t *c, const uint16_t x, const uint16_t y, 
                 char *text, const uint32_t color, const uint8_t size);
 
+uint8_t image_zoom(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom, const uint8_t interp);
+
 #ifdef __cplusplus
 }
 #endif

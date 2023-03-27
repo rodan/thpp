@@ -270,6 +270,7 @@ uint8_t *pal_init_lut(const uint8_t id, const uint8_t bpp)
 
         if (stop_end == stop_begin) {
             fprintf(stderr, "invalid stop offsets in interval %d\n", interval);
+            free(pal);
             return NULL;
         }
 

@@ -42,7 +42,8 @@ struct th_getopt {
     char *in_file;
     char *out_file;
     uint8_t pal;
-    uint8_t zoom;
+    uint8_t zoom_level;
+    uint8_t zoom_interpolation;
     uint16_t flags;
     double t_min;
     double t_max;
@@ -95,12 +96,14 @@ struct profile {
 };
 typedef profile profile_t;
 
+#define STAGE_CNT 2
+
 struct th_db {
     th_getopt_t p;      ///< parameters gotten via getopt() from the user
     struct stat sb;     ///< input file status struct
     tgram_t *in_th;     ///< input thermogram
     tgram_t *out_th;    ///< processed thermogram
-    th_rgba_t rgba;     ///< processed image
+    th_rgba_t rgba[STAGE_CNT];   ///< processed image - 0 is the original, at 1x zoom
     scale_t scale;      ///< scale for the processed thermogram
     frontend_t fe;      ///< textures of the images used by the GUI
     profile_t pr;       ///< profile line

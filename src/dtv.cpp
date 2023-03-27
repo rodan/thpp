@@ -104,14 +104,11 @@ uint8_t dtv_open(tgram_t * thermo, char *dtv_file)
 }
 
 // coverity[ -taint_source : arg-0 ]
-uint8_t dtv_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id, const uint8_t zoom)
+uint8_t dtv_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id)
 {
-    uint16_t i = 0;
-    uint16_t row = 0;
+    uint32_t i = 0;
     uint16_t th_width;
     uint16_t th_height;
-    uint8_t zc;
-    uint8_t color[4];
     uint8_t *pal_rgb;
 
     if ((th == NULL) || (image == NULL)) {
@@ -127,28 +124,9 @@ uint8_t dtv_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id, 
     th_width = th->head.dtv->nst;
     th_height = th->head.dtv->nstv;
 
-    if (zoom == 1) {
-        for (i = 0; i < th_width * th_height; i++) {
-            memcpy(image + (i * 4), &(pal_rgb[th->frame[i] * 3]), 3);
-            image[i * 4 + 3] = 255;     // alpha channel
-        }
-    } else {
-        // resize by multiplying pixels
-        for (row = 0; row < th_height; row++) {
-            for (i = 0; i < th_width; i++) {
-                memcpy(color, &(pal_rgb[th->frame[row * th_width + i] * 3]), 3);
-                color[3] = 255; // alpha channel
-                for (zc = 0; zc < zoom; zc++) {
-                    // multiply each pixel zoom times
-                    memcpy(image + ((row * th_width * zoom * zoom + i * zoom + zc) * 4), color, 4);
-                }
-            }
-            for (zc = 1; zc < zoom; zc++) {
-                // copy last row zoom times
-                memmove(image + ((row * th_width * zoom * zoom + zc * zoom * th_width) * 4),
-                        image + ((row * th_width * zoom * zoom) * 4), th_width * zoom * 4);
-            }
-        }
+    for (i = 0; i < th_width * th_height; i++) {
+        memcpy(image + (i * 4), &(pal_rgb[th->frame[i] * 3]), 3);
+        image[i * 4 + 3] = 255;     // alpha channel
     }
 
     return EXIT_SUCCESS;

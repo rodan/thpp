@@ -15,7 +15,6 @@
 #include "graphics.h"
 
 #define BUF_SIZE  32
-#define  DEFAULT_PALETTE  6
 
 th_db_t db;
 global_preferences_t gp;
@@ -57,8 +56,9 @@ uint8_t parse_options(int argc, char *argv[], th_getopt_t * p)
     };
 
     memset(p, 0, sizeof(th_getopt_t));
-    p->pal = DEFAULT_PALETTE;
-    p->zoom = 1;
+    p->pal = DEF_PALETTE;
+    p->zoom_level = DEF_ZOOM;
+    p->zoom_interpolation = DEF_ZOOM_INTERP;
 
     while ((opt =
             getopt_long(argc, argv, "i:o:p:z:l:a:d:e:r:t:vkh", long_options, &option_index)) != -1) {
@@ -75,7 +75,7 @@ uint8_t parse_options(int argc, char *argv[], th_getopt_t * p)
             p->pal = atoi(optarg);
             break;
         case 'z':
-            p->zoom = atoi(optarg);
+            p->zoom_level = atoi(optarg);
             break;
         case 'l':
             p->flags |= OPT_SET_NEW_MIN;
@@ -323,8 +323,8 @@ void gp_init(th_getopt_t *p)
     pref->thumbnail_size = DEF_THUMBNAIL_SIZE;
     pref->thumbnail_gen_per_frame = DEF_THUMBNAIL_GEN;
     pref->palette_default = p->pal;
-    pref->zoom_level = p->zoom;
-    pref->zoom_interpolation = DEF_ZOOM_INTERP;
+    pref->zoom_level = p->zoom_level;
+    pref->zoom_interpolation = p->zoom_interpolation;
 }
 
 void style_set(uint8_t theme)

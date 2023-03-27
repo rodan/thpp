@@ -1,7 +1,9 @@
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include "tlpi_hdr.h"
 #include "proj.h"
 #include "graphics.h"
 #include "font_int.h"
@@ -163,6 +165,7 @@ void draw_text(canvas_t *c, const uint16_t x, const uint16_t y, char *text, cons
     }
 }
 
+
 uint32_t highlight_color(const uint32_t color, const uint32_t color_highlight)
 {
     uint8_t alpha;
@@ -185,5 +188,63 @@ uint32_t highlight_color(const uint32_t color, const uint32_t color_highlight)
     }
 }
 
+uint8_t image_zoom_nearest(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom)
+{
+    uint16_t w = src->width;
+    uint16_t h = src->height;
+    uint8_t zc;
+    uint8_t color[4];
+    uint16_t i = 0;
+    uint16_t row = 0;
 
+    for (row = 0; row < h; row++) {
+        for (i = 0; i < w; i++) {
+            memcpy(color, src->data + ((row * w + i) * 4), 4);
+            for (zc = 0; zc < zoom; zc++) {
+                // multiply each pixel zoom times
+                memcpy(dst->data + ((row * w * zoom * zoom + i * zoom + zc) * 4), color, 4);
+            }
+        }
+        for (zc = 1; zc < zoom; zc++) {
+            // copy last row zoom times
+            memmove(dst->data + ((row * w * zoom * zoom + zc * zoom * w) * 4),
+                    dst->data + ((row * w * zoom * zoom) * 4), w * zoom * 4);
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+uint8_t image_zoom(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom_level, const uint8_t interpolation)
+{
+    uint8_t ret;
+    uint16_t w = src->width;
+    uint16_t h = src->height;
+
+    switch (interpolation) {
+        case ZOOM_INTERP_NEAREST:
+            if (dst->data) {
+                free(dst->data);
+            }
+            dst->data = (uint8_t *) calloc(w * h * zoom_level * zoom_level * 4, sizeof(uint8_t));
+            if (dst->data == NULL) {
+                errExit("allocating buffer");
+            }
+            dst->width = w * zoom_level;
+            dst->height = h * zoom_level;
+            break;
+        default:
+            return EXIT_FAILURE;
+            break;
+    }
+
+    switch (interpolation) {
+        case ZOOM_INTERP_NEAREST:
+            ret = image_zoom_nearest(dst, src, zoom_level);
+            break;
+        default:
+            break;
+    }
+    return ret;
+}
 

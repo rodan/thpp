@@ -165,13 +165,13 @@ uint8_t node_populate(node_t * node, const char *abs_path)
     thumb.p.in_file = (char *)calloc(strlen(abs_path) + 1, sizeof(char));
     strncpy(thumb.p.in_file, abs_path, strlen(abs_path));
     thumb.p.pal = pref->palette_default;
-    thumb.p.zoom = 1;
+    thumb.p.zoom_level = 1;
 
     if (main_cli(&thumb, 0) == EXIT_SUCCESS) {
-        load_texture_from_mem(thumb.rgba.data, &node->texture, thumb.rgba.width, thumb.rgba.height);
+        load_texture_from_mem(thumb.rgba[0].data, &node->texture, thumb.rgba[0].width, thumb.rgba[0].height);
         //printf("tex %u for %s\n", node->texture, abs_path);
-        node->width = thumb.rgba.width;
-        node->height = thumb.rgba.height;
+        node->width = thumb.rgba[0].width;
+        node->height = thumb.rgba[0].height;
         node->flags = FL_FILE_READY;
         return EXIT_SUCCESS;
     } else {

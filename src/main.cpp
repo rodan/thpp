@@ -240,7 +240,7 @@ int main(int argc, char **argv)
             break;
         }
 
-        ImGui::ShowDemoWindow(NULL);
+        //ImGui::ShowDemoWindow(NULL);
 
         ImGui::End();
 

@@ -6,16 +6,27 @@
 #include "imgui_internal.h"
 #include "proj.h"
 #include "opengl_helper.h"
+#include "graphics.h"
 #include "viewport.h"
+
+uint32_t prev_texture = 0;
 
 uint8_t viewport_refresh_vp(th_db_t * db)
 {
+    global_preferences_t *pref = gp_get_ptr();
+
     //load_texture_from_file(db->p.out_file, &db->fe.vp_texture, &vp_width, &vp_height);
-    db->fe.actual_zoom = db->p.zoom;
-    db->fe.vp_width = db->rgba.width;
-    db->fe.vp_height = db->rgba.height;
-    load_texture_from_mem(db->rgba.data, &db->fe.vp_texture, db->fe.vp_width, db->fe.vp_height);
-    //load_texture_from_mem(db->rgba.data, fb_get_texture_ptr(), vp_width, vp_height);
+    db->fe.actual_zoom = pref->zoom_level;
+    db->fe.vp_width = db->rgba[1].width;
+    db->fe.vp_height = db->rgba[1].height;
+
+    if (db->fe.vp_texture) {
+        prev_texture = db->fe.vp_texture;
+    }
+
+    load_texture_from_mem(db->rgba[1].data, &db->fe.vp_texture, db->fe.vp_width, db->fe.vp_height);
+
+    // we should force at least one more frame to be rendered
 
     return EXIT_SUCCESS;
 }
@@ -43,6 +54,11 @@ void viewport_render(th_db_t * db)
     }
 
     ImGui::Image((void *)(intptr_t) db->fe.vp_texture, ImVec2(db->fe.vp_width, db->fe.vp_height));
+
+    if (prev_texture) {
+        free_textures(1, &prev_texture);
+        prev_texture = 0;
+    }
 
     img_pos_x = (io.MousePos.x - screen_pos.x) / db->fe.actual_zoom;
     img_pos_y = (io.MousePos.y - screen_pos.y) / db->fe.actual_zoom;
@@ -109,12 +125,16 @@ void viewport_render(th_db_t * db)
     if (pointer_inside_image && (io.MouseWheel < 0)) {
         if (pref->zoom_level > 1) {
             pref->zoom_level--;
+            image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
+            viewport_refresh_vp(db);
         }
     }
 
     if (pointer_inside_image && (io.MouseWheel > 0)) {
         if (pref->zoom_level < 16) {
             pref->zoom_level++;
+            image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
+            viewport_refresh_vp(db);
         }
     }
 
