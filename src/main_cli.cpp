@@ -18,8 +18,6 @@
 #include "file_library.h"
 #include "main_cli.h"
 
-th_db_t db;
-struct global_preferences gp;
 
 void cleanup(th_db_t *db)
 {
@@ -92,7 +90,9 @@ void cleanup(th_db_t *db)
 
 void termination_handler(int)
 {
-    cleanup(&db);
+    th_db_t *db = db_get_ptr();
+
+    cleanup(db);
     file_library_free();
     _exit(EXIT_SUCCESS);
 }
@@ -223,6 +223,3 @@ int main_cli(th_db_t * db, uint8_t flags)
     return EXIT_SUCCESS;
 }
 
-th_db_t *get_db_ptr(void){
-    return &db;
-}

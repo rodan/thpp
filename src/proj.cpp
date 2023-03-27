@@ -17,7 +17,8 @@
 #define BUF_SIZE  32
 #define  DEFAULT_PALETTE  6
 
-extern struct global_preferences gp;
+th_db_t db;
+global_preferences_t gp;
 
 void show_usage(void)
 {
@@ -34,7 +35,7 @@ void show_version(void)
     fprintf(stdout, " thpp %d.%d\nbuild %d commit %d\n", VER_MAJOR, VER_MINOR, BUILD, COMMIT);
 }
 
-uint8_t parse_options(int argc, char *argv[], th_custom_param_t * p)
+uint8_t parse_options(int argc, char *argv[], th_getopt_t * p)
 {
     int opt;
     int option_index = 0;
@@ -55,7 +56,7 @@ uint8_t parse_options(int argc, char *argv[], th_custom_param_t * p)
         {0, 0, 0, 0}
     };
 
-    memset(p, 0, sizeof(th_custom_param_t));
+    memset(p, 0, sizeof(th_getopt_t));
     p->pal = DEFAULT_PALETTE;
     p->zoom = 1;
 
@@ -314,27 +315,34 @@ void style_init(void)
 {
 }
 
-void gp_init(void)
+void gp_init(th_getopt_t *p)
 {
-    style_set(STYLE_DARK);
-    gp.thumbnail_size = DEF_THUMBNAIL_SIZE;
+    global_preferences_t *pref = gp_get_ptr();
 
+    style_set(STYLE_DARK);
+    pref->thumbnail_size = DEF_THUMBNAIL_SIZE;
+    pref->thumbnail_gen_per_frame = DEF_THUMBNAIL_GEN;
+    pref->palette_default = p->pal;
+    pref->zoom_level = p->zoom;
+    pref->zoom_interpolation = DEF_ZOOM_INTERP;
 }
 
 void style_set(uint8_t theme)
 {
+    global_preferences_t *pref = gp_get_ptr();
+
     switch (theme) {
         case STYLE_DARK:
-            gp.style.theme = theme;
-            gp.style.ovl_text_color = 0xccccccff;
-            gp.style.ovl_highlight_color = 0xddddddff;
-            gp.style.plot_line_color = 0xffff00ff;
+            pref->style.theme = theme;
+            pref->style.ovl_text_color = 0xccccccff;
+            pref->style.ovl_highlight_color = 0xddddddff;
+            pref->style.plot_line_color = 0xffff00ff;
             break;
         case STYLE_LIGHT:
-            gp.style.theme = theme;
-            gp.style.ovl_text_color = 0x333333ff;
-            gp.style.ovl_highlight_color = 0x222222ff;
-            gp.style.plot_line_color = 0x111100ff;
+            pref->style.theme = theme;
+            pref->style.ovl_text_color = 0x333333ff;
+            pref->style.ovl_highlight_color = 0x222222ff;
+            pref->style.plot_line_color = 0x111100ff;
             break;
     } 
 }
@@ -342,6 +350,16 @@ void style_set(uint8_t theme)
 style_t *style_get_ptr(void)
 {
     return &gp.style;
+}
+
+global_preferences_t *gp_get_ptr(void)
+{
+    return &gp;
+}
+
+th_db_t *db_get_ptr(void)
+{
+    return &db;
 }
 
 void print_buf(uint8_t * data, const uint16_t size)

@@ -104,6 +104,20 @@ void viewport_render(th_db_t * db)
         }
     }
 
+    global_preferences_t *pref = gp_get_ptr();
+
+    if (pointer_inside_image && (io.MouseWheel < 0)) {
+        if (pref->zoom_level > 1) {
+            pref->zoom_level--;
+        }
+    }
+
+    if (pointer_inside_image && (io.MouseWheel > 0)) {
+        if (pref->zoom_level < 16) {
+            pref->zoom_level++;
+        }
+    }
+
     if (ImGui::IsMouseDown(0) == 0) {
         db->pr.do_refresh = 0;
     }

@@ -41,7 +41,6 @@
 #include "../libs/emscripten/emscripten_mainloop_stub.h"
 #endif
 
-extern th_db db;
 volatile unsigned int FrameCountSinceLastInput = 0;
 double MaxWaitBeforeNextFrame = 3;
 
@@ -82,13 +81,14 @@ double GetEventWaitingTime()
 int main(int argc, char **argv)
 {
     char wtitle[40];
+    th_db_t *db = db_get_ptr(); 
 
-    memset(&db, 0, sizeof(th_db));
+    memset(db, 0, sizeof(th_db));
 
-    parse_options(argc, argv, &(db.p));
-    gp_init();
+    parse_options(argc, argv, &(db->p));
+    gp_init(&db->p);
     pal_init();
-    main_cli(&db, SETUP_SIGHANDLER | GENERATE_OUT_FILE);
+    main_cli(db, SETUP_SIGHANDLER | GENERATE_OUT_FILE);
 
     snprintf(wtitle, 39, "Thermal Processing Panel v%d.%d", VER_MAJOR, VER_MINOR);
 
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
     glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
     SetMaxWaitBeforeNextFrame(3.0);
 
-    viewport_refresh_vp(&db);
+    viewport_refresh_vp(db);
     file_library_init();
 
     // Main loop
@@ -231,11 +231,11 @@ int main(int argc, char **argv)
 
         ImGui::NewFrame();
 
-        db.fe.return_state = RET_OK;
+        db->fe.return_state = RET_OK;
 
-        main_menu(&db);
+        main_menu(db);
 
-        if (db.fe.return_state == RET_EXIT) {
+        if (db->fe.return_state == RET_EXIT) {
             // file/exit was pressed
             break;
         }
@@ -270,7 +270,7 @@ int main(int argc, char **argv)
     EMSCRIPTEN_MAINLOOP_END;
 #endif
 
-    cleanup(&db);
+    cleanup(db);
     file_library_free();
 
     // Cleanup

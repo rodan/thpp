@@ -6,11 +6,10 @@
 #include "proj.h"
 #include "tool_preferences.h"
 
-extern struct global_preferences gp;
-
 void tool_preferences(bool *p_open, th_db_t * db)
 {
     uint8_t value_changed;
+    global_preferences_t *pref = gp_get_ptr();
 
     if (!ImGui::Begin("preferences", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
@@ -39,21 +38,17 @@ void tool_preferences(bool *p_open, th_db_t * db)
     }
 
     static uint8_t s_pal = DEF_PALETTE;
-    //if (reset_changes) {
-    //    s_pal = db->p.pal;
-    //}
     value_changed = ImGui::Combo("palette", (int *) &s_pal,
                  "256\0color\0grey\0hmetal0\0hmetal1\0hmetal2\0hotblue1\0hotblue2\0iron\0per_true\0pericolor\0rainbow\0rainbow0\0\0");
     if (value_changed) {
-        gp.palette_default = s_pal;
+        pref->palette_default = s_pal;
         db->p.pal = s_pal;
-        //show_apply_button = 1;
     }
 
     static int s_thumbnail_size = DEF_THUMBNAIL_SIZE;
     value_changed = ImGui::DragInt("thumbnail size", &s_thumbnail_size, 1, 64, 512, "%d", ImGuiSliderFlags_AlwaysClamp);
     if (value_changed) {
-        gp.thumbnail_size = s_thumbnail_size;
+        pref->thumbnail_size = s_thumbnail_size;
     }
 
     ImGui::End();

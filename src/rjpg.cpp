@@ -22,8 +22,6 @@
 
 //#define   RJPG_CREATE_INTERMEDIATE_PNG_FILE
 
-extern uint8_t vpl_data[12][768];
-
 uint8_t rjpg_new(tgram_t ** thermo)
 {
     tgram_t *t;
@@ -275,7 +273,7 @@ uint8_t rjpg_rescale(th_db_t *d)
     double l_rh;
     tgram_t * src_th = d->in_th;
     tgram_t * dst_th = d->out_th;
-    th_custom_param_t *p = &(d->p);
+    th_getopt_t *p = &(d->p);
 
     rjpg_header_t *h = dst_th->head.rjpg;
 

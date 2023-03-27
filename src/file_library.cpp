@@ -36,8 +36,6 @@ node_t *head = NULL;
 
 th_db_t thumb;
 
-extern struct global_preferences gp;
-
 void ll_print(node_t * head);
 node_t *ll_find_tail(node_t * head);
 node_t *ll_add(node_t ** head, const uint8_t val);
@@ -151,6 +149,8 @@ std::string str_tolower(std::string s)
 
 uint8_t node_populate(node_t * node, const char *abs_path)
 {
+    global_preferences_t *pref = gp_get_ptr();
+
     if (stat(abs_path, &node->st) < 0) {
         node->flags |= FL_FILE_INVALID;
         return EXIT_FAILURE;
@@ -164,7 +164,7 @@ uint8_t node_populate(node_t * node, const char *abs_path)
 
     thumb.p.in_file = (char *)calloc(strlen(abs_path) + 1, sizeof(char));
     strncpy(thumb.p.in_file, abs_path, strlen(abs_path));
-    thumb.p.pal = 6;
+    thumb.p.pal = pref->palette_default;
     thumb.p.zoom = 1;
 
     if (main_cli(&thumb, 0) == EXIT_SUCCESS) {
@@ -230,14 +230,11 @@ uint8_t thumbnail_prepare(std::filesystem::path file)
 
 void file_library(bool *p_open, th_db_t * db)
 {
-    if (!ImGui::Begin("image library", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::End();
-        return;
-    }
     uint32_t texture = 0;
     static float padding = 32.0f;
-    float thumbnail_size_x = gp.thumbnail_size;
-    float thumbnail_size_y = gp.thumbnail_size;
+    global_preferences_t *pref = gp_get_ptr();
+    float thumbnail_size_x = pref->thumbnail_size;
+    float thumbnail_size_y = pref->thumbnail_size;
     float cell_size = thumbnail_size_x + padding;
     std::filesystem::path abs_path;
     uint16_t path_size = 0;
@@ -247,6 +244,12 @@ void file_library(bool *p_open, th_db_t * db)
     node_t *search = NULL;
     uint32_t u;
     uint8_t entry_is_dir = 0;
+    uint16_t file_analyze = pref->thumbnail_gen_per_frame;
+
+    if (!ImGui::Begin("image library", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::End();
+        return;
+    }
 
     float panel_width = ImGui::GetContentRegionAvail().x;
     int column_count = (int)(panel_width / cell_size);
@@ -293,7 +296,7 @@ void file_library(bool *p_open, th_db_t * db)
 
         entry_is_dir = 0;
         worthy_file = 0;
-        thumbnail_size_y = gp.thumbnail_size;
+        thumbnail_size_y = pref->thumbnail_size;
 
         if (directory_entry.is_directory()) {
             texture = dir_tx;
@@ -314,7 +317,10 @@ void file_library(bool *p_open, th_db_t * db)
                     }
                 } else if (search->flags & FL_FILE_PREPARE) {
                     worthy_file = 1;
-                    node_populate(search, abs_path.c_str());
+                    if (file_analyze) {
+                        node_populate(search, abs_path.c_str());
+                        file_analyze--;
+                    }
                 }
             } else {
                 // file not present in the linked list
@@ -364,4 +370,5 @@ void file_library(bool *p_open, th_db_t * db)
     }
 
     ImGui::End();
+
 }

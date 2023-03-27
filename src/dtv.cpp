@@ -14,8 +14,6 @@
 
 #define   DTV_BUF_SIZE  2048
 
-extern uint8_t vpl_data[12][768];
-
 uint8_t dtv_new(tgram_t ** thermo)
 {
     tgram_t *t;
@@ -166,7 +164,7 @@ uint8_t dtv_rescale(th_db_t *d)
     uint8_t ut;
     tgram_t * src_th = d->in_th;
     tgram_t * dst_th = d->out_th;
-    th_custom_param_t *p = &(d->p);
+    th_getopt_t *p = &(d->p);
 
     // populate dst thermo header
     memcpy(dst_th->head.dtv, src_th->head.dtv, DTV_HEADER_SZ);

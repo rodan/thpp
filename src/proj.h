@@ -38,7 +38,7 @@
 extern "C" {
 #endif
 
-struct th_custom_param {
+struct th_getopt {
     char *in_file;
     char *out_file;
     uint8_t pal;
@@ -51,7 +51,7 @@ struct th_custom_param {
     double atm_temp;        ///< atmospheric temperature in dC
     double rh;
 };
-typedef struct th_custom_param th_custom_param_t;
+typedef struct th_getopt th_getopt_t;
 
 struct th_rgba {
     uint16_t width;
@@ -96,24 +96,32 @@ struct profile {
 typedef profile profile_t;
 
 struct th_db {
-    th_custom_param_t p;
-    struct stat sb;
-    tgram_t *in_th;
-    tgram_t *out_th;
-    th_rgba_t rgba;
-    scale_t scale;
-    frontend_t fe;
-    profile_t pr;
-    double *temp_arr;
+    th_getopt_t p;      ///< parameters gotten via getopt() from the user
+    struct stat sb;     ///< input file status struct
+    tgram_t *in_th;     ///< input thermogram
+    tgram_t *out_th;    ///< processed thermogram
+    th_rgba_t rgba;     ///< processed image
+    scale_t scale;      ///< scale for the processed thermogram
+    frontend_t fe;      ///< textures of the images used by the GUI
+    profile_t pr;       ///< profile line
+    double *temp_arr;   ///< array containing actual temperatures for the processed image
 };
 typedef struct th_db th_db_t;
+
+#define  ZOOM_INTERP_NEAREST  0
+#define   ZOOM_INTERP_LINEAR  1
+#define    ZOOM_INTERP_CUBIC  2
+
 
 #define           STYLE_DARK  0
 #define          STYLE_LIGHT  1
 #define        STYLE_CLASSIC  2
 #define            DEF_STYLE  2
 #define   DEF_THUMBNAIL_SIZE  128
+#define    DEF_THUMBNAIL_GEN  4     ///< number of files to analyze during each generated frame
 #define          DEF_PALETTE  6
+#define             DEF_ZOOM  1
+#define      DEF_ZOOM_INTERP  ZOOM_INTERP_NEAREST
 
 struct style {
     uint8_t theme; // 0 - classic dark, 1 - light
@@ -127,24 +135,31 @@ typedef style style_t;
 struct global_preferences {
     uint8_t palette_default;
     uint16_t thumbnail_size;
+    uint16_t thumbnail_gen_per_frame;
+    uint8_t zoom_level;
+    uint8_t zoom_interpolation;
     style_t style;
 };
+typedef struct global_preferences global_preferences_t;
 
 uint8_t get_file_type(const char *in_file);
 void print_buf(uint8_t * data, const uint16_t size);
 void show_usage(void);
 void show_version(void);
-uint8_t parse_options(int argc, char *argv[], th_custom_param_t * p);
+uint8_t parse_options(int argc, char *argv[], th_getopt_t * p);
 int proj_main(th_db_t *db);
 uint8_t localhost_is_le(void);
 void generate_scale(scale_t *scale);
 uint8_t get_min_max(tgram_t *th, double *t_min, double *t_max);
 
 style_t *style_get_ptr(void);
+global_preferences_t *gp_get_ptr(void);
+th_db_t *db_get_ptr(void);
+
 void style_set(uint8_t theme);
 void style_init(void);
 
-void gp_init(void);
+void gp_init(th_getopt_t *p);
 
 #ifdef __cplusplus
 }
