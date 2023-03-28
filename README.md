@@ -15,6 +15,11 @@ Thermal processing panel is viewer/analyzer of thermal images. It aims to be a r
  author:        Petre Rodan <2b4eda@subdimension.ro>
  license:       GNU GPLv3
 
+graphical user interface based on Dear ImGui
+ source:        https://github.com/ocornut/imgui
+ author:        Aymar Cornut
+ license:       MIT
+
 png decode/encode functionality provided by
  source:        https://github.com/lvandeve/lodepng
  author:        Lode Vandevenne
@@ -56,7 +61,6 @@ rJPG| yes | yes | yes | yes
 
 the code depends on the headers and libraries provided by the following packages:
 
- * media-libs/exiftool-12.42 (tool to read and write meta information in image, audio and video files)
  * dev-libs/json-c-0.16 (JSON implementation in C)
  * dev-libs/apr-util-1.6.3 (Apache Portable Runtime Utility Library)
  * media-libs/glfw-3.3.8 (Portable OpenGL FrameWork)
@@ -67,6 +71,14 @@ compilation is simple, one only needs to
 cd ./src
 make
 ```
+
+### Runtime requirements
+
+ * media-libs/exiftool-12.42
+
+ optional package used for the image restoration algorithm after a 4x rescale:
+
+ * media-gfx/realesrgan-ncnn-vulkan
 
 ### Usage example
 
