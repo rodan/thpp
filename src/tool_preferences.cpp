@@ -6,12 +6,15 @@
 #include "proj.h"
 #include "graphics.h"
 #include "viewport.h"
+#include "imgui_wrapper.h"
+#include "file_properties.h"
 #include "tool_preferences.h"
 
 void tool_preferences(bool *p_open, th_db_t * db)
 {
     uint8_t value_changed;
     global_preferences_t *pref = gp_get_ptr();
+    fp_visibility_t *v = file_properties_get_ptr();
 
     if (!ImGui::Begin("preferences", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
@@ -96,10 +99,39 @@ void tool_preferences(bool *p_open, th_db_t * db)
         viewport_refresh_vp(db);
     }
 
+    ImGui::Separator();
+    if (ImGui::TreeNode("file properties")) {
+        ImGui::SameLine(); HelpMarker("control the visibility of items in the file properties table");
+        ImGui::Checkbox("image width", &v->raw_th_img_width);
+        ImGui::Checkbox("image height", &v->raw_th_img_height);
+        ImGui::Checkbox("image date", &v->ir_date);
+        ImGui::Checkbox("image time", &v->ir_time);
+        ImGui::Checkbox("image file name", &v->ir_fname);
+        ImGui::Checkbox("image comment", &v->ir_comment);
+        ImGui::Checkbox("image min", &v->ir_min);
+        ImGui::Checkbox("image max", &v->ir_max);
+        ImGui::Checkbox("image avg", &v->ir_avg);
+        ImGui::Checkbox("line min", &v->line_min);
+        ImGui::Checkbox("line max", &v->line_max);
+        ImGui::Checkbox("line avg", &v->line_avg);
+        ImGui::Checkbox("emissivity", &v->emissivity);
+        ImGui::Checkbox("object distance", &v->distance);
+        ImGui::Checkbox("relative humidity", &v->rh);
+        ImGui::Checkbox("atmospheric trans Alpha1", &v->alpha1);
+        ImGui::Checkbox("atmospheric trans Alpha2", &v->alpha2);
+        ImGui::Checkbox("atmospheric trans Beta1", &v->beta1);
+        ImGui::Checkbox("atmospheric trans Beta2", &v->beta2);
+        ImGui::Checkbox("planck r1", &v->planckR1);
+        ImGui::Checkbox("planck r2", &v->planckR2);
+        ImGui::Checkbox("planck b", &v->planckB);
+        ImGui::Checkbox("planck f", &v->planckF);
+        ImGui::Checkbox("planck o", &v->planckO);
+        ImGui::Checkbox("atmospheric TransX", &v->atm_trans_X);
+        ImGui::Checkbox("atmospheric temperature", &v->air_temp);
+        ImGui::Checkbox("reflected apparent temperature", &v->refl_temp);
+    }
+
 
     ImGui::End();
 }
-
-
-
 

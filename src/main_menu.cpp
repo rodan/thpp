@@ -23,7 +23,6 @@ struct window_open {
     bool bhelp_about;
     bool bfile_library;
     bool bfile_properties;
-    bool bfile_properties_extra;
     bool bfile_open;
     bool btool_processing;
     bool btool_histogram;
@@ -90,7 +89,6 @@ uint8_t main_menu(th_db_t * db)
         if (ImGui::BeginMenu("file")) {
             ImGui::MenuItem("library", NULL, &wo.bfile_library, 1);
             ImGui::MenuItem("properties", NULL, &wo.bfile_properties, 1);
-            ImGui::MenuItem("properties extra", NULL, &wo.bfile_properties_extra, 1);
             ImGui::Separator();
             ImGui::MenuItem("exit", NULL, &opt_exit, 1);
             ImGui::EndMenu();
@@ -128,10 +126,6 @@ uint8_t main_menu(th_db_t * db)
 
     if (wo.bfile_properties) {
         file_properties(&wo.bfile_properties, db);
-    }
-
-    if (wo.bfile_properties_extra) {
-        file_properties_extra(&wo.bfile_properties_extra, db);
     }
 
     if (wo.btool_processing) {
