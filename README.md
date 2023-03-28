@@ -80,6 +80,10 @@ make
 
  * media-gfx/realesrgan-ncnn-vulkan
 
+comparison between 4x zoom with nearest interpolation (left) vs realsr (on the right):
+
+![screenshot](./img/thpp_realsr_interpolation.png)
+
 ### Usage example
 
 ```
