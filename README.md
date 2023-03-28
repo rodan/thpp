@@ -46,7 +46,8 @@ currently supported image formats:
 
 camera | image type
 --- | ---
-Irtis 2000 | DTV 256x248 pixel, single frame
+Irtis 200 | ver2 DTV 256x248 pixel, single frame
+Irtis 2000 | ver3 DTV including panoramas, single frame
 Flir ThermaCAM E25 | radiometric JPG 160x120
 Flir E5 | radiometric JPG 120x90, 320x240
 

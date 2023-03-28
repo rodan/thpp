@@ -14,8 +14,6 @@
 #define           OPT_SET_NEW_RH  0x40
 
 #define                   FT_UNK  0
-#define                   FT_DTV  1
-#define                  FT_RJPG  2
 
 #define                   RET_OK  0
 #define    RET_OK_REFRESH_NEEDED  0x1
@@ -148,7 +146,7 @@ struct global_preferences {
 };
 typedef struct global_preferences global_preferences_t;
 
-uint8_t get_file_type(const char *in_file);
+uint16_t get_file_type(const char *in_file, uint16_t *type, uint16_t *subtype);
 void print_buf(uint8_t * data, const uint16_t size);
 void show_usage(void);
 void show_version(void);

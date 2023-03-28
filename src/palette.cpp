@@ -8,7 +8,7 @@
 #include "palette.h"
 
 #define       PAL_STOPS  13
-#define  PAL_CACHE_SIZE  3
+#define  PAL_CACHE_SIZE  4
 
 // use either floating point math or ints to calculate the palette transient
 #define USE_FLOATS
@@ -204,7 +204,6 @@ struct cached_palette {
 typedef struct cached_palette cached_palette_t;
 
 cached_palette_t pal_cache[PAL_CACHE_SIZE];
-
 
 uint8_t *pal_init_lut(const uint8_t id, const uint8_t bpp)
 {

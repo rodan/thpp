@@ -224,7 +224,22 @@ void file_properties(bool *p_open, th_db_t * db)
             break;
         case TH_IRTIS_DTV:
             hi = db->in_th->head.dtv;
-            
+
+            if (v.raw_th_img_width) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("raw thermal image width");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%u", hi->nst);
+            }
+
+            if (v.raw_th_img_height) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("raw thermal image height");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%u", hi->nstv);
+            }
             if (v.ir_comment) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);

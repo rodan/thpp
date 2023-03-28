@@ -127,21 +127,23 @@ int main_cli(th_db_t * db, uint8_t flags)
     unsigned err = 0;
     uint16_t th_width;
     uint16_t th_height;
-    uint8_t file_type = FT_UNK;
+    uint16_t file_type = FT_UNK;
+    uint16_t file_subtype = FT_UNK;
 
     if (flags & SETUP_SIGHANDLER) {
         setup_sighandler();
     }
 
-    file_type = get_file_type(db->p.in_file);
+    get_file_type(db->p.in_file, &file_type, &file_subtype);
 
     if (lstat(db->p.in_file, &db->sb) == -1) {
         errExit("lstat");
     }
 
-    if (file_type == FT_DTV) {
+    if (file_type == TH_IRTIS_DTV) {
 
         dtv_new(&(db->in_th));
+        db->in_th->subtype = file_subtype;
 
         dtv_open(db->in_th, db->p.in_file);
         dtv_populate_temp_arr(db);
@@ -164,10 +166,12 @@ int main_cli(th_db_t * db, uint8_t flags)
         db->rgba[0].height = th_height;
 
         dtv_new(&(db->out_th));
+        db->out_th->subtype = file_subtype;
+
         dtv_rescale(db);
         dtv_transfer(db->out_th, db->rgba[0].data, db->p.pal);
 
-    } else if (file_type == FT_RJPG) {
+    } else if (file_type == TH_FLIR_RJPG) {
 
         rjpg_new(&(db->in_th));
         rjpg_new(&(db->out_th));

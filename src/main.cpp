@@ -88,14 +88,16 @@ int main(int argc, char **argv)
     parse_options(argc, argv, &(db->p));
     gp_init(&db->p);
     pal_init();
-    main_cli(db, SETUP_SIGHANDLER | GENERATE_OUT_FILE);
+    if (main_cli(db, SETUP_SIGHANDLER | GENERATE_OUT_FILE) == EXIT_FAILURE) {
+        return EXIT_FAILURE;
+    }
 
     snprintf(wtitle, 39, "Thermal Processing Panel v%d.%d", VER_MAJOR, VER_MINOR);
 
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) {
         fprintf(stderr, "ERROR: could not start GLFW3\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     // Decide GL+GLSL versions

@@ -126,13 +126,14 @@ uint8_t parse_options(int argc, char *argv[], th_getopt_t * p)
     return EXIT_SUCCESS;
 }
 
-uint8_t get_file_type(const char *in_file)
+uint16_t get_file_type(const char *in_file, uint16_t *type, uint16_t *subtype)
 {
     int fd;
     uint8_t *buf;
     uint8_t ret = FT_UNK;
     static const uint8_t sig_exif[4] = { 0x45, 0x78, 0x69, 0x66 };      // appears at file offset 0x18
-    static const uint8_t sig_dtv[2] = { 0x6e, 0x02 };   // appears at offset 0x0
+    static const uint8_t sig_dtv_v2[3] = { 0x02, 0x00, 0x00 };   // appears at offset 0x1
+    static const uint8_t sig_dtv_v3[3] = { 0x03, 0x00, 0x00 };   // appears at offset 0x1
 
     // read input file
     if ((fd = open(in_file, O_RDONLY)) < 0) {
@@ -150,12 +151,30 @@ uint8_t get_file_type(const char *in_file)
         exit(EXIT_FAILURE);
     }
 
-    if (memcmp(buf, sig_dtv, 2) == 0) {
-        ret = FT_DTV;
-    }
-
-    if (memcmp(buf + 0x18, sig_exif, 4) == 0) {
-        ret = FT_RJPG;
+    if (memcmp(buf + 1, sig_dtv_v2, 3) == 0) {
+        ret = TH_IRTIS_DTV;
+        if (type) {
+            *type = TH_IRTIS_DTV;
+        }
+        if (subtype) {
+            *subtype = TH_DTV_VER2;
+        }
+    } else if (memcmp(buf + 1, sig_dtv_v3, 3) == 0) {
+        ret = TH_IRTIS_DTV;
+        if (type) {
+            *type = TH_IRTIS_DTV;
+        }
+        if (subtype) {
+            *subtype = TH_DTV_VER3;
+        }
+    } else if (memcmp(buf + 0x18, sig_exif, 4) == 0) {
+        ret = TH_FLIR_RJPG;
+        if (type) {
+            *type = TH_FLIR_RJPG;
+        }
+        if (subtype) {
+            *subtype = TH_UNSET;
+        }
     }
 
     close(fd);
@@ -182,8 +201,13 @@ uint8_t get_min_max(tgram_t *th, double *t_min, double *t_max)
             *t_max = th->head.rjpg->t_max;
             break;
         case TH_IRTIS_DTV:
-            *t_min = th->head.dtv->tsc[1];
-            *t_max = th->head.dtv->tsc[1] + 256.0 * th->head.dtv->tsc[0];
+            if (th->subtype == TH_DTV_VER2) {
+                *t_min = th->head.dtv->tsc[1];
+                *t_max = th->head.dtv->tsc[1] + 256.0 * th->head.dtv->tsc[0];
+            } else if (th->subtype == TH_DTV_VER3) {
+                *t_min = th->head.dtv->tsc[1];
+                *t_max = th->head.dtv->tsc[1] + 65536.0 * th->head.dtv->tsc[0];
+            }
             break;
         default:
             *t_min = 0.0;
