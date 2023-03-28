@@ -35,9 +35,10 @@ void viewport_render(th_db_t * db)
 {
     int16_t img_pos_x, img_pos_y;
     static int16_t prev_img_pos_x, prev_img_pos_y;
-    static uint8_t pointer_inside_image = 0;
+    uint8_t pointer_inside_image = 0;
     uint8_t pointer_over_viewport = 0;
     ImGuiWindowClass window_class;
+    double spot_temp = 0;
 
     ImGuiIO & io = ImGui::GetIO();
     ImGuiContext & g = *GImGui;
@@ -51,13 +52,6 @@ void viewport_render(th_db_t * db)
     if (db->in_th == NULL) {
         ImGui::End();
         return;
-    }
-
-    ImGui::Image((void *)(intptr_t) db->fe.vp_texture, ImVec2(db->fe.vp_width, db->fe.vp_height));
-
-    if (prev_texture) {
-        free_textures(1, &prev_texture);
-        prev_texture = 0;
     }
 
     img_pos_x = (io.MousePos.x - screen_pos.x) / db->fe.actual_zoom;
@@ -74,9 +68,8 @@ void viewport_render(th_db_t * db)
         if ((img_pos_x > 0) && (img_pos_x < db->in_th->head.rjpg->raw_th_img_width) &&
             (img_pos_y > 0) && (img_pos_y < db->in_th->head.rjpg->raw_th_img_height) &&
             pointer_over_viewport) {
-            ImGui::Text("spot %.2f°C",
-                        db->temp_arr[img_pos_y * db->in_th->head.rjpg->raw_th_img_width +
-                                     img_pos_x]);
+            spot_temp = db->temp_arr[img_pos_y * db->in_th->head.rjpg->raw_th_img_width +
+                                     img_pos_x];
             pointer_inside_image = 1;
         } else {
             pointer_inside_image = 0;
@@ -85,26 +78,24 @@ void viewport_render(th_db_t * db)
     case TH_IRTIS_DTV:
         if ((img_pos_x > 0) && (img_pos_x < db->in_th->head.dtv->nst) &&
             (img_pos_y > 0) && (img_pos_y < db->in_th->head.dtv->nstv) && pointer_over_viewport) {
-            ImGui::Text("spot %.2f°C",
-                        db->temp_arr[img_pos_y * db->in_th->head.dtv->nst + img_pos_x]);
+            spot_temp = db->temp_arr[img_pos_y * db->in_th->head.dtv->nst + img_pos_x];
             pointer_inside_image = 1;
         } else {
             pointer_inside_image = 0;
         }
         break;
     }
-    ImGui::End();
 
     if (db->fe.return_state != RET_OK) {
         memset(&db->pr, 0, sizeof(profile_t));
         return;
     }
 
-    if (pointer_inside_image && ImGui::IsMouseDown(0) && (db->pr.do_refresh == 0)
-        && pointer_over_viewport) {
+    if (pointer_inside_image && ImGui::IsMouseDown(0) && (db->pr.do_refresh == 0) && pointer_over_viewport) {
         prev_img_pos_x = img_pos_x;
         prev_img_pos_y = img_pos_y;
         db->pr.do_refresh = 1;
+        printf("do refresh\n");
     }
 
     if (pointer_inside_image && ImGui::IsMouseDown(0) && pointer_over_viewport) {
@@ -120,33 +111,27 @@ void viewport_render(th_db_t * db)
         }
     }
 
-    global_preferences_t *pref = gp_get_ptr();
-
     if (pointer_inside_image && (io.MouseWheel < 0)) {
-        if (pref->zoom_level > 1) {
-            pref->zoom_level--;
-            db->p.zoom_level = pref->zoom_level;
-
-            if (pref->zoom_level == 1){
-                db->rgba_vp = &db->rgba[0];
-                viewport_refresh_vp(db);
-            } else {
-                db->rgba_vp = &db->rgba[1];
-                image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
-                viewport_refresh_vp(db);
-            }
-        }
+        set_zoom(db, ZOOM_DECREMENT);
+        viewport_refresh_vp(db);
     }
 
     if (pointer_inside_image && (io.MouseWheel > 0)) {
-        if (pref->zoom_level < 16) {
-            db->rgba_vp = &db->rgba[1];
-            pref->zoom_level++;
-            db->p.zoom_level = pref->zoom_level;
-            image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
-            viewport_refresh_vp(db);
-        }
+        set_zoom(db, ZOOM_INCREMENT);
+        viewport_refresh_vp(db);
     }
+
+    ImGui::Image((void *)(intptr_t) db->fe.vp_texture, ImVec2(db->fe.vp_width, db->fe.vp_height));
+
+    if (prev_texture) {
+        free_textures(1, &prev_texture);
+        prev_texture = 0;
+    }
+
+    if (pointer_inside_image) {
+        ImGui::Text("spot %.2f°C", spot_temp);
+    }
+    ImGui::End();
 
     if (ImGui::IsMouseDown(0) == 0) {
         db->pr.do_refresh = 0;

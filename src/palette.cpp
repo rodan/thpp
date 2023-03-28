@@ -350,7 +350,7 @@ void pal_free(void)
 {
     int8_t i;
 
-    for (i = PAL_CACHE_SIZE; i>0; i--) {
+    for (i = 0; i < PAL_CACHE_SIZE; i++) {
         if (pal_cache[i].data) {
             free(pal_cache[i].data);
             pal_cache[i].data = NULL;

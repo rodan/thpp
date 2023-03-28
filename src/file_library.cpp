@@ -157,6 +157,7 @@ uint8_t node_populate(node_t * node, const char *abs_path)
     }
 
     cleanup(&thumb);
+    memset(&thumb, 0, sizeof(th_db_t));
 
     if (thumb.p.in_file) {
         free(thumb.p.in_file);
@@ -208,17 +209,11 @@ uint8_t thumbnail_prepare(std::filesystem::path file)
             node_ptr = ll_add(&head);
             strncpy(node_ptr->fname, file.filename().c_str(), FNAME_MAX - 1);
             node_ptr->flags = FL_FILE_PREPARE;
-            //node_populate(node_ptr, file.c_str());
         } else {
             if ((node_s = node_search_fname(file.filename().c_str())) == NULL) {
                 node_ptr = ll_add(&head);
                 strncpy(node_ptr->fname, file.filename().c_str(), FNAME_MAX - 1);
                 node_ptr->flags = FL_FILE_PREPARE;
-                //node_populate(node_ptr, file.c_str());
-            //} else {
-            //    if (node_s->flags == FL_FILE_PREPARE) {
-            //        node_populate(node_s, file.c_str());
-            //    }
             }
         }
 

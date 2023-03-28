@@ -112,8 +112,11 @@ struct th_db {
 };
 typedef struct th_db th_db_t;
 
-#define  ZOOM_INTERP_NEAREST  0
-#define   ZOOM_INTERP_REALSR  1
+#define  ZOOM_INTERP_NEAREST  0x0
+#define   ZOOM_INTERP_REALSR  0x1
+
+#define       ZOOM_DECREMENT  0x1
+#define       ZOOM_INCREMENT  0x2
 
 
 #define           STYLE_DARK  0
@@ -163,6 +166,8 @@ void style_set(uint8_t theme);
 void style_init(void);
 
 void gp_init(th_getopt_t *p);
+
+void set_zoom(th_db_t * db, const uint8_t flags);
 
 #ifdef __cplusplus
 }

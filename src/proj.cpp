@@ -362,6 +362,56 @@ th_db_t *db_get_ptr(void)
     return &db;
 }
 
+void set_zoom(th_db_t * db, const uint8_t flags)
+{
+    global_preferences_t *pref = gp_get_ptr();
+    uint8_t initial_zoom = pref->zoom_level;
+
+    switch (flags) {
+        case ZOOM_DECREMENT:
+            if (pref->zoom_level > 1) {
+                pref->zoom_level--;
+                db->p.zoom_level = pref->zoom_level;
+
+                if (pref->zoom_interpolation == ZOOM_INTERP_REALSR) {
+                    if (pref->zoom_level > 4) {
+                        pref->zoom_level = 4;
+                        db->p.zoom_level = 4;
+                    } else if (pref->zoom_level < 4) {
+                        pref->zoom_level = 1;
+                        db->p.zoom_level = 1;
+                    }
+                }
+
+                if (pref->zoom_level == 1){
+                    db->rgba_vp = &db->rgba[0];
+                } else {
+                    db->rgba_vp = &db->rgba[1];
+                    image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
+                }
+            }
+            break;
+        case ZOOM_INCREMENT:
+            if (pref->zoom_level < 16) {
+                db->rgba_vp = &db->rgba[1];
+                pref->zoom_level++;
+                db->p.zoom_level = pref->zoom_level;
+
+                if (pref->zoom_interpolation == ZOOM_INTERP_REALSR) {
+                    pref->zoom_level = 4;
+                    db->p.zoom_level = 4;
+                }
+                if (pref->zoom_level != initial_zoom) {
+                    image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+
+}
+
 void print_buf(uint8_t * data, const uint16_t size)
 {
     uint16_t bytes_remaining = size;

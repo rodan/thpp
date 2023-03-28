@@ -83,15 +83,16 @@ void tool_preferences(bool *p_open, th_db_t * db)
     // target zoom level
     int s_zoom = pref->zoom_level;
     if (pref->zoom_interpolation == ZOOM_INTERP_REALSR) {
-        value_changed = ImGui::SliderInt("zoom [4..4]", &s_zoom, 4, 4);
+        value_changed = ImGui::SliderInt("zoom [1 or 4]", &s_zoom, 1, 4);
     } else {
         value_changed = ImGui::SliderInt("zoom [1..16]", &s_zoom, 1, 16);
     }
     if (value_changed) {
-        pref->zoom_level = s_zoom;
-        db->p.zoom_level = s_zoom;
-        db->fe.actual_zoom = s_zoom;
-        image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
+        if (s_zoom > pref->zoom_level) {
+            set_zoom(db, ZOOM_INCREMENT);
+        } else {
+            set_zoom(db, ZOOM_DECREMENT);
+        }
         viewport_refresh_vp(db);
     }
 

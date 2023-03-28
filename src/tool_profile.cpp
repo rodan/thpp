@@ -4,12 +4,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <math.h>
+#include "tlpi_hdr.h"
 #include "proj.h"
 #include "implot.h"
 #include "tool_profile.h"
 
-double *xdata = NULL;
-double *ydata = NULL;
+static double *xdata = NULL;
+static double *ydata = NULL;
 
 void line_plot_calc(th_db_t * db, double *data, const uint16_t data_len)
 {
@@ -64,8 +65,7 @@ void line_plot(th_db_t * db)
     double ymin = 0.0;
     double ymax = 0.0;
 
-
-    if (db->pr.do_refresh) {
+    if (db->pr.do_refresh || !xdata || !ydata) {
 
         if (xdata != NULL) {
             free(xdata);
@@ -98,13 +98,26 @@ void line_plot(th_db_t * db)
         data_len = len;
 
         xdata = (double *) calloc(data_len, sizeof(double));
+        if (xdata == NULL) {
+            errMsg("allocating buffer");
+            return;
+        }
         ydata = (double *) calloc(data_len, sizeof(double));
+        if (ydata == NULL) {
+            errMsg("allocating buffer");
+            return;
+        }
 
         for (i = 0; i < data_len; i++) {
             xdata[i] = i;
         }
 
         line_plot_calc(db, ydata, data_len);
+    }
+
+    if ((xdata == NULL) || (ydata == NULL)) {
+        printf("saved %s, %p %p %d %d\n", db->p.in_file, (void *) xdata, (void *) ydata, data_len, db->pr.active);
+        return;
     }
 
     if (ImPlot::BeginPlot("profile")) {
@@ -144,8 +157,8 @@ void tool_profile(bool *p_open, th_db_t * db)
         return;
     }
 
-    if ((db->in_th == NULL) || (db->out_th == NULL))  {
-        ImGui::Text("file not opened");
+    if ((db->in_th == NULL) || (db->out_th == NULL) || (!db->pr.active))  {
+        ImGui::Text("profile not active or file not opened");
         ImGui::End();
         return;
     }

@@ -193,7 +193,7 @@ uint32_t highlight_color(const uint32_t color, const uint32_t color_highlight)
 
 uint8_t image_zoom_realsr(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom)
 {
-    unsigned err = 0;
+    int err = 0;
     pid_t pid;
     int status;
     unsigned w, h;
@@ -203,21 +203,30 @@ uint8_t image_zoom_realsr(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom)
         return EXIT_FAILURE;
     }
     
-    int fd_src, fd_dst;
     char tmp_src[] = "/tmp/thpp_upscale_src_XXXXXX";
     char tmp_dst[] = "/tmp/thpp_upscale_dst_XXXXXX";
-    fd_src = mkstemp(tmp_src);
-    fd_dst = mkstemp(tmp_dst);
+
+    umask(077);
+
+    err = mkstemp(tmp_src);
+    if (err == -1) {
+        errMsg("during mkstemp");
+        return EXIT_FAILURE;
+    }
+
+    err = mkstemp(tmp_dst);
+    if (err == -1) {
+        errMsg("during mkstemp");
+        return EXIT_FAILURE;
+    }
 
     char *tmp_dst_ext = (char *) calloc(strlen(tmp_dst) + 5, sizeof(char));
 
     snprintf(tmp_dst_ext, strlen(tmp_dst) + 5, "%s.png", tmp_dst);
 
-    umask(077);
-
     err = lodepng_encode32_file(tmp_src, src->data, src->width, src->height);
     if (err) {
-        fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
+        fprintf(stderr, "encoder error %d: %s\n", err, lodepng_error_text(err));
     }
 
     switch (fork()) {
@@ -236,21 +245,19 @@ uint8_t image_zoom_realsr(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom)
 
             if (status != 0) {
                 fprintf(stderr, "realesrgan-ncnn-vulkan exited in error\n");
+                free(tmp_dst_ext);
                 return EXIT_FAILURE;
             }
 
             if (WIFEXITED(status) || WIFSIGNALED(status)) {
-                // populated rjpg header with info from the json file
-                //if (rjpg_extract_json(th, tmp_json) == EXIT_FAILURE) {
-                //    return EXIT_FAILURE;
-                //}
-                //unlink(tmp_json);
                 err = lodepng_decode32_file(&dst->data, &w, &h, tmp_dst_ext);
                 if (err) {
-                    fprintf(stderr, "dencoder error %u: %s\n", err, lodepng_error_text(err));
+                    fprintf(stderr, "decoder error %d: %s\n", err, lodepng_error_text(err));
                 }
+                unlink(tmp_dst);
+                unlink(tmp_src);
+                unlink(tmp_dst_ext);
                 free(tmp_dst_ext);
-
                 return EXIT_SUCCESS;
             }
         }

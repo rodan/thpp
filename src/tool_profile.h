@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 void tool_profile(bool *p_open, th_db_t * db);
-void line_plot_free();
+void line_plot_free(void);
 
 #ifdef __cplusplus
 }

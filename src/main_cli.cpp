@@ -89,7 +89,7 @@ void cleanup(th_db_t *db)
         free_textures(1, &db->fe.vp_texture);
     }
 
-    line_plot_free();
+    memset(&db, 0, sizeof(th_db_t));
 }
 
 void termination_handler(int)
@@ -97,6 +97,7 @@ void termination_handler(int)
     th_db_t *db = db_get_ptr();
 
     cleanup(db);
+    line_plot_free();
     file_library_free();
     _exit(EXIT_SUCCESS);
 }
