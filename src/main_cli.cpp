@@ -89,7 +89,7 @@ void cleanup(th_db_t *db)
         free_textures(1, &db->fe.vp_texture);
     }
 
-    memset(&db, 0, sizeof(th_db_t));
+    //memset(db, 0, sizeof(th_db_t));
 }
 
 void termination_handler(int)
@@ -145,7 +145,9 @@ int main_cli(th_db_t * db, uint8_t flags)
         dtv_new(&(db->in_th));
         db->in_th->subtype = file_subtype;
 
-        dtv_open(db->in_th, db->p.in_file);
+        if (dtv_open(db->in_th, db->p.in_file) == EXIT_FAILURE) {
+            return EXIT_FAILURE;
+        }
         dtv_populate_temp_arr(db);
 
         th_width = db->in_th->head.dtv->nst;
@@ -176,7 +178,9 @@ int main_cli(th_db_t * db, uint8_t flags)
         rjpg_new(&(db->in_th));
         rjpg_new(&(db->out_th));
 
-        rjpg_open(db->in_th, db->p.in_file);
+        if (rjpg_open(db->in_th, db->p.in_file) == EXIT_FAILURE) {
+            return EXIT_FAILURE;
+        }
 
         th_width = db->in_th->head.rjpg->raw_th_img_width;
         th_height = db->in_th->head.rjpg->raw_th_img_height;

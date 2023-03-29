@@ -165,7 +165,6 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
     switch (fork()) {
     case -1:
         errExit("fork");
-
     case 0:
         if (fd_json < 0) {
             errExit("during mkstemp");
@@ -177,7 +176,8 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
         for (;;) {
             pid = waitpid(-1, &status, WUNTRACED);
             if (pid == -1) {
-                errExit("during waitpid");
+                errMsg("during waitpid");
+                return EXIT_FAILURE;
             }
 
             if (status != 0) {

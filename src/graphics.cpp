@@ -299,8 +299,7 @@ uint8_t image_zoom(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom_level, con
     uint16_t w = src->width;
     uint16_t h = src->height;
 
-    printf("zoom %d %d\n", zoom_level, interpolation);
-
+    //printf("zoom %d %d\n", zoom_level, interpolation);
     switch (interpolation) {
         case ZOOM_INTERP_NEAREST:
         case ZOOM_INTERP_REALSR:

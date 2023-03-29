@@ -45,15 +45,18 @@ uint8_t dtv_open(tgram_t * thermo, char *dtv_file)
     uint8_t *fm;                ///< dtv file contents copied to memory
     uint8_t *buf;               ///< read buffer
     ssize_t cnt, rcnt;          ///< read counters
-    ssize_t frame_sz;           ///< total size of frames in the input file
+    uint32_t frame_sz;          ///< total size of frames in the input file
     uint8_t ret = EXIT_SUCCESS;
 
     if ((fd = open(dtv_file, O_RDONLY)) < 0) {
-        errExit("opening input file");
+        errMsg("opening input file");
+        return EXIT_FAILURE;
     }
 
     if (fstat(fd, &st) < 0) {
-        errExit("reading input file");
+        errMsg("reading input file");
+        close(fd);
+        return EXIT_FAILURE;
     }
 
     fm = (uint8_t *) calloc(st.st_size, sizeof(uint8_t));
@@ -84,12 +87,24 @@ uint8_t dtv_open(tgram_t * thermo, char *dtv_file)
     memcpy(thermo->head.dtv, fm, DTV_HEADER_SZ);
 
     frame_sz = thermo->head.dtv->nst * thermo->head.dtv->nstv * thermo->head.dtv->frn;
-    if (frame_sz < 256 * 248) {
-        fprintf(stderr, "error: unexpected image size %dx%dx%d\n", thermo->head.dtv->nst,
-                thermo->head.dtv->nstv, thermo->head.dtv->frn);
-        free(buf);
-        free(fm);
-        exit(EXIT_FAILURE);
+
+    if (thermo->subtype == TH_DTV_VER2) {
+        if (st.st_size != frame_sz + DTV_HEADER_SZ) {
+            fprintf(stderr, "error: unexpected image size %d*%d*%d+%d != %ld\n", thermo->head.dtv->nst,
+                thermo->head.dtv->nstv, thermo->head.dtv->frn, DTV_HEADER_SZ, st.st_size);
+            ret = EXIT_FAILURE;
+            goto cleanup;
+        }
+    } else if (thermo->subtype == TH_DTV_VER3) {
+        if (st.st_size != frame_sz * 2 + DTV_HEADER_SZ) {
+            fprintf(stderr, "error: unexpected image size 2*%d*%d*%d+%d != %ld\n", thermo->head.dtv->nst,
+                thermo->head.dtv->nstv, thermo->head.dtv->frn, DTV_HEADER_SZ, st.st_size);
+            ret = EXIT_FAILURE;
+            goto cleanup;
+        }
+    } else {
+        ret = EXIT_FAILURE;
+        goto cleanup;
     }
 
     // populate thermo frame
@@ -111,9 +126,9 @@ uint8_t dtv_open(tgram_t * thermo, char *dtv_file)
         ret = EXIT_FAILURE;
     }
 
+cleanup:
     free(buf);
     free(fm);
-
     return ret;
 }
 
@@ -168,10 +183,11 @@ uint8_t dtv_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id)
 // function that allocates and populates d->out_th->frame based on d->in_th->frame
 uint8_t dtv_rescale(th_db_t *d)
 {
-    ssize_t frame_sz;
-    ssize_t i;
+    uint32_t frame_sz;
+    uint32_t i;
     double ft;
     uint8_t ut;
+    uint16_t wt;
     tgram_t * src_th = d->in_th;
     tgram_t * dst_th = d->out_th;
     th_getopt_t *p = &(d->p);
@@ -182,10 +198,6 @@ uint8_t dtv_rescale(th_db_t *d)
     dst_th->subtype = src_th->subtype;
 
     frame_sz = src_th->head.dtv->nst * src_th->head.dtv->nstv * src_th->head.dtv->frn;
-    if (frame_sz < 256 * 248) {
-        fprintf(stderr, "warning: unexpected image size %dx%dx%d\n", src_th->head.dtv->nst,
-                src_th->head.dtv->nstv, src_th->head.dtv->frn);
-    }
 
     // dst thermo frame
     if (src_th->subtype == TH_DTV_VER2) {
@@ -220,8 +232,28 @@ uint8_t dtv_rescale(th_db_t *d)
         if (dst_th->framew == NULL) {
             errExit("allocating buffer");
         }
-            
-        memcpy(dst_th->framew, src_th->framew, frame_sz * 2);
+
+        if ((p->flags & OPT_SET_NEW_MIN) || (p->flags & OPT_SET_NEW_MAX)) {
+            dst_th->head.dtv->tsc[1] = p->t_min;
+            dst_th->head.dtv->tsc[0] = (p->t_max - p->t_min) / 65536.0;
+
+            for (i = 0; i < frame_sz; i++) {
+                ft = ((src_th->head.dtv->tsc[0] * src_th->framew[i] + src_th->head.dtv->tsc[1] -
+                       dst_th->head.dtv->tsc[1]) / dst_th->head.dtv->tsc[0]);
+                ft += 0.5;
+                if (ft < 0) {
+                    wt = 0;
+                } else if (ft > 65535) {
+                    wt = 65535;
+                } else {
+                    wt = (uint16_t) ft;
+                }
+                dst_th->framew[i] = wt;
+            }
+        } else {
+            // min and max do not change, so copy the raw thermal values verbatim
+            memcpy(dst_th->framew, src_th->framew, frame_sz * 2);
+        }
     } else {
         return EXIT_FAILURE;
     }

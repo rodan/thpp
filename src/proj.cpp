@@ -132,8 +132,8 @@ uint16_t get_file_type(const char *in_file, uint16_t *type, uint16_t *subtype)
     uint8_t *buf;
     uint8_t ret = FT_UNK;
     static const uint8_t sig_exif[4] = { 0x45, 0x78, 0x69, 0x66 };      // appears at file offset 0x18
-    static const uint8_t sig_dtv_v2[3] = { 0x02, 0x00, 0x00 };   // appears at offset 0x1
-    static const uint8_t sig_dtv_v3[3] = { 0x03, 0x00, 0x00 };   // appears at offset 0x1
+    static const uint8_t sig_dtv_v2[1] = { 0x02 };   // appears at offset 0x1
+    static const uint8_t sig_dtv_v3[1] = { 0x03 };   // appears at offset 0x1
 
     // read input file
     if ((fd = open(in_file, O_RDONLY)) < 0) {
@@ -151,7 +151,7 @@ uint16_t get_file_type(const char *in_file, uint16_t *type, uint16_t *subtype)
         exit(EXIT_FAILURE);
     }
 
-    if (memcmp(buf + 1, sig_dtv_v2, 3) == 0) {
+    if (memcmp(buf + 1, sig_dtv_v2, 1) == 0) {
         ret = TH_IRTIS_DTV;
         if (type) {
             *type = TH_IRTIS_DTV;
@@ -159,7 +159,7 @@ uint16_t get_file_type(const char *in_file, uint16_t *type, uint16_t *subtype)
         if (subtype) {
             *subtype = TH_DTV_VER2;
         }
-    } else if (memcmp(buf + 1, sig_dtv_v3, 3) == 0) {
+    } else if (memcmp(buf + 1, sig_dtv_v3, 1) == 0) {
         ret = TH_IRTIS_DTV;
         if (type) {
             *type = TH_IRTIS_DTV;

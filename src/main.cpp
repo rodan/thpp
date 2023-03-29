@@ -83,7 +83,7 @@ int main(int argc, char **argv)
     char wtitle[40];
     th_db_t *db = db_get_ptr(); 
 
-    memset(db, 0, sizeof(th_db));
+    memset(db, 0, sizeof(th_db_t));
 
     parse_options(argc, argv, &(db->p));
     gp_init(&db->p);
