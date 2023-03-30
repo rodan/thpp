@@ -10,3 +10,6 @@
 [submodule "lib/imgui-filebrowser"]
 	path = lib/imgui-filebrowser
 	url = https://github.com/AirGuanZ/imgui-filebrowser.git
+[submodule "lib/TinyTIFF"]
+	path = lib/TinyTIFF
+	url = https://github.com/jkriege2/TinyTIFF.git
