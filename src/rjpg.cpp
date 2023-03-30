@@ -61,7 +61,6 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     char *model;
     uint8_t ret = EXIT_SUCCESS;
     int img_fd = -1;
-    uint32_t i;
 
     rjpg_header_t *h = th->head.rjpg;
 
@@ -158,15 +157,19 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
             ret = EXIT_FAILURE;
             goto cleanup;
         } else {
-            const uint32_t width=TinyTIFFReader_getWidth(tiffr);
-            const uint32_t height=TinyTIFFReader_getHeight(tiffr);
-            const uint16_t samples=TinyTIFFReader_getSamplesPerPixel(tiffr);
-            const uint16_t bps=TinyTIFFReader_getBitsPerSample(tiffr, 0);
+            const uint32_t tiff_width=TinyTIFFReader_getWidth(tiffr);
+            const uint32_t tiff_height=TinyTIFFReader_getHeight(tiffr);
+            //const uint16_t tiff_spp=TinyTIFFReader_getSamplesPerPixel(tiffr);
+            //const uint16_t tiff_bps=TinyTIFFReader_getBitsPerSample(tiffr, 0);
 
-            printf("size %ux%u, %u samples per pixel, %u bits each\n", width, height, samples, bps);
+            //printf("size %ux%u, %u samples per pixel, %u bits each\n", width, height, samples, bps);
+            if ((tiff_width != h->raw_th_img_width) || (tiff_height != h->raw_th_img_height)) {
+                fprintf(stderr, "unexpected image size %u != %u or %u ! %u\n", tiff_width, h->raw_th_img_width, tiff_height, h->raw_th_img_height);
+                ret = EXIT_FAILURE;
+                goto cleanup;
+            }
 
-            th->framew = (uint16_t*) calloc(width*height, sizeof(uint16_t));
-
+            th->framew = (uint16_t*) calloc(tiff_width*tiff_height, sizeof(uint16_t));
             TinyTIFFReader_getSampleData(tiffr, th->framew, 0);
         }
         TinyTIFFReader_close(tiffr);
@@ -178,6 +181,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
 
 cleanup:
 
+    unlink(img_name);
     close(img_fd);
 
 cleanup_no_close:

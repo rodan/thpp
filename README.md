@@ -51,17 +51,24 @@ currently supported image formats:
 
 camera | image type | image encoding
 --- | --- | ---
-Flir ThermaCAM E25 | radiometric JPG 160x120 | png inside jpeg exif, 16bpp
-Flir E5 | radiometric JPG 120x90, 320x240 | png inside jpeg exif, 16bpp
-Flir SC660 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bpp
-Irtis 200, 2000+ | ver2, ver3 DTV files, single frame | raw 8bpp, raw 16bpp
+Flir ThermaCAM E25 | radiometric JPG 160x120 | png inside jpeg exif, 16bps
+Flir E5 | radiometric JPG 120x90, 320x240 | png inside jpeg exif, 16bps
+Flir SC660 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Irtis 200, 2000+ | ver2, ver3 DTV files, single frame | raw 8bps, raw 16bps
 
 currently supported functions:
 
-image type | export to png | palette change | rescale | zoom
---- | --- | --- | --- | --- 
-rJPG| yes | yes | yes | yes
-dtv | yes | yes | yes | yes
+ * export radiometric file to png
+ * get the temperature of any pixel of the image
+ * select color presentation based on 13 in-built palettes
+ * thermal scale
+ * rescale image based on custom temperature limits
+ * reconfigure camera data (distance to target, emissivity, atmosperic temperature, relative humidity) for temperature compensation
+ * zoom image (useful only for the low-resolution formats). 'nearest' interpolation is used by default with optional support for realesrgan if binary is present on the system
+ * temperature histogram
+ * thumbnail view of all files in a directory in an image library window
+ * customizable file properties table
+ * initial support for line profile
 
 ### Build requirements
 
