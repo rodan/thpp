@@ -98,10 +98,12 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     h->raw_th_img_height = strtol(get(item_obj, "RawThermalImageHeight"), NULL, 10);
     model = get(item_obj, "CameraModel");
 
-    if (memcmp(model, ID_THERMACAM_E25, min(strlen(model), strlen(ID_THERMACAM_E25))) == 0) {
-        th->subtype = TH_FLIR_THERMACAM_E25;
-    } else if (memcmp(model, ID_FLIR_E5, min(strlen(model), strlen(ID_FLIR_E5))) == 0) {
-        th->subtype = TH_FLIR_E5;
+    if (strlen(model) > 2) {
+        if (memcmp(model, ID_THERMACAM_E25, min(strlen(model), strlen(ID_THERMACAM_E25))) == 0) {
+            th->subtype = TH_FLIR_THERMACAM_E25;
+        } else if (memcmp(model, ID_FLIR_E5, min(strlen(model), strlen(ID_FLIR_E5))) == 0) {
+            th->subtype = TH_FLIR_E5;
+        }
     }
 
     // fill raw_th_img
@@ -181,8 +183,12 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
 
 cleanup:
 
-    unlink(img_name);
-    close(img_fd);
+    if (img_name) {
+        unlink(img_name);
+    }
+    if (img_fd > 0) {
+        close(img_fd);
+    }
 
 cleanup_no_close:
 

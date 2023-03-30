@@ -51,6 +51,8 @@ currently supported image formats:
 
 camera | image type | image encoding
 --- | --- | ---
+DJI zenmuse | radiometric JPG 640x512 | tiff inside jpeg exif, 16bps
+Flir AX8 | radiometric JPG 80x60 | png inside jpeg exif, 16bps
 Flir ThermaCAM E25 | radiometric JPG 160x120 | png inside jpeg exif, 16bps
 Flir E5 | radiometric JPG 120x90, 320x240 | png inside jpeg exif, 16bps
 Flir SC660 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
@@ -64,7 +66,7 @@ currently supported functions:
  * thermal scale
  * rescale image based on custom temperature limits
  * reconfigure camera data (distance to target, emissivity, atmosperic temperature, relative humidity) for temperature compensation
- * zoom image (useful only for the low-resolution formats). 'nearest' interpolation is used by default with optional support for realesrgan if binary is present on the system
+ * zoom image (useful only for the low-resolution formats). 'nearest' interpolation is used by default with optional support for real-ESRGAN if binary is present on the system
  * temperature histogram
  * thumbnail view of all files in a directory in an image library window
  * customizable file properties table
