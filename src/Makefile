@@ -5,6 +5,10 @@ LODEPNG_DIR = ../lib/lodepng
 LODEPNG_LIB = ${LODEPNG_DIR}/lodepng.o
 LODEPNG_SRC_C = ${LODEPNG_DIR}/lodepng.cpp
 
+TINYTIFF_DIR = ../lib/TinyTIFF/src
+TINYTIFF_LIB = ${TINYTIFF_DIR}/tinytiffreader.o
+TINYTIFF_SRC_C = ${TINYTIFF_DIR}/tinytiffreader.c
+
 TLPI_DIR  = ../lib/tlpi-lib
 TLPI_LIB  = ${TLPI_DIR}/libtlpi.a
 
@@ -20,10 +24,10 @@ IMPLOT_DIR = ../lib/implot/
 IMPLOT_SRC = $(IMPLOT_DIR)/implot.cpp $(IMPLOT_DIR)/implot_demo.cpp $(IMPLOT_DIR)/implot_items.cpp
 IMPLOT_OBJ = $(addsuffix .o, $(basename $(IMPLOT_SRC)))
 
-INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I $(IMPLOT_DIR) -I `apr-1-config --includedir` 
+INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TINYTIFF_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I $(IMPLOT_DIR) -I `apr-1-config --includedir` 
 LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp json_helper.cpp dtv.cpp rjpg.cpp graphics.cpp main_menu.cpp viewport.cpp tool_processing.cpp tool_histogram.cpp tool_profile.cpp tool_scale.cpp tool_preferences.cpp help_about.cpp file_library.cpp file_properties.cpp # $(wildcard *.cpp)
 LOCAL_SRC_C := # $(wildcard *.c)
-SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C)
+SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C) $(TINYTIFF_SRC_C)
 #EXOBJECT   = $(PROJ).o
 EXOUTPUT   = $(PROJ)
 
@@ -67,7 +71,7 @@ COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN)
 
 all : lib version.h $(EXOUTPUT)
 
-lib : $(LODEPNG_LIB)
+lib : $(LODEPNG_LIB) $(TINYTIFF_LIB)
 
 $(TLPI_LIB): force_look
 	@echo "looking into subdir $(TLPI_DIR)"
@@ -84,9 +88,9 @@ version.h: $(SRC)
 	@echo -e " * $(@F)"
 	@$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
 
-$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ) $(IMPLOT_OBJ)
+$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TINYTIFF_LIB) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ) $(IMPLOT_OBJ)
 	@echo -e "\n>> Building $@ as target $(TARGET)"
-	@$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TLPI_LIB) $(IMGUI_OBJ) $(IMPLOT_OBJ) -o $@ && size $@
+	$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TINYTIFF_LIB) $(TLPI_LIB) $(IMGUI_OBJ) $(IMPLOT_OBJ) -o $@ && size $@
 
 allgen : ${GEN_EXE}
 

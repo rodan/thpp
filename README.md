@@ -25,6 +25,11 @@ png decode/encode functionality provided by
  author:        Lode Vandevenne
  license:       zlib (GPL compatible)
 
+tiff decode/encode functionality provided by
+ source:        https://github.com/jkriege2/TinyTIFF
+ author:        Jan W. Krieger
+ license:       LGPL-3.0
+
 error checking based on the Linux Programming Interface book's library
  source:        https://nostarch.com/tlpi/
  author:        Michael Kerrisk
@@ -44,19 +49,19 @@ git clone --recurse-submodules git@github.com:rodan/thpp.git
 
 currently supported image formats:
 
-camera | image type
---- | ---
-Irtis 200 | ver2 DTV 256x248 pixel, single frame
-Irtis 2000 | ver3 DTV including panoramas, single frame
-Flir ThermaCAM E25 | radiometric JPG 160x120
-Flir E5 | radiometric JPG 120x90, 320x240
+camera | image type | image encoding
+--- | --- | ---
+Flir ThermaCAM E25 | radiometric JPG 160x120 | png inside jpeg exif, 16bpp
+Flir E5 | radiometric JPG 120x90, 320x240 | png inside jpeg exif, 16bpp
+Flir SC660 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bpp
+Irtis 200, 2000+ | ver2, ver3 DTV files, single frame | raw 8bpp, raw 16bpp
 
 currently supported functions:
 
 image type | export to png | palette change | rescale | zoom
 --- | --- | --- | --- | --- 
-dtv | yes | yes | yes | yes
 rJPG| yes | yes | yes | yes
+dtv | yes | yes | yes | yes
 
 ### Build requirements
 

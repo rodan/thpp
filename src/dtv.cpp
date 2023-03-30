@@ -235,7 +235,7 @@ uint8_t dtv_rescale(th_db_t *d)
 
         if ((p->flags & OPT_SET_NEW_MIN) || (p->flags & OPT_SET_NEW_MAX)) {
             dst_th->head.dtv->tsc[1] = p->t_min;
-            dst_th->head.dtv->tsc[0] = (p->t_max - p->t_min) / 65536.0;
+            dst_th->head.dtv->tsc[0] = (p->t_max - p->t_min) / 65535.0;
 
             for (i = 0; i < frame_sz; i++) {
                 ft = ((src_th->head.dtv->tsc[0] * src_th->framew[i] + src_th->head.dtv->tsc[1] -

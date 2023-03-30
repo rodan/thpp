@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <arpa/inet.h>
+#include "tinytiffreader.h"
 #include "apr_base64.h"
 #include "json_helper.h"
 #include "lodepng.h"
@@ -20,7 +21,9 @@
 #define                  RJPG_BUF_SIZE  2048
 #define    RJPG_EXIFTOOL_BASE64_PREFIX  7       ///< number of bytes that need to be skipped during base64_decode
 
-//#define   RJPG_CREATE_INTERMEDIATE_PNG_FILE
+const uint8_t magic_number_png[8] = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
+const uint8_t magic_number_tiff_1[4] = {0x49, 0x49, 0x2a, 0x00};
+const uint8_t magic_number_tiff_2[4] = {0x4d, 0x4d, 0x00, 0x2a};
 
 uint8_t rjpg_new(tgram_t ** thermo)
 {
@@ -50,12 +53,15 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
 {
     json_object *root_obj = NULL;
     json_object *item_obj = NULL;
-    char *png_name;
-    uint8_t *png_contents;
+    char *img_name = NULL;
+    uint8_t *img_contents = NULL;
     int decode_len;
     unsigned x, y;
     unsigned err = 0;
     char *model;
+    uint8_t ret = EXIT_SUCCESS;
+    int img_fd = -1;
+    uint32_t i;
 
     rjpg_header_t *h = th->head.rjpg;
 
@@ -63,13 +69,15 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
 
     if (root_obj == NULL) {
         fprintf(stderr, "unable to parse json file\n");
-        return EXIT_FAILURE;
+        ret = EXIT_FAILURE;
+        goto cleanup;
     }
 
     item_obj = json_object_array_get_idx(root_obj, 0);
     if (item_obj == NULL) {
         fprintf(stderr, "unable to parse json file\n");
-        return EXIT_FAILURE;
+        ret = EXIT_FAILURE;
+        goto cleanup;
     }
 
     h->emissivity = strtof(get(item_obj, "Emissivity"), NULL);
@@ -101,55 +109,90 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     decode_len =
         apr_base64_decode_len(get(item_obj, "RawThermalImage") + RJPG_EXIFTOOL_BASE64_PREFIX);
 
-    png_name = (char *)calloc(strlen(json_file) + 5, sizeof(char));
-    if (png_name == NULL) {
+    img_name = (char *)calloc(strlen(json_file) + 5, sizeof(char));
+    if (img_name == NULL) {
         errExit("allocating png filename");
         exit(EXIT_FAILURE);
     }
 
-    png_contents = (uint8_t *) calloc(decode_len, sizeof(uint8_t));
-    if (png_contents == NULL) {
+    img_contents = (uint8_t *) calloc(decode_len, sizeof(uint8_t));
+    if (img_contents == NULL) {
         errExit("allocating png file");
         exit(EXIT_FAILURE);
     }
 
-    apr_base64_decode((char *)png_contents,
+    apr_base64_decode((char *)img_contents,
                       get(item_obj, "RawThermalImage") + RJPG_EXIFTOOL_BASE64_PREFIX);
 
-#ifdef RJPG_CREATE_INTERMEDIATE_PNG_FILE
-    int png_fd;
+    snprintf(img_name, strlen(json_file) + 5, "%s.img", json_file);
 
-    snprintf(png_name, strlen(json_file) + 5, "%s.png", json_file);
-
-    if ((png_fd = open(png_name, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
-        errMsg("opening file %s", png_name);
-        goto cleanup;
+    if ((img_fd = open(img_name, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
+        errMsg("opening file %s", img_name);
+        ret = EXIT_FAILURE;
+        goto cleanup_no_close;
     }
 
-    if (write(png_fd, png_contents, decode_len) < decode_len) {
+    if (write(img_fd, img_contents, decode_len) < decode_len) {
         errMsg("writing");
-        close(png_fd);
+        ret = EXIT_FAILURE;
         goto cleanup;
     }
-
-    close(png_fd);
-#endif
 
     h->raw_th_img_sz = h->raw_th_img_width * h->raw_th_img_height;
 
-    // th->framew gets allocated by lodepng_decode_memory()
-    err = lodepng_decode_memory((uint8_t **)&(th->framew), &x, &y, png_contents, decode_len, LCT_GREY, 16);
-    if (err) {
-        fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
+    if (memcmp(img_contents, magic_number_png, 8) == 0) {
+        // th->framew gets allocated by lodepng_decode_memory()
+        err = lodepng_decode_memory((uint8_t **)&(th->framew), &x, &y, img_contents, decode_len, LCT_GREY, 16);
+        if (err) {
+            fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
+            ret = EXIT_FAILURE;
+            goto cleanup;
+        }
+    } else if ((memcmp(img_contents, magic_number_tiff_1, 4) == 0) || 
+               (memcmp(img_contents, magic_number_tiff_2, 4) == 0)) {
+
+        TinyTIFFReaderFile* tiffr=NULL;
+        tiffr=TinyTIFFReader_open(img_name); 
+        if (!tiffr) {
+            fprintf(stderr, "decoder error TinyTIFFReader_open() has failed\n");
+            ret = EXIT_FAILURE;
+            goto cleanup;
+        } else {
+            const uint32_t width=TinyTIFFReader_getWidth(tiffr);
+            const uint32_t height=TinyTIFFReader_getHeight(tiffr);
+            const uint16_t samples=TinyTIFFReader_getSamplesPerPixel(tiffr);
+            const uint16_t bps=TinyTIFFReader_getBitsPerSample(tiffr, 0);
+
+            printf("size %ux%u, %u samples per pixel, %u bits each\n", width, height, samples, bps);
+
+            th->framew = (uint16_t*) calloc(width*height, sizeof(uint16_t));
+
+            TinyTIFFReader_getSampleData(tiffr, th->framew, 0);
+        }
+        TinyTIFFReader_close(tiffr);
+    } else {
+        fprintf(stderr, "file format not recognized\n");
+        ret = EXIT_FAILURE;
         goto cleanup;
     }
 
- cleanup:
-    json_object_put(root_obj);
+cleanup:
 
-    free(png_name);
-    free(png_contents);
-    return EXIT_SUCCESS;
+    close(img_fd);
+
+cleanup_no_close:
+
+    if (root_obj) {
+        json_object_put(root_obj);
+    }
+    if (img_name) {
+        free(img_name);
+    }
+    if (img_contents) {
+        free(img_contents);
+    }
+
+    return ret;
 }
 
 uint8_t rjpg_open(tgram_t * th, char *in_file)
@@ -210,7 +253,7 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id)
         return EXIT_FAILURE;
     }
 
-    pal_rgb = pal_init_lut(pal_id, PAL_8BPP);
+    pal_rgb = pal_init_lut(pal_id, PAL_16BPP);
     if (pal_rgb == NULL) {
         fprintf(stderr, "palette generation error\n");
         exit(EXIT_FAILURE);
@@ -220,7 +263,7 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id)
     th_height = th->head.rjpg->raw_th_img_height;
 
     for (i = 0; i < th_width * th_height; i++) {
-        memcpy(image + (i * 4), &(pal_rgb[th->frame[i] * 3]), 3);
+        memcpy(image + (i * 4), &(pal_rgb[th->framew[i] * 3]), 3);
         image[i*4 + 3] = 255; // alpha channel
     }
 
@@ -259,8 +302,8 @@ uint8_t rjpg_rescale(th_db_t *d)
     memcpy((uint8_t *) dst_th->head.rjpg, (uint8_t *) src_th->head.rjpg, sizeof(rjpg_header_t));
 
     // alloc frame mem
-    dst_th->frame = (uint8_t *) calloc(h->raw_th_img_sz, sizeof(uint8_t));
-    if (dst_th->frame == NULL) {
+    dst_th->framew = (uint16_t *) calloc(h->raw_th_img_sz, sizeof(uint16_t));
+    if (dst_th->framew == NULL) {
         errMsg("allocating buffer");
         return EXIT_FAILURE;
     }
@@ -366,10 +409,6 @@ uint8_t rjpg_rescale(th_db_t *d)
         }
     }
 
-    h->t_res = (h->t_max - h->t_min) / 255;
-
-    //printf("t_min %.2f, t_max %.2f, t_res %.2f\n", h->t_min, h->t_max, h->t_res);
-
     if (p->flags & OPT_SET_NEW_MIN) {
         l_min = p->t_min;
     } else {
@@ -387,17 +426,20 @@ uint8_t rjpg_rescale(th_db_t *d)
         return EXIT_FAILURE;
     }
 
-    l_res = (l_max - l_min) / 255;
+    l_res = (l_max - l_min) / 65535.0;
+    h->t_min = l_min;
+    h->t_max = l_max;
+    h->t_res = l_res;
 
     // rescale image
     for (i = 0; i < h->raw_th_img_sz; i++) {
         ftemp = ((d->temp_arr[i] - l_min) / l_res) + 0.5;
         if (ftemp < 0) {
             ftemp = 0;
-        } else if (ftemp > 255) {
-            ftemp = 255;
+        } else if (ftemp > 65535) {
+            ftemp = 65535.0;
         }
-        dst_th->frame[i] = ftemp;
+        dst_th->framew[i] = ftemp;
     }
 
     return EXIT_SUCCESS;
