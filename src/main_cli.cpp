@@ -137,7 +137,7 @@ int main_cli(th_db_t * db, uint8_t flags)
     get_file_type(db->p.in_file, &file_type, &file_subtype);
 
     if (lstat(db->p.in_file, &db->sb) == -1) {
-        errExit("lstat");
+        return EXIT_FAILURE;
     }
 
     if (file_type == TH_IRTIS_DTV) {
@@ -215,7 +215,7 @@ int main_cli(th_db_t * db, uint8_t flags)
         db->rgba_vp = &db->rgba[0];
     }
 
-    if (flags & GENERATE_OUT_FILE) {
+    if ((flags & GENERATE_OUT_FILE) && (db->p.out_file != NULL)) {
         err =
             lodepng_encode32_file(db->p.out_file, db->rgba_vp->data, th_width * db->p.zoom_level,
                                   th_height * db->p.zoom_level);

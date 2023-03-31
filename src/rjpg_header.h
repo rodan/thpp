@@ -1,6 +1,8 @@
 #ifndef __RJPG_HEADER_H__
 #define __RJPG_HEADER_H__
 
+#define  TAG_SZ_MAX  32
+
 struct rjpg_header {
     double emissivity;
     double distance;
@@ -24,6 +26,8 @@ struct rjpg_header {
     double t_max;
     uint32_t raw_th_img_sz;
     uint8_t *raw_th_img;
+    char camera_make[TAG_SZ_MAX];
+    char camera_model[TAG_SZ_MAX];
 };
 
 typedef struct rjpg_header rjpg_header_t;

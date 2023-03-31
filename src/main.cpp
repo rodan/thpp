@@ -88,8 +88,11 @@ int main(int argc, char **argv)
     parse_options(argc, argv, &(db->p));
     gp_init(&db->p);
     pal_init();
-    if (main_cli(db, SETUP_SIGHANDLER | GENERATE_OUT_FILE) == EXIT_FAILURE) {
-        return EXIT_FAILURE;
+
+    if (db->p.in_file != NULL) {
+        if (main_cli(db, SETUP_SIGHANDLER | GENERATE_OUT_FILE) == EXIT_FAILURE) {
+            return EXIT_FAILURE;
+        }
     }
 
     snprintf(wtitle, 39, "Thermal Processing Panel v%d.%d", VER_MAJOR, VER_MINOR);

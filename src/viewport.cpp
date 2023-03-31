@@ -17,6 +17,11 @@ uint8_t viewport_refresh_vp(th_db_t * db)
 
     //load_texture_from_file(db->p.out_file, &db->fe.vp_texture, &vp_width, &vp_height);
     db->fe.actual_zoom = pref->zoom_level;
+
+    if (db->rgba_vp == NULL) {
+        return EXIT_FAILURE;
+    }
+
     db->fe.vp_width = db->rgba_vp->width;
     db->fe.vp_height = db->rgba_vp->height;
 
@@ -24,7 +29,10 @@ uint8_t viewport_refresh_vp(th_db_t * db)
         prev_texture = db->fe.vp_texture;
     }
 
-    load_texture_from_mem(db->rgba_vp->data, &db->fe.vp_texture, db->fe.vp_width, db->fe.vp_height);
+    if (db->fe.vp_width && db->fe.vp_height) {
+        load_texture_from_mem(db->rgba_vp->data, &db->fe.vp_texture, db->fe.vp_width, db->fe.vp_height);
+        return EXIT_SUCCESS;
+    }
 
     // we should force at least one more frame to be rendered
 

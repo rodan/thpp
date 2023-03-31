@@ -7,7 +7,10 @@
 extern "C" {
 #endif
 
-char *get(struct json_object *new_obj, const char *key);
+char *json_get(struct json_object *new_obj, const char *key);
+uint8_t json_getf(struct json_object *new_obj, const char *key, float *value);
+uint8_t json_getd(struct json_object *new_obj, const char *key, double *value);
+uint8_t json_getw(struct json_object *new_obj, const char *key, uint16_t *value);
 
 #ifdef __cplusplus
 }

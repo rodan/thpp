@@ -117,11 +117,13 @@ uint8_t parse_options(int argc, char *argv[], th_getopt_t * p)
         }
     }
 
+#if 0
     if ((p->in_file == NULL) || (p->out_file == NULL)) {
         fprintf(stderr, "Error: provide input and output files\n");
         show_usage();
         exit(1);
     }
+#endif
 
     return EXIT_SUCCESS;
 }
@@ -131,9 +133,11 @@ uint16_t get_file_type(const char *in_file, uint16_t *type, uint16_t *subtype)
     int fd;
     uint8_t *buf;
     uint8_t ret = FT_UNK;
-    static const uint8_t sig_exif[4] = { 0x45, 0x78, 0x69, 0x66 };      // appears at file offset 0x18
+    static const uint8_t sig_exif[4] = { 0x45, 0x78, 0x69, 0x66 };      // appears at file offset 0x18 or 0x06
     static const uint8_t sig_dtv_v2[1] = { 0x02 };   // appears at offset 0x1
     static const uint8_t sig_dtv_v3[1] = { 0x03 };   // appears at offset 0x1
+    static const uint8_t sig_flir[4] = {0x46, 0x4c, 0x49, 0x52}; // sometimes at offset 0x18
+    static const uint8_t sig_jfif[4] = {0x4a, 0x46, 0x49, 0x46}; // at offset 0x6
 
     // read input file
     if ((fd = open(in_file, O_RDONLY)) < 0) {
@@ -167,7 +171,26 @@ uint16_t get_file_type(const char *in_file, uint16_t *type, uint16_t *subtype)
         if (subtype) {
             *subtype = TH_DTV_VER3;
         }
-    } else if (memcmp(buf + 0x18, sig_exif, 4) == 0) {
+    } else if ((memcmp(buf + 0x18, sig_exif, 4) == 0) || (memcmp(buf + 0x6, sig_exif, 4) == 0)) {
+        // having an exif inside the jpeg file is a requirement
+        ret = TH_FLIR_RJPG;
+        if (type) {
+            *type = TH_FLIR_RJPG;
+        }
+        if (subtype) {
+            *subtype = TH_UNSET;
+        }
+    } else if (memcmp(buf + 0x18, sig_flir, 4) == 0) {
+        ret = TH_FLIR_RJPG;
+        if (type) {
+            *type = TH_FLIR_RJPG;
+        }
+        if (subtype) {
+            *subtype = TH_UNSET;
+        }
+    } else if (memcmp(buf + 0x6, sig_jfif, 4) == 0) {
+        // is it at least a jpeg file? let's hope for the best
+        // should be the last 'else if' rule
         ret = TH_FLIR_RJPG;
         if (type) {
             *type = TH_FLIR_RJPG;

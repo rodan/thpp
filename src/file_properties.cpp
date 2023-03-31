@@ -84,6 +84,22 @@ void file_properties(bool *p_open, th_db_t * db)
         case TH_FLIR_RJPG:
             hf = db->in_th->head.rjpg;
 
+            if (v.camera_make) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("camera make");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%s", hf->camera_make);
+            }
+
+            if (v.camera_model) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("camera model");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%s", hf->camera_model);
+            }
+
             if (v.emissivity) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);

@@ -102,6 +102,8 @@ void tool_preferences(bool *p_open, th_db_t * db)
     ImGui::Separator();
     if (ImGui::TreeNode("file properties")) {
         ImGui::SameLine(); HelpMarker("control the visibility of items in the file properties table");
+        ImGui::Checkbox("camera make", &v->camera_make);
+        ImGui::Checkbox("camera model", &v->camera_model);
         ImGui::Checkbox("image width", &v->raw_th_img_width);
         ImGui::Checkbox("image height", &v->raw_th_img_height);
         ImGui::Checkbox("image date", &v->ir_date);

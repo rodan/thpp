@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <arpa/inet.h>
+#include <locale.h>
 #include "tinytiffreader.h"
 #include "apr_base64.h"
 #include "json_helper.h"
@@ -18,7 +19,6 @@
 #include "proj.h"
 #include "rjpg.h"
 
-#define                  RJPG_BUF_SIZE  2048
 #define    RJPG_EXIFTOOL_BASE64_PREFIX  7       ///< number of bytes that need to be skipped during base64_decode
 
 const uint8_t magic_number_png[8] = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
@@ -58,8 +58,10 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     int decode_len;
     unsigned x, y;
     unsigned err = 0;
-    char *model;
-    uint8_t ret = EXIT_SUCCESS;
+    char *camera_make;
+    char *camera_model;
+    char *rti;
+    uint8_t ret = EXIT_FAILURE;
     int img_fd = -1;
 
     rjpg_header_t *h = th->head.rjpg;
@@ -68,47 +70,132 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
 
     if (root_obj == NULL) {
         fprintf(stderr, "unable to parse json file\n");
-        ret = EXIT_FAILURE;
         goto cleanup;
     }
 
     item_obj = json_object_array_get_idx(root_obj, 0);
     if (item_obj == NULL) {
         fprintf(stderr, "unable to parse json file\n");
-        ret = EXIT_FAILURE;
         goto cleanup;
     }
 
-    h->emissivity = strtof(get(item_obj, "Emissivity"), NULL);
-    h->distance = strtof(get(item_obj, "ObjectDistance"), NULL);
-    h->rh = strtof(get(item_obj, "RelativeHumidity"), NULL) / 100.0;
-    h->alpha1 = strtof(get(item_obj, "AtmosphericTransAlpha1"), NULL);
-    h->alpha2 = strtof(get(item_obj, "AtmosphericTransAlpha2"), NULL);
-    h->beta1 = strtof(get(item_obj, "AtmosphericTransBeta1"), NULL);
-    h->beta2 = strtof(get(item_obj, "AtmosphericTransBeta2"), NULL);
-    h->planckR1 = strtof(get(item_obj, "PlanckR1"), NULL);
-    h->planckR2 = strtof(get(item_obj, "PlanckR2"), NULL);
-    h->planckB = strtof(get(item_obj, "PlanckB"), NULL);
-    h->planckF = strtof(get(item_obj, "PlanckF"), NULL);
-    h->planckO = strtof(get(item_obj, "PlanckO"), NULL);
-    h->atm_trans_X = strtof(get(item_obj, "AtmosphericTransX"), NULL);
-    h->air_temp = strtof(get(item_obj, "AtmosphericTemperature"), NULL) + RJPG_K;
-    h->refl_temp = strtof(get(item_obj, "ReflectedApparentTemperature"), NULL) + RJPG_K;
-    h->raw_th_img_width = strtol(get(item_obj, "RawThermalImageWidth"), NULL, 10);
-    h->raw_th_img_height = strtol(get(item_obj, "RawThermalImageHeight"), NULL, 10);
-    model = get(item_obj, "CameraModel");
+    setlocale(LC_ALL|~LC_NUMERIC, "");
 
-    if (strlen(model) > 2) {
-        if (memcmp(model, ID_THERMACAM_E25, min(strlen(model), strlen(ID_THERMACAM_E25))) == 0) {
+    rti = json_get(item_obj, "RawThermalImage");
+    if (rti == NULL) {
+        fprintf(stderr, "RawThermalImage tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "Emissivity", &h->emissivity) != EXIT_SUCCESS) {
+        fprintf(stderr, "Emissivity tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "ObjectDistance", &h->distance) != EXIT_SUCCESS) {
+        fprintf(stderr, "ObjectDistance tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "RelativeHumidity", &h->rh) != EXIT_SUCCESS) {
+        fprintf(stderr, "RelativeHumidity tag is missing\n");
+        goto cleanup;
+    }
+    h->rh /= 100.0;
+
+    if (json_getd(item_obj, "AtmosphericTransAlpha1", &h->alpha1) != EXIT_SUCCESS) {
+        fprintf(stderr, "AtmosphericTransAlpha1 tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "AtmosphericTransAlpha2", &h->alpha2) != EXIT_SUCCESS) {
+        fprintf(stderr, "AtmosphericTransAlpha2 tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "AtmosphericTransBeta1", &h->alpha2) != EXIT_SUCCESS) {
+        fprintf(stderr, "AtmosphericTransBeta1 tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "AtmosphericTransBeta2", &h->beta2) != EXIT_SUCCESS) {
+        fprintf(stderr, "AtmosphericTransBeta2 tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "PlanckR1", &h->planckR1) != EXIT_SUCCESS) {
+        fprintf(stderr, "PlanckR1 tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "PlanckR2", &h->planckR2) != EXIT_SUCCESS) {
+        fprintf(stderr, "PlanckR2 tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "PlanckB", &h->planckB) != EXIT_SUCCESS) {
+        fprintf(stderr, "PlanckB tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "PlanckF", &h->planckF) != EXIT_SUCCESS) {
+        fprintf(stderr, "PlanckF tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "PlanckO", &h->planckO) != EXIT_SUCCESS) {
+        fprintf(stderr, "PlanckO tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "AtmosphericTransX", &h->atm_trans_X) != EXIT_SUCCESS) {
+        fprintf(stderr, "AtmosphericTransX tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getd(item_obj, "AtmosphericTemperature", &h->air_temp) != EXIT_SUCCESS) {
+        fprintf(stderr, "AtmosphericTemperature tag is missing\n");
+        goto cleanup;
+    }
+    h->air_temp += RJPG_K;
+
+    if (json_getd(item_obj, "ReflectedApparentTemperature", &h->refl_temp) != EXIT_SUCCESS) {
+        fprintf(stderr, "ReflectedApparentTemperature tag is missing\n");
+        goto cleanup;
+    }
+    h->refl_temp += RJPG_K;
+
+    if (json_getw(item_obj, "RawThermalImageWidth", &h->raw_th_img_width) != EXIT_SUCCESS) {
+        fprintf(stderr, "RawThermalImageWidth tag is missing\n");
+        goto cleanup;
+    }
+
+    if (json_getw(item_obj, "RawThermalImageHeight", &h->raw_th_img_height) != EXIT_SUCCESS) {
+        fprintf(stderr, "RawThermalImageHeight tag is missing\n");
+        goto cleanup;
+    }
+
+    camera_make = json_get(item_obj, "Make");
+    camera_model = json_get(item_obj, "Model");
+
+    snprintf(h->camera_make, 32, "%s", camera_make);
+    snprintf(h->camera_model, 32, "%s", camera_model);
+
+    if (strlen(camera_model) > 2) {
+        if (memcmp(camera_model, ID_FLIR_THERMACAM_E25, min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_E25))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_E25;
-        } else if (memcmp(model, ID_FLIR_E5, min(strlen(model), strlen(ID_FLIR_E5))) == 0) {
-            th->subtype = TH_FLIR_E5;
+        } else if (memcmp(camera_model, ID_FLIR_THERMACAM_EX320, min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_EX320))) == 0) {
+            th->subtype = TH_FLIR_THERMACAM_EX320;
+        } else if (memcmp(camera_model, ID_FLIR_P20_NTSC, min(strlen(camera_model), strlen(ID_FLIR_P20_NTSC))) == 0) {
+            th->subtype = TH_FLIR_P20_NTSC;
+        } else if (memcmp(camera_model, ID_FLIR_S65_NTSC, min(strlen(camera_model), strlen(ID_FLIR_S65_NTSC))) == 0) {
+            th->subtype = TH_FLIR_S65_NTSC;
         }
     }
 
     // fill raw_th_img
     decode_len =
-        apr_base64_decode_len(get(item_obj, "RawThermalImage") + RJPG_EXIFTOOL_BASE64_PREFIX);
+        apr_base64_decode_len(rti + RJPG_EXIFTOOL_BASE64_PREFIX);
 
     img_name = (char *)calloc(strlen(json_file) + 5, sizeof(char));
     if (img_name == NULL) {
@@ -122,20 +209,17 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
         exit(EXIT_FAILURE);
     }
 
-    apr_base64_decode((char *)img_contents,
-                      get(item_obj, "RawThermalImage") + RJPG_EXIFTOOL_BASE64_PREFIX);
+    apr_base64_decode((char *)img_contents, rti + RJPG_EXIFTOOL_BASE64_PREFIX);
 
     snprintf(img_name, strlen(json_file) + 5, "%s.img", json_file);
 
     if ((img_fd = open(img_name, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
         errMsg("opening file %s", img_name);
-        ret = EXIT_FAILURE;
         goto cleanup_no_close;
     }
 
     if (write(img_fd, img_contents, decode_len) < decode_len) {
         errMsg("writing");
-        ret = EXIT_FAILURE;
         goto cleanup;
     }
 
@@ -146,9 +230,9 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
         err = lodepng_decode_memory((uint8_t **)&(th->framew), &x, &y, img_contents, decode_len, LCT_GREY, 16);
         if (err) {
             fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
-            ret = EXIT_FAILURE;
             goto cleanup;
         }
+        ret = EXIT_SUCCESS;
     } else if ((memcmp(img_contents, magic_number_tiff_1, 4) == 0) || 
                (memcmp(img_contents, magic_number_tiff_2, 4) == 0)) {
 
@@ -156,7 +240,6 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
         tiffr=TinyTIFFReader_open(img_name); 
         if (!tiffr) {
             fprintf(stderr, "decoder error TinyTIFFReader_open() has failed\n");
-            ret = EXIT_FAILURE;
             goto cleanup;
         } else {
             const uint32_t tiff_width=TinyTIFFReader_getWidth(tiffr);
@@ -167,7 +250,6 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
             //printf("size %ux%u, %u samples per pixel, %u bits each\n", width, height, samples, bps);
             if ((tiff_width != h->raw_th_img_width) || (tiff_height != h->raw_th_img_height)) {
                 fprintf(stderr, "unexpected image size %u != %u or %u ! %u\n", tiff_width, h->raw_th_img_width, tiff_height, h->raw_th_img_height);
-                ret = EXIT_FAILURE;
                 goto cleanup;
             }
 
@@ -175,10 +257,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
             TinyTIFFReader_getSampleData(tiffr, th->framew, 0);
         }
         TinyTIFFReader_close(tiffr);
-    } else {
-        fprintf(stderr, "file format not recognized\n");
-        ret = EXIT_FAILURE;
-        goto cleanup;
+        ret = EXIT_SUCCESS;
     }
 
 cleanup:
@@ -186,7 +265,7 @@ cleanup:
     if (img_name) {
         unlink(img_name);
     }
-    if (img_fd > 0) {
+    if (img_fd >= 0) {
         close(img_fd);
     }
 
@@ -356,14 +435,19 @@ uint8_t rjpg_rescale(th_db_t *d)
         l_rh = h->rh;
     }
 
-    if (src_th->subtype == TH_FLIR_THERMACAM_E25) {
-        if (localhost_is_le()) {
-            framew_needs_flippage = 1;
-        }
-    } else {
-        if (!localhost_is_le()) {
-            framew_needs_flippage = 1;
-        }
+    switch (src_th->subtype) {
+        case TH_FLIR_THERMACAM_E25:
+        case TH_FLIR_THERMACAM_EX320:
+        case TH_FLIR_P20_NTSC:
+        case TH_FLIR_S65_NTSC:
+            if (localhost_is_le()) {
+                framew_needs_flippage = 1;
+            }
+            break;
+        default:
+            if (!localhost_is_le()) {
+                framew_needs_flippage = 1;
+            }
     }
 
     if (p->flags & OPT_SET_DISTANCE_COMP) {

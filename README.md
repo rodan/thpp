@@ -51,12 +51,74 @@ currently supported image formats:
 
 camera | image type | image encoding
 --- | --- | ---
-DJI zenmuse | radiometric JPG 640x512 | tiff inside jpeg exif, 16bps
-Flir AX8 | radiometric JPG 80x60 | png inside jpeg exif, 16bps
 Flir ThermaCAM E25 | radiometric JPG 160x120 | png inside jpeg exif, 16bps
+Irtis 200, 2000+ | ver2, ver3 DTV files, single frame | raw, 8bps 16bps
+
+the following formats can be opened without errors, but the validity of the temperature data still needs confirmation:
+
+camera | image type | image encoding
+--- | --- | ---
+DJI zenmuse | radiometric JPG 640x512 | tiff inside jpeg exif, 16bps
+Flir b40 | radiometric JPG 120x120 | png inside jpeg exif, 16bps
+Flir b50 | radiometric JPG 140x140 | tiff inside jpeg exif, 16bps
+Flir i3 | radiometric JPG 60x60 | png inside jpeg exif, 16bps
+Flir i5 | radiometric JPG 80x80 | png inside jpeg exif, 16bps
+Flir i7 | radiometric JPG 120x120 | png inside jpeg exif, 16bps
+Flir i50 | radiometric JPG 140x140 | png inside jpeg exif, 16bps
+Flir i60 | radiometric JPG 180x180 | tiff inside jpeg exif, 16bps
+Flir AX5 | radiometric JPG 320x256 | tiff inside jpeg exif, 16bps
+Flir AX8 | radiometric JPG 80x60 | png inside jpeg exif, 16bps
+Flir B20HS | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir B335 | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir Bertha3 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir Duo Pro R| radiometric JPG 640x512 | tiff inside jpeg exif, 16bps
+Flir E4 | radiometric JPG 320x240| png inside jpeg exif, 16bps
+Flir E5 | radiometric JPG 120x90 | png inside jpeg exif, 16bps
+Flir E6 | radiometric JPG 160x120 | png inside jpeg exif, 16bps
+Flir E8 | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir E30 | radiometric JPG 160x120 | tiff inside jpeg exif, 16bps
+Flir E30bx | radiometric JPG 160x120 | tiff inside jpeg exif, 16bps
+Flir E40 | radiometric JPG 320x240 | tiff inside jpeg exif, 16bps
+Flir E40bx | radiometric JPG 160x120 | tiff inside jpeg exif, 16bps
+Flir E50 | radiometric JPG 240x180 | tiff inside jpeg exif, 16bps
+Flir E60 | radiometric JPG 320x240 | tiff inside jpeg exif, 16bps
+Flir E76 | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir ONE | radiometric JPG 160x120 | png inside jpeg exif, 16bps
+Flir ONE Pro| radiometric JPG 640x480 | png inside jpeg exif, 16bps
+Flir P20 NTSC | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir P25 PAL | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir P60 | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir P60 NTSC | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir P60 PAL | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir P640 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir P660 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir S65 NTSC | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir T250 Western | radiometric JPG 200x150 | tiff inside jpeg exif, 16bps
+Flir T360 Western | radiometric JPG 320x240 | tiff inside jpeg exif, 16bps
+Flir T400 | radiometric JPG 320x240 | tiff inside jpeg exif, 16bps
+Flir T400 Western | radiometric JPG 320x240 | tiff inside jpeg exif, 16bps
+Flir T420 | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir T425 | radiometric JPG 320x240 | tiff inside jpeg exif, 16bps
+Flir T620 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir T620bx | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir T630sc | radiometric JPG 640x480 | png inside jpeg exif, 16bps
+Flir T640 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir Thermacam B-360 Western | radiometric JPG 320x240 | tiff inside jpeg exif, 16bps
+Flir Thermacam E2 | radiometric JPG 160x120 | png inside jpeg exif, 16bps
+Flir Thermacam E320 | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir Thermacam E65 | radiometric JPG 160x120 | png inside jpeg exif, 16bps
+Flir Thermacam EX320 | radiometric JPG 320x240 | png inside jpeg exif, 16bps
+Flir ThermaCAM P640 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir ThermaCAM P660 Western | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir ThermaCAM SC640 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir ThermaCAM SC660 Western | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir ThermaCAM T-400 | radiometric JPG 320x240 | tiff inside jpeg exif, 16bps
+Flir ThermaCAM P660 Western | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir ThermaCAM SC660 Western | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
+Flir Z-CAMERA | radiometric JPG 80x80 | png inside jpeg exif, 16bps
 Flir E5 | radiometric JPG 120x90, 320x240 | png inside jpeg exif, 16bps
 Flir SC660 | radiometric JPG 640x480 | tiff inside jpeg exif, 16bps
-Irtis 200, 2000+ | ver2, ver3 DTV files, single frame | raw 8bps, raw 16bps
+
 
 currently supported functions:
 
@@ -66,7 +128,7 @@ currently supported functions:
  * thermal scale
  * rescale image based on custom temperature limits
  * reconfigure camera data (distance to target, emissivity, atmosperic temperature, relative humidity) for temperature compensation
- * zoom image (useful only for the low-resolution formats). 'nearest' interpolation is used by default with optional support for real-ESRGAN if binary is present on the system
+ * zoom image. 'nearest' interpolation is used by default with optional support for real-ESRGAN if that package is installed on the system
  * temperature histogram
  * thumbnail view of all files in a directory in an image library window
  * customizable file properties table
