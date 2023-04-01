@@ -381,6 +381,7 @@ uint8_t rjpg_rescale(th_db_t *d)
     double l_emissivity;
     double l_atm_temp;
     double l_rh;
+    int32_t t_acc = 0;
     tgram_t * src_th = d->in_th;
     tgram_t * dst_th = d->out_th;
     th_getopt_t *p = &(d->p);
@@ -458,6 +459,7 @@ uint8_t rjpg_rescale(th_db_t *d)
         tau_raw_atm = raw_atm * (1 - tau);
         raw_refl = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->refl_temp)) - h->planckF)) - h->planckO;
         epsilon_tau_raw_refl = raw_refl * (1 - l_emissivity) * tau;
+        t_acc = 0;
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
             if (framew_needs_flippage) {
@@ -474,13 +476,15 @@ uint8_t rjpg_rescale(th_db_t *d)
             if (h->t_max < t_obj_c) {
                 h->t_max = t_obj_c;
             }
+            t_acc += t_obj_c;
         }
-
+        h->t_avg = 1.0 * t_acc / h->raw_th_img_sz;
     } else {
         raw_refl =
                 h->planckR1 / (h->planckR2 * (exp(h->planckB / h->refl_temp) - h->planckF)) -
                 h->planckO;
         ep_raw_refl = raw_refl * (1 - l_emissivity);
+        t_acc = 0;
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
             if (framew_needs_flippage) {
@@ -500,7 +504,9 @@ uint8_t rjpg_rescale(th_db_t *d)
             if (h->t_max < t_obj_c) {
                 h->t_max = t_obj_c;
             }
+            t_acc += t_obj_c;
         }
+        h->t_avg = 1.0 * t_acc / h->raw_th_img_sz;
     }
 
     if (p->flags & OPT_SET_NEW_MIN) {
@@ -521,9 +527,9 @@ uint8_t rjpg_rescale(th_db_t *d)
     }
 
     l_res = (l_max - l_min) / 65535.0;
-    h->t_min = l_min;
-    h->t_max = l_max;
-    h->t_res = l_res;
+    //h->t_min = l_min;
+    //h->t_max = l_max;
+    //h->t_res = l_res;
 
     // rescale image
     for (i = 0; i < h->raw_th_img_sz; i++) {

@@ -155,6 +155,7 @@ int proj_main(th_db_t *db);
 uint8_t localhost_is_le(void);
 void generate_scale(scale_t *scale);
 uint8_t get_min_max(tgram_t *th, double *t_min, double *t_max);
+uint8_t get_avg(tgram_t *th, double *t_avg);
 
 style_t *style_get_ptr(void);
 global_preferences_t *gp_get_ptr(void);

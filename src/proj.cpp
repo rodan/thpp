@@ -241,6 +241,26 @@ uint8_t get_min_max(tgram_t *th, double *t_min, double *t_max)
     return EXIT_SUCCESS;
 }
 
+uint8_t get_avg(tgram_t *th, double *t_avg)
+{
+    if (th == NULL) {
+        return EXIT_FAILURE;
+    }
+
+    switch (th->type) {
+        case TH_FLIR_RJPG:
+            *t_avg = th->head.rjpg->t_avg;
+            break;
+        case TH_IRTIS_DTV:
+            *t_avg = 0.0;
+            break;
+        default:
+            *t_avg = 0.0;
+            return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
 void draw_scale_overlay(scale_t *scale, const double major, const double minor, const uint8_t precission)
 {
     double delta = scale->t_max - scale->t_min;

@@ -11,7 +11,7 @@ fp_visibility_t v;
 
 void file_properties(bool *p_open, th_db_t * db)
 {
-    double t_min, t_max;
+    double t_min, t_max, t_avg;
     struct tm t;
     rjpg_header_t *hf;
     dtv_header_t *hi;
@@ -63,6 +63,7 @@ void file_properties(bool *p_open, th_db_t * db)
         }
 
         get_min_max(db->out_th, &t_min, &t_max);
+        get_avg(db->out_th, &t_avg);
 
         if (v.ir_min) {
             ImGui::TableNextRow();
@@ -78,6 +79,14 @@ void file_properties(bool *p_open, th_db_t * db)
             ImGui::Text("IR: Max");
             ImGui::TableSetColumnIndex(1);
             ImGui::Text("%.02f C", t_max);
+        }
+
+        if (v.ir_avg) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("IR: Avg");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%.02f C", t_avg);
         }
 
         switch (db->in_th->type) {
