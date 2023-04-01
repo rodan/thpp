@@ -363,16 +363,18 @@ uint8_t rjpg_rescale(th_db_t *d)
 {
     ssize_t i;
     uint8_t framew_needs_flippage = 0;
-    double raw_refl;
+    double raw_refl1, raw_refl2;
+    double raw_refl1_attn, raw_refl2_attn;
     double ep_raw_refl;
     double raw_obj;
     double h2o;
     double t_obj_c;
     double tau;
-    double raw_atm;
+    double raw_atm1, raw_atm2, raw_wind;
+    double raw_atm1_attn, raw_atm2_attn, raw_wind_attn;
     double tau_raw_atm;
     double epsilon_tau_raw_refl;
-    uint16_t temp;
+    uint16_t raw;
     double ftemp;
     double l_min;
     double l_max;
@@ -382,6 +384,8 @@ uint8_t rjpg_rescale(th_db_t *d)
     double l_atm_temp;
     double l_rh;
     int32_t t_acc = 0;
+    double IRT = 0.96; ///< Infrared Window transmission - default 1.  likely ~0.95-0.96. Should be empirically determined.
+    double refl_wind = 0; ///< anti-reflective coating on window
     tgram_t * src_th = d->in_th;
     tgram_t * dst_th = d->out_th;
     th_getopt_t *p = &(d->p);
@@ -451,23 +455,39 @@ uint8_t rjpg_rescale(th_db_t *d)
             }
     }
 
-    if (p->flags & OPT_SET_DISTANCE_COMP) {
+    //if (p->flags & OPT_SET_DISTANCE_COMP) {
         h2o = l_rh * exp(1.5587 + 0.06939 * l_atm_temp - 0.00027816 * pow(l_atm_temp,2) + 0.00000068455 * pow(l_atm_temp,3)); //  # 8.563981576
-        tau = h->atm_trans_X * exp(-sqrt(l_distance) * (h->alpha1 + h->beta1 * sqrt(h2o))) + (1 - h->atm_trans_X) * 
+        tau = h->atm_trans_X * exp(-sqrt(l_distance) * (h->alpha1 + h->beta1 * sqrt(h2o))) + (1.0 - h->atm_trans_X) * 
                   exp( -sqrt(l_distance) * (h->alpha2 + h->beta2 * sqrt(h2o)));
-        raw_atm = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->air_temp)) - h->planckF)) - h->planckO;
-        tau_raw_atm = raw_atm * (1 - tau);
-        raw_refl = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->refl_temp)) - h->planckF)) - h->planckO;
-        epsilon_tau_raw_refl = raw_refl * (1 - l_emissivity) * tau;
+
+        raw_refl1 = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->refl_temp)) - h->planckF)) - h->planckO;
+        //epsilon_tau_raw_refl = raw_refl * (1.0 - l_emissivity) * tau;
+        raw_refl1_attn = (1.0 - l_emissivity)/l_emissivity*raw_refl1;
+
+        raw_atm1 = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->air_temp)) - h->planckF)) - h->planckO;
+        //tau_raw_atm = raw_atm * (1.0 - tau);
+        raw_atm1_attn = (1.0 - tau)/l_emissivity/tau*raw_atm1;
+
+        raw_wind = raw_refl1;
+        raw_wind_attn = (1.0 - IRT)/l_emissivity/tau/IRT*raw_wind;
+    
+        raw_refl2 = raw_refl1;
+        raw_refl2_attn = refl_wind/l_emissivity/tau/IRT*raw_refl2;
+
+        raw_atm2 = raw_atm1;
+        raw_atm2_attn = (1.0 - tau)/l_emissivity/tau/IRT/tau*raw_atm2;
+
         t_acc = 0;
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
             if (framew_needs_flippage) {
-                temp = htons(src_th->framew[i]);
+                raw = htons(src_th->framew[i]);
             } else {
-                temp = src_th->framew[i];
+                raw = src_th->framew[i];
             }
-            raw_obj = (temp - tau_raw_atm - epsilon_tau_raw_refl) / l_emissivity / tau;
+            //raw_obj = (temp - tau_raw_atm - epsilon_tau_raw_refl) / l_emissivity / tau;
+            //raw/E/tau1/IRT/tau2-raw.atm1.attn-raw.atm2.attn-raw.wind.attn-raw.refl1.attn-raw.refl2.attn
+            raw_obj = 1.0 * raw / l_emissivity / tau / IRT / tau - raw_atm1_attn - raw_atm2_attn - raw_wind_attn - raw_refl1_attn - raw_refl2_attn;
             t_obj_c = h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) - RJPG_K;
             d->temp_arr[i] = t_obj_c;
             if (h->t_min > t_obj_c) {
@@ -479,6 +499,7 @@ uint8_t rjpg_rescale(th_db_t *d)
             t_acc += t_obj_c;
         }
         h->t_avg = 1.0 * t_acc / h->raw_th_img_sz;
+#if 0
     } else {
         raw_refl =
                 h->planckR1 / (h->planckR2 * (exp(h->planckB / h->refl_temp) - h->planckF)) -
@@ -489,11 +510,11 @@ uint8_t rjpg_rescale(th_db_t *d)
         for (i = 0; i < h->raw_th_img_sz; i++) {
             if (framew_needs_flippage) {
                 // data in the exif-png gets here in big endian words
-                temp = htons(src_th->framew[i]);
+                raw = htons(src_th->framew[i]);
             } else {
-                temp = src_th->framew[i];
+                raw = src_th->framew[i];
             }
-            raw_obj = 1.0 * (temp - ep_raw_refl) / l_emissivity;
+            raw_obj = 1.0 * (raw - ep_raw_refl) / l_emissivity;
             t_obj_c =
                 h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) -
                 RJPG_K;
@@ -508,6 +529,7 @@ uint8_t rjpg_rescale(th_db_t *d)
         }
         h->t_avg = 1.0 * t_acc / h->raw_th_img_sz;
     }
+#endif
 
     if (p->flags & OPT_SET_NEW_MIN) {
         l_min = p->t_min;
