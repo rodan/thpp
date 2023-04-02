@@ -14,11 +14,13 @@
 // the following flir cameras are the exception
 // they need to have the bytes from the raw thermal data samples flipped
 #define       TH_FLIR_THERMACAM_E25  0x1
-#define     TH_FLIR_THERMACAM_EX320  0x2
-#define            TH_FLIR_P20_NTSC  0x3
-#define            TH_FLIR_S65_NTSC  0x4
+#define       TH_FLIR_THERMACAM_E65  0x2
+#define     TH_FLIR_THERMACAM_EX320  0x3
+#define            TH_FLIR_P20_NTSC  0x4
+#define            TH_FLIR_S65_NTSC  0x5
 
 #define       ID_FLIR_THERMACAM_E25  "ThermaCAM  E25"
+#define       ID_FLIR_THERMACAM_E65  "ThermaCAM E65"
 #define     ID_FLIR_THERMACAM_EX320  "ThermaCAM EX320"
 #define            ID_FLIR_P20_NTSC  "P20 NTSC"
 #define            ID_FLIR_S65_NTSC  "S65 NTSC"

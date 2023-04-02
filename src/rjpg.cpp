@@ -186,18 +186,19 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
             (camera_model, ID_FLIR_THERMACAM_E25,
              min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_E25))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_E25;
-        } else
-            if (memcmp
+        } else if (memcmp
+                (camera_model, ID_FLIR_THERMACAM_E65,
+                 min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_E65))) == 0) {
+            th->subtype = TH_FLIR_THERMACAM_E65;
+        } else if (memcmp
                 (camera_model, ID_FLIR_THERMACAM_EX320,
                  min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_EX320))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_EX320;
-        } else
-            if (memcmp
+        } else if (memcmp
                 (camera_model, ID_FLIR_P20_NTSC,
                  min(strlen(camera_model), strlen(ID_FLIR_P20_NTSC))) == 0) {
             th->subtype = TH_FLIR_P20_NTSC;
-        } else
-            if (memcmp
+        } else if (memcmp
                 (camera_model, ID_FLIR_S65_NTSC,
                  min(strlen(camera_model), strlen(ID_FLIR_S65_NTSC))) == 0) {
             th->subtype = TH_FLIR_S65_NTSC;
@@ -451,6 +452,7 @@ uint8_t rjpg_rescale(th_db_t * d)
 
     switch (src_th->subtype) {
     case TH_FLIR_THERMACAM_E25:
+    case TH_FLIR_THERMACAM_E65:
     case TH_FLIR_THERMACAM_EX320:
     case TH_FLIR_P20_NTSC:
     case TH_FLIR_S65_NTSC:
