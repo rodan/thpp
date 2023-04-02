@@ -186,7 +186,7 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("planck r2");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%lf", hf->planckR2);
+                ImGui::Text("%.010lf", hf->planckR2);
             }
 
             if (v.planckB) {

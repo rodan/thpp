@@ -90,7 +90,7 @@ uint8_t parse_options(int argc, char *argv[], th_getopt_t * p)
             p->distance = atof(optarg);
             break;
         case 'k':
-            p->flags |= OPT_SET_DISTANCE_COMP;
+            p->flags |= OPT_SET_COMP;
             break;
         case 'e':
             p->flags |= OPT_SET_NEW_EMISSIVITY;

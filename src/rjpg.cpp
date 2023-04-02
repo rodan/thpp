@@ -25,6 +25,48 @@ const uint8_t magic_number_png[8] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 
 const uint8_t magic_number_tiff_1[4] = { 0x49, 0x49, 0x2a, 0x00 };
 const uint8_t magic_number_tiff_2[4] = { 0x4d, 0x4d, 0x00, 0x2a };
 
+double E;                       ///< Emissivity - default 1, should be above 0.95 for sources that resemble a black body
+double OD;                      ///< Object Distance in metres
+double RTemp;                   ///< apparent Reflected Temperature - one value from FLIR file (dC), default 20dC
+double ATemp;                   ///< Atmospheric Temperature for transmission loss - one value from FLIR file (dC) - default = RTemp
+double IRWTemp;                 ///< Infrared Window Temperature - default = RTemp (dC)
+double IWT;                     ///< Infrared Window Transmission - default 1.  likely ~0.95-0.96. Should be empirically determined.
+double RH;                      ///< Relative humidity - float between 0 and 1
+double PR1;                     ///< PlanckR1 calibration constant
+double PB;                      ///< PlanckB calibration constant
+double PF;                      ///< PlanckF calibration constant
+double PO;                      ///< PlanckO calibration constant
+double PR2;                     ///< PlanckR2 calibration constant
+double ATA1;                    ///< Atmospheric Trans Alpha 1
+double ATA2;                    ///< Atmospheric Trans Alpha 2
+double ATB1;                    ///< Atmospheric Trans Beta 1
+double ATB2;                    ///< Atmospheric Trans Beta 2
+double ATX;                     ///< Atmospheric Trans X
+double WR;                      ///< Window Reflectivity (0 for window covered in anti-reflective coating)
+
+double h2o;
+
+// the digital-to-analog conversion algorithm is not provided by Flir
+// this compile-type define is provided to pick one of the open-source formulas to calculate the temperature from the raw data
+// enable USE_GLENN_ALGO in order to use the algorithm described in https://github.com/gtatters/Thermimage
+// otherwise the simplified https://github.com/kentavv/flir-batch-process algo will be applied
+#define USE_GLENN_ALGO
+
+#ifdef USE_GLENN_ALGO
+double tau1, tau2;
+double raw_refl1, raw_refl2;
+double raw_refl1_attn, raw_refl2_attn;
+double raw_atm1, raw_atm2, raw_wind;
+double raw_atm1_attn, raw_atm2_attn, raw_wind_attn;
+#else
+double tau;
+double raw_atm;
+double tau_raw_atm;
+double raw_refl;
+double epsilon_tau_raw_refl;
+double ep_raw_refl;
+#endif
+
 uint8_t rjpg_new(tgram_t ** thermo)
 {
     tgram_t *t;
@@ -153,17 +195,17 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
         goto cleanup;
     }
 
+    // air_temp keeps temperature in degrees C
     if (json_getd(item_obj, "AtmosphericTemperature", &h->air_temp) != EXIT_SUCCESS) {
         fprintf(stderr, "AtmosphericTemperature tag is missing\n");
         goto cleanup;
     }
-    h->air_temp += RJPG_K;
 
+    // refl_temp keeps temperature in degrees C
     if (json_getd(item_obj, "ReflectedApparentTemperature", &h->refl_temp) != EXIT_SUCCESS) {
         fprintf(stderr, "ReflectedApparentTemperature tag is missing\n");
         goto cleanup;
     }
-    h->refl_temp += RJPG_K;
 
     if (json_getw(item_obj, "RawThermalImageWidth", &h->raw_th_img_width) != EXIT_SUCCESS) {
         fprintf(stderr, "RawThermalImageWidth tag is missing\n");
@@ -174,6 +216,9 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
         fprintf(stderr, "RawThermalImageHeight tag is missing\n");
         goto cleanup;
     }
+
+    h->iwt = 1.0;
+    h->wr = 0;
 
     camera_make = json_get(item_obj, "Make");
     camera_model = json_get(item_obj, "Model");
@@ -187,20 +232,20 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
              min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_E25))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_E25;
         } else if (memcmp
-                (camera_model, ID_FLIR_THERMACAM_E65,
-                 min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_E65))) == 0) {
+                   (camera_model, ID_FLIR_THERMACAM_E65,
+                    min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_E65))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_E65;
         } else if (memcmp
-                (camera_model, ID_FLIR_THERMACAM_EX320,
-                 min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_EX320))) == 0) {
+                   (camera_model, ID_FLIR_THERMACAM_EX320,
+                    min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_EX320))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_EX320;
         } else if (memcmp
-                (camera_model, ID_FLIR_P20_NTSC,
-                 min(strlen(camera_model), strlen(ID_FLIR_P20_NTSC))) == 0) {
+                   (camera_model, ID_FLIR_P20_NTSC,
+                    min(strlen(camera_model), strlen(ID_FLIR_P20_NTSC))) == 0) {
             th->subtype = TH_FLIR_P20_NTSC;
         } else if (memcmp
-                (camera_model, ID_FLIR_S65_NTSC,
-                 min(strlen(camera_model), strlen(ID_FLIR_S65_NTSC))) == 0) {
+                   (camera_model, ID_FLIR_S65_NTSC,
+                    min(strlen(camera_model), strlen(ID_FLIR_S65_NTSC))) == 0) {
             th->subtype = TH_FLIR_S65_NTSC;
         }
     }
@@ -257,10 +302,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
         } else {
             const uint32_t tiff_width = TinyTIFFReader_getWidth(tiffr);
             const uint32_t tiff_height = TinyTIFFReader_getHeight(tiffr);
-            //const uint16_t tiff_spp=TinyTIFFReader_getSamplesPerPixel(tiffr);
-            //const uint16_t tiff_bps=TinyTIFFReader_getBitsPerSample(tiffr, 0);
 
-            //printf("size %ux%u, %u samples per pixel, %u bits each\n", width, height, samples, bps);
             if ((tiff_width != h->raw_th_img_width) || (tiff_height != h->raw_th_img_height)) {
                 fprintf(stderr, "unexpected image size %u != %u or %u ! %u\n", tiff_width,
                         h->raw_th_img_width, tiff_height, h->raw_th_img_height);
@@ -373,29 +415,76 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id)
     return EXIT_SUCCESS;
 }
 
+#ifdef USE_GLENN_ALGO
+
+double rjpg_calc_glenn(uint16_t raw)
+{
+    double raw_obj;
+    double ret;
+
+    raw_obj =
+        (1.0 * raw / E / tau1 / IWT / tau2 - raw_atm1_attn - raw_atm2_attn - raw_wind_attn -
+         raw_refl1_attn - raw_refl2_attn);
+    ret = PB / log(PR1 / (PR2 * (raw_obj + PO)) + PF) - 273.15;
+
+    return ret;
+}
+
+#else
+double rjpg_calc_distcomp(uint16_t raw)
+{
+    double raw_obj;
+    double ret;
+
+    raw_obj = (1.0 * raw - tau_raw_atm - epsilon_tau_raw_refl) / E / tau;
+    ret = PB / log(PR1 / (PR2 * (raw_obj + PO)) + PF) - RJPG_K;
+
+    return ret;
+}
+
+double rjpg_calc_nodistcomp(uint16_t raw)
+{
+    double raw_obj;
+    double ret;
+
+    raw_obj = (1.0 * raw - ep_raw_refl) / E;
+    ret = PB / log(PR1 / (PR2 * (raw_obj + PO)) + PF) - RJPG_K;
+
+    return ret;
+}
+#endif
+
+void rjpg_temp2csv(th_db_t * d)
+{
+    uint16_t x,y;
+
+    if (d->out_th == NULL) {
+        return;
+    }
+
+    rjpg_header_t *h = d->out_th->head.rjpg;
+
+    for (y=0; y<h->raw_th_img_height; y++) {
+        for (x=0; x<h->raw_th_img_width; x++) {
+            printf("%.06le", d->temp_arr[y*h->raw_th_img_width + x]);
+            if (x < h->raw_th_img_width - 1) {
+                printf(",");
+            }
+        }
+        printf("\n");
+    }
+}
+
 uint8_t rjpg_rescale(th_db_t * d)
 {
     ssize_t i;
     uint8_t framew_needs_flippage = 0;
-    double raw_refl;
-    double ep_raw_refl;
-    double raw_obj;
-    double h2o;
-    double t_obj_c;
-    double tau;
-    double raw_atm;
-    double tau_raw_atm;
-    double epsilon_tau_raw_refl;
     uint16_t raw;
     double ftemp;
     double l_min;
     double l_max;
     double l_res;
-    double l_distance;
-    double l_emissivity;
-    double l_atm_temp;
-    double l_rh;
-    int32_t t_acc = 0;
+    int64_t t_acc = 0;
     tgram_t *src_th = d->in_th;
     tgram_t *dst_th = d->out_th;
     th_getopt_t *p = &(d->p);
@@ -427,28 +516,59 @@ uint8_t rjpg_rescale(th_db_t * d)
     h->t_max = -32000.0;
 
     if (p->flags & OPT_SET_NEW_DISTANCE) {
-        l_distance = p->distance;
+        OD = p->distance;
     } else {
-        l_distance = h->distance;
+        OD = h->distance;
     }
 
     if (p->flags & OPT_SET_NEW_EMISSIVITY) {
-        l_emissivity = p->emissivity;
+        E = p->emissivity;
     } else {
-        l_emissivity = h->emissivity;
+        E = h->emissivity;
     }
 
     if (p->flags & OPT_SET_NEW_AT) {
-        l_atm_temp = p->atm_temp;
+        ATemp = p->atm_temp;
     } else {
-        l_atm_temp = h->air_temp - RJPG_K;
+        ATemp = h->air_temp;
+    }
+
+    if (p->flags & OPT_SET_NEW_RT) {
+        RTemp = p->refl_temp;
+    } else {
+        RTemp = h->refl_temp;
     }
 
     if (p->flags & OPT_SET_NEW_RH) {
-        l_rh = p->rh;
+        RH = p->rh;
     } else {
-        l_rh = h->rh;
+        RH = h->rh;
     }
+
+    if (p->flags & OPT_SET_NEW_IWT) {
+        IWT = p->iwt;
+    } else {
+        IWT = h->iwt;
+    }
+
+    if (p->flags & OPT_SET_NEW_WR) {
+        WR = p->wr;
+    } else {
+        WR = h->wr;
+    }
+
+    RTemp = h->refl_temp;
+    IRWTemp = RTemp;
+    PR1 = h->planckR1;
+    PB = h->planckB;
+    PF = h->planckF;
+    PO = h->planckO;
+    PR2 = h->planckR2;
+    ATA1 = h->alpha1;
+    ATA2 = h->alpha2;
+    ATB1 = h->beta1;
+    ATB2 = h->beta2;
+    ATX = h->atm_trans_X;
 
     switch (src_th->subtype) {
     case TH_FLIR_THERMACAM_E25:
@@ -466,18 +586,82 @@ uint8_t rjpg_rescale(th_db_t * d)
         }
     }
 
-    //if (p->flags & OPT_SET_DISTANCE_COMP) {
-    if (1) {
-        h2o = l_rh * exp(1.5587 + 0.06939 * l_atm_temp - 0.00027816 * pow(l_atm_temp,2) + 0.00000068455 * pow(l_atm_temp,3)); //  # 8.563981576
-        tau = h->atm_trans_X * exp(-sqrt(l_distance) * (h->alpha1 + h->beta1 * sqrt(h2o))) + (1 - h->atm_trans_X) * 
-                  exp( -sqrt(l_distance) * (h->alpha2 + h->beta2 * sqrt(h2o)));
-        raw_atm = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->air_temp)) - h->planckF)) - h->planckO;
+#ifdef USE_GLENN_ALGO
+    // algorithm expects all temperature variable input in degrees C
+
+    h2o =
+        RH * exp(1.5587 + 0.06939 * ATemp - 0.00027816 * pow(ATemp, 2) +
+                 0.00000068455 * pow(ATemp, 3));
+    tau1 =
+        ATX * exp(-sqrt(OD / 2) * (ATA1 + ATB1 * sqrt(h2o))) + (1 -
+                                                                ATX) * exp(-sqrt(OD / 2) * (ATA2 +
+                                                                                            ATB2 *
+                                                                                            sqrt
+                                                                                            (h2o)));
+    tau2 = tau1;
+
+    raw_refl1 = PR1 / (PR2 * (exp(PB / (RTemp + 273.15)) - PF)) - PO;
+    raw_refl1_attn = (1 - E) / E * raw_refl1;
+
+    raw_atm1 = PR1 / (PR2 * (exp(PB / (ATemp + 273.15)) - PF)) - PO;
+    raw_atm1_attn = (1 - tau1) / E / tau1 * raw_atm1;
+
+    raw_wind = PR1 / (PR2 * (exp(PB / (IRWTemp + 273.15)) - PF)) - PO;
+    raw_wind_attn = (1.0 - IWT) / E / tau1 / IWT * raw_wind;
+
+    raw_refl2 = raw_refl1;
+    raw_refl2_attn = WR / E / tau1 / IWT * raw_refl2;
+
+    raw_atm2 = raw_atm1;
+    raw_atm2_attn = (1 - tau2) / E / tau1 / IWT / tau2 * raw_atm2;
+
+    for (i = 0; i < h->raw_th_img_sz; i++) {
+        if (framew_needs_flippage) {
+            raw = htons(src_th->framew[i]);
+        } else {
+            raw = src_th->framew[i];
+        }
+
+        double t_obj = rjpg_calc_glenn(raw);
+        //if (i < 10) {
+        //    printf("raw %u, t_obj %lf\n", raw, t_obj);
+        //}
+        d->temp_arr[i] = t_obj;
+        if (h->t_min > t_obj) {
+            h->t_min = t_obj;
+        }
+        if (h->t_max < t_obj) {
+            h->t_max = t_obj;
+        }
+        t_acc += raw;
+    }
+    h->t_avg = rjpg_calc_glenn(t_acc / h->raw_th_img_sz);
+
+#else
+    // algorithm expects all temperature variable input in degrees K
+
+    RTemp += RJPG_K;
+    ATemp += RJPG_K;
+
+    if (p->flags & OPT_SET_COMP) {
+        //if (1) {
+        h2o =
+            RH * exp(1.5587 + 0.06939 * ATemp - 0.00027816 * pow(ATemp, 2) +
+                     0.00000068455 * pow(ATemp, 3));
+        tau =
+            ATX * exp(-sqrt(OD) * (ATA1 + ATB1 * sqrt(h2o))) + (1 -
+                                                                ATX) * exp(-sqrt(OD) * (ATA2 +
+                                                                                        ATB2 *
+                                                                                        sqrt(h2o)));
+        raw_atm = PR1 / (PR2 * (exp(PB / ATemp) - PF)) - PO;
         tau_raw_atm = raw_atm * (1 - tau);
-        raw_refl = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->refl_temp)) - h->planckF)) - h->planckO;
-        epsilon_tau_raw_refl = raw_refl * (1 - l_emissivity) * tau;
+        raw_refl = PR1 / (PR2 * (exp(PB / (RTemp)) - PF)) - PO;
+        epsilon_tau_raw_refl = raw_refl * (1 - E) * tau;
         t_acc = 0;
 
-        printf("tau %lf, h2o %lf, raw_atm %lf, tau_raw_atm %lf, raw_refl %lf, epsilon_tau_raw_refl %lf\n", tau, h2o, raw_atm, tau_raw_atm, raw_refl, epsilon_tau_raw_refl);
+        printf
+            ("tau %lf, h2o %lf, raw_atm %lf, tau_raw_atm %lf, raw_refl %lf, epsilon_tau_raw_refl %lf\n",
+             tau, h2o, raw_atm, tau_raw_atm, raw_refl, epsilon_tau_raw_refl);
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
             if (framew_needs_flippage) {
@@ -485,26 +669,24 @@ uint8_t rjpg_rescale(th_db_t * d)
             } else {
                 raw = src_th->framew[i];
             }
-            raw_obj = (raw - tau_raw_atm - epsilon_tau_raw_refl) / l_emissivity / tau;
-            t_obj_c = h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) - RJPG_K;
-            if (i<10) {
-                printf("raw %u, raw_obj %lf, t_obj %lf\n", raw, raw_obj, t_obj_c);
+
+            double t_obj_dc = rjpg_calc_distcomp(raw);
+            if (i < 10) {
+                printf("raw %u, t_obj %lf\n", raw, t_obj_dc);
             }
-            d->temp_arr[i] = t_obj_c;
-            if (h->t_min > t_obj_c) {
-                h->t_min = t_obj_c;
+            d->temp_arr[i] = t_obj_dc;
+            if (h->t_min > t_obj_dc) {
+                h->t_min = t_obj_dc;
             }
-            if (h->t_max < t_obj_c) {
-                h->t_max = t_obj_c;
+            if (h->t_max < t_obj_dc) {
+                h->t_max = t_obj_dc;
             }
-            t_acc += t_obj_c;
+            t_acc += raw;
         }
-        h->t_avg = 1.0 * t_acc / h->raw_th_img_sz;
+        h->t_avg = rjpg_calc_distcomp(t_acc / h->raw_th_img_sz);
     } else {
-        raw_refl =
-                h->planckR1 / (h->planckR2 * (exp(h->planckB / h->refl_temp) - h->planckF)) -
-                h->planckO;
-        ep_raw_refl = raw_refl * (1 - l_emissivity);
+        raw_refl = PR1 / (PR2 * (exp(PB / RTemp) - PF)) - PO;
+        ep_raw_refl = raw_refl * (1 - E);
         t_acc = 0;
 
         printf("raw_refl %lf, ep_raw_refl %lf\n", raw_refl, ep_raw_refl);
@@ -516,24 +698,23 @@ uint8_t rjpg_rescale(th_db_t * d)
             } else {
                 raw = src_th->framew[i];
             }
-            raw_obj = 1.0 * (raw - ep_raw_refl) / l_emissivity;
-            t_obj_c =
-                h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) -
-                RJPG_K;
-            if (i<10) {
-                printf("raw %u, raw_obj %lf, t_obj %lf\n", raw, raw_obj, t_obj_c);
+            double t_obj = rjpg_calc_nodistcomp(raw);
+            if (i < 10) {
+                printf("raw %u, t_obj %lf\n", raw, t_obj);
             }
-            d->temp_arr[i] = t_obj_c;
-            if (h->t_min > t_obj_c) {
-                h->t_min = t_obj_c;
+            d->temp_arr[i] = t_obj;
+            if (h->t_min > t_obj) {
+                h->t_min = t_obj;
             }
-            if (h->t_max < t_obj_c) {
-                h->t_max = t_obj_c;
+            if (h->t_max < t_obj) {
+                h->t_max = t_obj;
             }
-            t_acc += t_obj_c;
+            t_acc += raw;
         }
-        h->t_avg = 1.0 * t_acc / h->raw_th_img_sz;
+        h->t_avg = rjpg_calc_nodistcomp(t_acc / h->raw_th_img_sz);
+        printf("avg %ld %u %lf\n", t_acc, h->raw_th_img_sz, h->t_avg);
     }
+#endif
 
     if (p->flags & OPT_SET_NEW_MIN) {
         l_min = p->t_min;
@@ -553,9 +734,6 @@ uint8_t rjpg_rescale(th_db_t * d)
     }
 
     l_res = (l_max - l_min) / 65535.0;
-    //h->t_min = l_min;
-    //h->t_max = l_max;
-    //h->t_res = l_res;
 
     // rescale image
     for (i = 0; i < h->raw_th_img_sz; i++) {
@@ -568,8 +746,11 @@ uint8_t rjpg_rescale(th_db_t * d)
         dst_th->framew[i] = ftemp;
     }
 
+    //rjpg_temp2csv(d);
+
     return EXIT_SUCCESS;
 }
+
 
 void rjpg_close(tgram_t * thermo)
 {

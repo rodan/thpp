@@ -8,10 +8,13 @@
 #define          OPT_SET_NEW_MIN  0x01
 #define          OPT_SET_NEW_MAX  0x02
 #define     OPT_SET_NEW_DISTANCE  0x04
-#define    OPT_SET_DISTANCE_COMP  0x08
+#define             OPT_SET_COMP  0x08
 #define   OPT_SET_NEW_EMISSIVITY  0x10
 #define           OPT_SET_NEW_AT  0x20
-#define           OPT_SET_NEW_RH  0x40
+#define           OPT_SET_NEW_RT  0x40
+#define           OPT_SET_NEW_RH  0x80
+#define           OPT_SET_NEW_IWT 0x100
+#define           OPT_SET_NEW_WR  0x200
 
 #define                   FT_UNK  0
 
@@ -45,10 +48,13 @@ struct th_getopt {
     uint16_t flags;
     double t_min;
     double t_max;
-    double distance;
-    double emissivity;
+    double distance;        ///< distance to object
+    double emissivity;      ///< object emissivity
     double atm_temp;        ///< atmospheric temperature in dC
-    double rh;
+    double refl_temp;       ///< reflected temperature in dC
+    double rh;              ///< relative humidity
+    double iwt;             ///< infrared window transmission
+    double wr;              ///< window reflectivity (0 if anti-reflective coating is present)
 };
 typedef struct th_getopt th_getopt_t;
 

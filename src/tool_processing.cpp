@@ -153,13 +153,14 @@ void tool_processing(bool *p_open, th_db_t * db)
         ImGui::Text("temperature compensation");
         ImGui::Separator();
 
+        ImGui::Text("  object");
         static float s_distance = h->distance;
         if (reset_changes) {
             s_distance = h->distance;
         }
         value_changed = ImGui::DragFloat("distance [m]", &s_distance, 0.2f, 0.2f, 100.0f, "%0.2f m");
         if (value_changed) {
-            db->p.flags |= OPT_SET_DISTANCE_COMP | OPT_SET_NEW_DISTANCE;
+            db->p.flags |= OPT_SET_COMP | OPT_SET_NEW_DISTANCE;
             db->p.distance = s_distance;
             show_apply_button = 1;
         }
@@ -175,13 +176,28 @@ void tool_processing(bool *p_open, th_db_t * db)
             show_apply_button = 1;
         }
 
-        static float s_atm_temp = h->air_temp - RJPG_K;
+        static float s_refl_temp = h->refl_temp;
         if (reset_changes) {
-            s_atm_temp = h->air_temp - RJPG_K;
+            s_refl_temp = h->refl_temp;
         }
-        value_changed = ImGui::DragFloat("atm temp [C]", &s_atm_temp, 1.0f, -20.1f, 300.0f, "%0.2f C");
+        value_changed = ImGui::DragFloat("reflected temp", &s_refl_temp, 0.01f, -20.0f, 300.0f, "%0.2f C");
         if (value_changed) {
-            db->p.flags |= OPT_SET_NEW_AT | OPT_SET_DISTANCE_COMP;
+            db->p.flags |= OPT_SET_NEW_RT | OPT_SET_COMP;
+            db->p.refl_temp = s_refl_temp;
+            show_apply_button = 1;
+        }
+
+        ImGui::Separator();
+        ImGui::Text("  atmosphere");
+        ImGui::Separator();
+
+        static float s_atm_temp = h->air_temp;
+        if (reset_changes) {
+            s_atm_temp = h->air_temp;
+        }
+        value_changed = ImGui::DragFloat("atm temp [C]", &s_atm_temp, 1.0f, -20.0f, 300.0f, "%0.2f C");
+        if (value_changed) {
+            db->p.flags |= OPT_SET_NEW_AT | OPT_SET_COMP;
             db->p.atm_temp = s_atm_temp;
             show_apply_button = 1;
         }
@@ -192,10 +208,38 @@ void tool_processing(bool *p_open, th_db_t * db)
         }
         value_changed = ImGui::DragFloat("rel humidity [%]", &s_rh, 1.0f, 0.1f, 100.0f, "%.0f %rH");
         if (value_changed) {
-            db->p.flags |= OPT_SET_NEW_RH | OPT_SET_DISTANCE_COMP;
+            db->p.flags |= OPT_SET_NEW_RH | OPT_SET_COMP;
             db->p.rh = s_rh / 100.0;
             show_apply_button = 1;
         }
+
+        ImGui::Separator();
+        ImGui::Text("  optics");
+        ImGui::Separator();
+
+        static float s_iwt = h->iwt;
+        if (reset_changes) {
+            s_iwt = h->iwt;
+        }
+        value_changed = ImGui::DragFloat("ir window transmission", &s_iwt, 0.01f, 0.1f, 1.0f, "%.02f");
+        if (value_changed) {
+            db->p.flags |= OPT_SET_NEW_IWT | OPT_SET_COMP;
+            db->p.iwt = s_iwt;
+            show_apply_button = 1;
+        }
+
+        static float s_wr = h->wr;
+        if (reset_changes) {
+            s_wr = h->wr;
+        }
+        value_changed = ImGui::DragFloat("window reflectivity", &s_wr, 0.01f, 0.0f, 1.0f, "%.02f");
+        if (value_changed) {
+            db->p.flags |= OPT_SET_NEW_WR | OPT_SET_COMP;
+            db->p.wr = s_wr;
+            show_apply_button = 1;
+        }
+
+
     }
 
     ImGui::Separator();
