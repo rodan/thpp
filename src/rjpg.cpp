@@ -21,9 +21,9 @@
 
 #define    RJPG_EXIFTOOL_BASE64_PREFIX  7       ///< number of bytes that need to be skipped during base64_decode
 
-const uint8_t magic_number_png[8] = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};
-const uint8_t magic_number_tiff_1[4] = {0x49, 0x49, 0x2a, 0x00};
-const uint8_t magic_number_tiff_2[4] = {0x4d, 0x4d, 0x00, 0x2a};
+const uint8_t magic_number_png[8] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
+const uint8_t magic_number_tiff_1[4] = { 0x49, 0x49, 0x2a, 0x00 };
+const uint8_t magic_number_tiff_2[4] = { 0x4d, 0x4d, 0x00, 0x2a };
 
 uint8_t rjpg_new(tgram_t ** thermo)
 {
@@ -79,7 +79,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
         goto cleanup;
     }
 
-    setlocale(LC_ALL|~LC_NUMERIC, "");
+    setlocale(LC_ALL | ~LC_NUMERIC, "");
 
     rti = json_get(item_obj, "RawThermalImage");
     if (rti == NULL) {
@@ -113,7 +113,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
         goto cleanup;
     }
 
-    if (json_getd(item_obj, "AtmosphericTransBeta1", &h->alpha2) != EXIT_SUCCESS) {
+    if (json_getd(item_obj, "AtmosphericTransBeta1", &h->beta1) != EXIT_SUCCESS) {
         fprintf(stderr, "AtmosphericTransBeta1 tag is missing\n");
         goto cleanup;
     }
@@ -182,20 +182,30 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     snprintf(h->camera_model, 32, "%s", camera_model);
 
     if (strlen(camera_model) > 2) {
-        if (memcmp(camera_model, ID_FLIR_THERMACAM_E25, min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_E25))) == 0) {
+        if (memcmp
+            (camera_model, ID_FLIR_THERMACAM_E25,
+             min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_E25))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_E25;
-        } else if (memcmp(camera_model, ID_FLIR_THERMACAM_EX320, min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_EX320))) == 0) {
+        } else
+            if (memcmp
+                (camera_model, ID_FLIR_THERMACAM_EX320,
+                 min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_EX320))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_EX320;
-        } else if (memcmp(camera_model, ID_FLIR_P20_NTSC, min(strlen(camera_model), strlen(ID_FLIR_P20_NTSC))) == 0) {
+        } else
+            if (memcmp
+                (camera_model, ID_FLIR_P20_NTSC,
+                 min(strlen(camera_model), strlen(ID_FLIR_P20_NTSC))) == 0) {
             th->subtype = TH_FLIR_P20_NTSC;
-        } else if (memcmp(camera_model, ID_FLIR_S65_NTSC, min(strlen(camera_model), strlen(ID_FLIR_S65_NTSC))) == 0) {
+        } else
+            if (memcmp
+                (camera_model, ID_FLIR_S65_NTSC,
+                 min(strlen(camera_model), strlen(ID_FLIR_S65_NTSC))) == 0) {
             th->subtype = TH_FLIR_S65_NTSC;
         }
     }
 
     // fill raw_th_img
-    decode_len =
-        apr_base64_decode_len(rti + RJPG_EXIFTOOL_BASE64_PREFIX);
+    decode_len = apr_base64_decode_len(rti + RJPG_EXIFTOOL_BASE64_PREFIX);
 
     img_name = (char *)calloc(strlen(json_file) + 5, sizeof(char));
     if (img_name == NULL) {
@@ -227,40 +237,43 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
 
     if (memcmp(img_contents, magic_number_png, 8) == 0) {
         // th->framew gets allocated by lodepng_decode_memory()
-        err = lodepng_decode_memory((uint8_t **)&(th->framew), &x, &y, img_contents, decode_len, LCT_GREY, 16);
+        err =
+            lodepng_decode_memory((uint8_t **) & (th->framew), &x, &y, img_contents, decode_len,
+                                  LCT_GREY, 16);
         if (err) {
             fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
             goto cleanup;
         }
         ret = EXIT_SUCCESS;
-    } else if ((memcmp(img_contents, magic_number_tiff_1, 4) == 0) || 
+    } else if ((memcmp(img_contents, magic_number_tiff_1, 4) == 0) ||
                (memcmp(img_contents, magic_number_tiff_2, 4) == 0)) {
 
-        TinyTIFFReaderFile* tiffr=NULL;
-        tiffr=TinyTIFFReader_open(img_name); 
+        TinyTIFFReaderFile *tiffr = NULL;
+        tiffr = TinyTIFFReader_open(img_name);
         if (!tiffr) {
             fprintf(stderr, "decoder error TinyTIFFReader_open() has failed\n");
             goto cleanup;
         } else {
-            const uint32_t tiff_width=TinyTIFFReader_getWidth(tiffr);
-            const uint32_t tiff_height=TinyTIFFReader_getHeight(tiffr);
+            const uint32_t tiff_width = TinyTIFFReader_getWidth(tiffr);
+            const uint32_t tiff_height = TinyTIFFReader_getHeight(tiffr);
             //const uint16_t tiff_spp=TinyTIFFReader_getSamplesPerPixel(tiffr);
             //const uint16_t tiff_bps=TinyTIFFReader_getBitsPerSample(tiffr, 0);
 
             //printf("size %ux%u, %u samples per pixel, %u bits each\n", width, height, samples, bps);
             if ((tiff_width != h->raw_th_img_width) || (tiff_height != h->raw_th_img_height)) {
-                fprintf(stderr, "unexpected image size %u != %u or %u ! %u\n", tiff_width, h->raw_th_img_width, tiff_height, h->raw_th_img_height);
+                fprintf(stderr, "unexpected image size %u != %u or %u ! %u\n", tiff_width,
+                        h->raw_th_img_width, tiff_height, h->raw_th_img_height);
                 goto cleanup;
             }
 
-            th->framew = (uint16_t*) calloc(tiff_width*tiff_height, sizeof(uint16_t));
+            th->framew = (uint16_t *) calloc(tiff_width * tiff_height, sizeof(uint16_t));
             TinyTIFFReader_getSampleData(tiffr, th->framew, 0);
         }
         TinyTIFFReader_close(tiffr);
         ret = EXIT_SUCCESS;
     }
 
-cleanup:
+ cleanup:
 
     if (img_name) {
         unlink(img_name);
@@ -269,7 +282,7 @@ cleanup:
         close(img_fd);
     }
 
-cleanup_no_close:
+ cleanup_no_close:
 
     if (root_obj) {
         json_object_put(root_obj);
@@ -337,7 +350,7 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id)
     uint16_t th_width;
     uint16_t th_height;
     uint8_t *pal_rgb;
-    
+
     if ((th == NULL) || (image == NULL)) {
         return EXIT_FAILURE;
     }
@@ -353,25 +366,23 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id)
 
     for (i = 0; i < th_width * th_height; i++) {
         memcpy(image + (i * 4), &(pal_rgb[th->framew[i] * 3]), 3);
-        image[i*4 + 3] = 255; // alpha channel
+        image[i * 4 + 3] = 255; // alpha channel
     }
 
     return EXIT_SUCCESS;
 }
 
-uint8_t rjpg_rescale(th_db_t *d)
+uint8_t rjpg_rescale(th_db_t * d)
 {
     ssize_t i;
     uint8_t framew_needs_flippage = 0;
-    double raw_refl1, raw_refl2;
-    double raw_refl1_attn, raw_refl2_attn;
+    double raw_refl;
     double ep_raw_refl;
     double raw_obj;
     double h2o;
     double t_obj_c;
     double tau;
-    double raw_atm1, raw_atm2, raw_wind;
-    double raw_atm1_attn, raw_atm2_attn, raw_wind_attn;
+    double raw_atm;
     double tau_raw_atm;
     double epsilon_tau_raw_refl;
     uint16_t raw;
@@ -384,10 +395,8 @@ uint8_t rjpg_rescale(th_db_t *d)
     double l_atm_temp;
     double l_rh;
     int32_t t_acc = 0;
-    double IRT = 0.96; ///< Infrared Window transmission - default 1.  likely ~0.95-0.96. Should be empirically determined.
-    double refl_wind = 0; ///< anti-reflective coating on window
-    tgram_t * src_th = d->in_th;
-    tgram_t * dst_th = d->out_th;
+    tgram_t *src_th = d->in_th;
+    tgram_t *dst_th = d->out_th;
     th_getopt_t *p = &(d->p);
 
     rjpg_header_t *h = dst_th->head.rjpg;
@@ -441,43 +450,32 @@ uint8_t rjpg_rescale(th_db_t *d)
     }
 
     switch (src_th->subtype) {
-        case TH_FLIR_THERMACAM_E25:
-        case TH_FLIR_THERMACAM_EX320:
-        case TH_FLIR_P20_NTSC:
-        case TH_FLIR_S65_NTSC:
-            if (localhost_is_le()) {
-                framew_needs_flippage = 1;
-            }
-            break;
-        default:
-            if (!localhost_is_le()) {
-                framew_needs_flippage = 1;
-            }
+    case TH_FLIR_THERMACAM_E25:
+    case TH_FLIR_THERMACAM_EX320:
+    case TH_FLIR_P20_NTSC:
+    case TH_FLIR_S65_NTSC:
+        if (localhost_is_le()) {
+            framew_needs_flippage = 1;
+        }
+        break;
+    default:
+        if (!localhost_is_le()) {
+            framew_needs_flippage = 1;
+        }
     }
 
     //if (p->flags & OPT_SET_DISTANCE_COMP) {
+    if (1) {
         h2o = l_rh * exp(1.5587 + 0.06939 * l_atm_temp - 0.00027816 * pow(l_atm_temp,2) + 0.00000068455 * pow(l_atm_temp,3)); //  # 8.563981576
-        tau = h->atm_trans_X * exp(-sqrt(l_distance) * (h->alpha1 + h->beta1 * sqrt(h2o))) + (1.0 - h->atm_trans_X) * 
+        tau = h->atm_trans_X * exp(-sqrt(l_distance) * (h->alpha1 + h->beta1 * sqrt(h2o))) + (1 - h->atm_trans_X) * 
                   exp( -sqrt(l_distance) * (h->alpha2 + h->beta2 * sqrt(h2o)));
-
-        raw_refl1 = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->refl_temp)) - h->planckF)) - h->planckO;
-        //epsilon_tau_raw_refl = raw_refl * (1.0 - l_emissivity) * tau;
-        raw_refl1_attn = (1.0 - l_emissivity)/l_emissivity*raw_refl1;
-
-        raw_atm1 = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->air_temp)) - h->planckF)) - h->planckO;
-        //tau_raw_atm = raw_atm * (1.0 - tau);
-        raw_atm1_attn = (1.0 - tau)/l_emissivity/tau*raw_atm1;
-
-        raw_wind = raw_refl1;
-        raw_wind_attn = (1.0 - IRT)/l_emissivity/tau/IRT*raw_wind;
-    
-        raw_refl2 = raw_refl1;
-        raw_refl2_attn = refl_wind/l_emissivity/tau/IRT*raw_refl2;
-
-        raw_atm2 = raw_atm1;
-        raw_atm2_attn = (1.0 - tau)/l_emissivity/tau/IRT/tau*raw_atm2;
-
+        raw_atm = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->air_temp)) - h->planckF)) - h->planckO;
+        tau_raw_atm = raw_atm * (1 - tau);
+        raw_refl = h->planckR1 / (h->planckR2 * (exp(h->planckB / (h->refl_temp)) - h->planckF)) - h->planckO;
+        epsilon_tau_raw_refl = raw_refl * (1 - l_emissivity) * tau;
         t_acc = 0;
+
+        printf("tau %lf, h2o %lf, raw_atm %lf, tau_raw_atm %lf, raw_refl %lf, epsilon_tau_raw_refl %lf\n", tau, h2o, raw_atm, tau_raw_atm, raw_refl, epsilon_tau_raw_refl);
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
             if (framew_needs_flippage) {
@@ -485,10 +483,11 @@ uint8_t rjpg_rescale(th_db_t *d)
             } else {
                 raw = src_th->framew[i];
             }
-            //raw_obj = (temp - tau_raw_atm - epsilon_tau_raw_refl) / l_emissivity / tau;
-            //raw/E/tau1/IRT/tau2-raw.atm1.attn-raw.atm2.attn-raw.wind.attn-raw.refl1.attn-raw.refl2.attn
-            raw_obj = 1.0 * raw / l_emissivity / tau / IRT / tau - raw_atm1_attn - raw_atm2_attn - raw_wind_attn - raw_refl1_attn - raw_refl2_attn;
+            raw_obj = (raw - tau_raw_atm - epsilon_tau_raw_refl) / l_emissivity / tau;
             t_obj_c = h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) - RJPG_K;
+            if (i<10) {
+                printf("raw %u, raw_obj %lf, t_obj %lf\n", raw, raw_obj, t_obj_c);
+            }
             d->temp_arr[i] = t_obj_c;
             if (h->t_min > t_obj_c) {
                 h->t_min = t_obj_c;
@@ -499,13 +498,14 @@ uint8_t rjpg_rescale(th_db_t *d)
             t_acc += t_obj_c;
         }
         h->t_avg = 1.0 * t_acc / h->raw_th_img_sz;
-#if 0
     } else {
         raw_refl =
                 h->planckR1 / (h->planckR2 * (exp(h->planckB / h->refl_temp) - h->planckF)) -
                 h->planckO;
         ep_raw_refl = raw_refl * (1 - l_emissivity);
         t_acc = 0;
+
+        printf("raw_refl %lf, ep_raw_refl %lf\n", raw_refl, ep_raw_refl);
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
             if (framew_needs_flippage) {
@@ -518,6 +518,9 @@ uint8_t rjpg_rescale(th_db_t *d)
             t_obj_c =
                 h->planckB / log(h->planckR1 / (h->planckR2 * (raw_obj + h->planckO)) + h->planckF) -
                 RJPG_K;
+            if (i<10) {
+                printf("raw %u, raw_obj %lf, t_obj %lf\n", raw, raw_obj, t_obj_c);
+            }
             d->temp_arr[i] = t_obj_c;
             if (h->t_min > t_obj_c) {
                 h->t_min = t_obj_c;
@@ -529,7 +532,6 @@ uint8_t rjpg_rescale(th_db_t *d)
         }
         h->t_avg = 1.0 * t_acc / h->raw_th_img_sz;
     }
-#endif
 
     if (p->flags & OPT_SET_NEW_MIN) {
         l_min = p->t_min;

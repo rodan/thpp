@@ -114,7 +114,7 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("emissivity");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.02f", hf->emissivity);
+                ImGui::Text("%.02lf", hf->emissivity);
             }
 
             if (v.distance) {
@@ -122,7 +122,7 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("distance");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.02f", hf->distance);
+                ImGui::Text("%.02lf", hf->distance);
             }
 
             if (v.rh) {
@@ -130,7 +130,7 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("relative humidity");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.02f", hf->rh);
+                ImGui::Text("%.02lf", hf->rh);
             }
 
             if (v.alpha1) {
@@ -138,7 +138,7 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("atmospheric trans Alpha1");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.04f", hf->alpha1);
+                ImGui::Text("%lf", hf->alpha1);
             }
 
             if (v.alpha2) {
@@ -146,7 +146,7 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("atmospheric trans Alpha2");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.04f", hf->alpha2);
+                ImGui::Text("%lf", hf->alpha2);
             }
 
             if (v.beta1) {
@@ -154,7 +154,7 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("atmospheric trans Beta1");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.04f", hf->beta1);
+                ImGui::Text("%lf", hf->beta1);
             }
 
             if (v.beta2) {
@@ -162,47 +162,7 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("atmospheric trans Beta2");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.04f", hf->beta2);
-            }
-
-            if (v.planckR1) {
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("planck r1");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.04f", hf->planckR1);
-            }
-
-            if (v.planckR2) {
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("planck r2");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.04f", hf->planckR2);
-            }
-
-            if (v.planckB) {
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("planck b");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.04f", hf->planckB);
-            }
-
-            if (v.planckF) {
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("planck f");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.04f", hf->planckF);
-            }
-
-            if (v.planckO) {
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("planck o");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.04f", hf->planckO);
+                ImGui::Text("%lf", hf->beta2);
             }
 
             if (v.atm_trans_X) {
@@ -210,7 +170,47 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("atmospheric TransX");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.04f", hf->atm_trans_X);
+                ImGui::Text("%lf", hf->atm_trans_X);
+            }
+
+            if (v.planckR1) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("planck r1");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%lf", hf->planckR1);
+            }
+
+            if (v.planckR2) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("planck r2");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%lf", hf->planckR2);
+            }
+
+            if (v.planckB) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("planck b");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%lf", hf->planckB);
+            }
+
+            if (v.planckF) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("planck f");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%lf", hf->planckF);
+            }
+
+            if (v.planckO) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("planck o");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%lf", hf->planckO);
             }
 
             if (v.air_temp) {
@@ -218,7 +218,7 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("atmospheric temperature");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.02f", hf->air_temp);
+                ImGui::Text("%.02lf", hf->air_temp);
             }
 
             if (v.refl_temp) {
@@ -226,7 +226,7 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("reflected apparent temperature");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.02f", hf->refl_temp);
+                ImGui::Text("%.02lf", hf->refl_temp);
             }
 
             if (v.raw_th_img_width) {
