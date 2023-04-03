@@ -47,7 +47,7 @@ CFLAGS?=$(DEFAULT_FLAGS)
 CXXFLAGS?=$(DEFAULT_FLAGS)
 LDFLAGS?=$(DEFAULT_LDFLAGS)
 
-CXXFLAGS+=-fPIC -I. -std=c++0x
+CXXFLAGS+=-std=c++17
 
 DEBUG := $(shell grep "^#define CONFIG_DEBUG" config.h)
 MACROS := $(shell ./tools/extract_macros.sh config.h)
@@ -82,7 +82,7 @@ version.h: $(SRC)
 
 %.o: %.cpp
 	@echo -e " * $(@F)"
-	@$(CXX) $(INCLUDES) $(CFLAGS) -c $< -o $@
+	@$(CXX) $(INCLUDES) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
 
 %.o: %.c
 	@echo -e " * $(@F)"

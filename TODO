@@ -5,6 +5,8 @@
  [x] zoom based on image oversampling techniques
  [x] mouse-based scroll-wheel zoom of the image
  [x] add configurable properties table with image info
+ [ ] fix scan-build cxx11 compilation errors
+ [ ] redo build script to allow compilation of both console-only version and gui version
  [ ] add overlay image containing spot targets and measurement lines
  [ ] selectable theme (for switching between dark mode for visualisation and white mode for printing) in preference dialog
  [ ] change temperature unit in preference dialog

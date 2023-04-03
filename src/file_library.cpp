@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <filesystem>
 #include <algorithm>
+#include <string>
 #include "imgui.h"
 #include "proj.h"
 #include "opengl_helper.h"
@@ -17,6 +17,21 @@
 #define      FL_FILE_READY  0x1
 #define    FL_FILE_INVALID  0x2
 #define    FL_FILE_PREPARE  0x4
+
+#ifndef __has_include
+  static_assert(false, "__has_include not supported");
+#else
+#  if __cplusplus >= 201703L && __has_include(<filesystem>)
+#    include <filesystem>
+     namespace fs = std::filesystem;
+#  elif __has_include(<experimental/filesystem>)
+#    include <experimental/filesystem>
+     namespace fs = std::experimental::filesystem;
+#  elif __has_include(<boost/filesystem.hpp>)
+#    include <boost/filesystem.hpp>
+     namespace fs = boost::filesystem;
+#  endif
+#endif
 
 uint32_t file_tx;
 uint32_t dir_tx;
@@ -198,7 +213,7 @@ node *node_search_fname(const char *fname)
     return NULL;
 }
 
-uint8_t thumbnail_prepare(std::filesystem::path file)
+uint8_t thumbnail_prepare(fs::path file)
 {
     node_t *node_ptr;
     node_t *node_s;
@@ -207,12 +222,13 @@ uint8_t thumbnail_prepare(std::filesystem::path file)
         (file.extension().string().compare(".jpg") == 0)) {
         if (head == NULL) {
             node_ptr = ll_add(&head);
-            strncpy(node_ptr->fname, file.filename().c_str(), FNAME_MAX - 1);
+            strncpy(&node_ptr->fname[0], file.filename().c_str(), FNAME_MAX - 1);
             node_ptr->flags = FL_FILE_PREPARE;
         } else {
-            if ((node_s = node_search_fname(file.filename().c_str())) == NULL) {
+            node_s = node_search_fname(file.filename().c_str());
+            if (node_s == NULL) {
                 node_ptr = ll_add(&head);
-                strncpy(node_ptr->fname, file.filename().c_str(), FNAME_MAX - 1);
+                strncpy(&node_ptr->fname[0], file.filename().c_str(), FNAME_MAX - 1);
                 node_ptr->flags = FL_FILE_PREPARE;
             }
         }
@@ -231,7 +247,7 @@ void file_library(bool *p_open, th_db_t * db)
     float thumbnail_size_x = pref->thumbnail_size;
     float thumbnail_size_y = pref->thumbnail_size;
     float cell_size = thumbnail_size_x + padding;
-    std::filesystem::path abs_path;
+    fs::path abs_path;
     uint16_t path_size = 0;
     uint8_t worthy_file = 0;
     //time_t current_time;
@@ -254,7 +270,7 @@ void file_library(bool *p_open, th_db_t * db)
     }
 
     ImGui::Columns(column_count, 0, false);
-    static std::filesystem::path m_current_directory = std::filesystem::current_path();
+    static fs::path m_current_directory = fs::current_path();
 
     ImVec4 bg_col = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);     // Black background
     ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
@@ -284,7 +300,7 @@ void file_library(bool *p_open, th_db_t * db)
     // add directories directly into the library
     // files are added only after they are deemed ready by file_library_discovery()
     // by that time their texture thumbnail has been generated
- for (auto & directory_entry:std::filesystem::directory_iterator(m_current_directory)) {
+ for (auto & directory_entry:fs::directory_iterator(m_current_directory)) {
         const auto & path = directory_entry.path();
         std::string filename_string = path.filename().string();
         std::string filename_ext = path.extension().string();
