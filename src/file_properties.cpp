@@ -38,21 +38,6 @@ void file_properties(bool *p_open, th_db_t * db)
         ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableHeadersRow();
 
-        if (v.ir_date) {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("IR: Date Of Creation");
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%d/%02d/%02d", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday);
-        }
-
-        if (v.ir_time) {
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::Text("IR: Time Of Creation");
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%02d:%02d:%02d", t.tm_hour, t.tm_min, t.tm_sec);
-        }
 
         if (v.ir_fname) {
             ImGui::TableNextRow();
@@ -229,48 +214,49 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::Text("%.02lf", hf->refl_temp);
             }
 
-            if (v.raw_th_img_width) {
+            if (v.ir_timestamp) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                ImGui::Text("raw thermal image width");
+                ImGui::Text("img create date");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%u", hf->raw_th_img_width);
+                ImGui::Text("%s", hf->create_ts);
             }
 
-            if (v.raw_th_img_height) {
+            if (v.raw_th_img_res) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                ImGui::Text("raw thermal image height");
+                ImGui::Text("IR: resolution");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%u", hf->raw_th_img_height);
+                ImGui::Text("%ux%u", hf->raw_th_img_width, hf->raw_th_img_height);
             }
-
 
             break;
         case TH_IRTIS_DTV:
             hi = db->in_th->head.dtv;
 
-            if (v.raw_th_img_width) {
+            if (v.raw_th_img_res) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
-                ImGui::Text("raw thermal image width");
+                ImGui::Text("IR: resolution");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%u", hi->nst);
+                ImGui::Text("%ux%u", hi->nst, hi->nstv);
             }
 
-            if (v.raw_th_img_height) {
-                ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
-                ImGui::Text("raw thermal image height");
-                ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%u", hi->nstv);
-            }
             if (v.ir_comment) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("IR: comment");
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("%s", hi->inform);
+            }
+
+            if (v.ir_timestamp) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("IR: Date Of Creation");
+                ImGui::TableSetColumnIndex(1);
+                ImGui::Text("%d/%02d/%02d %02d:%02d:%02d", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, 
+                        t.tm_hour, t.tm_min, t.tm_sec);
             }
 
             break;

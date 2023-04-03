@@ -21,10 +21,10 @@ struct fp_visibility {
     bool atm_trans_X;
     bool air_temp;
     bool refl_temp;
-    bool raw_th_img_width;
-    bool raw_th_img_height;
-    bool ir_date;
-    bool ir_time;
+    bool iwt;
+    bool iwtemp;
+    bool raw_th_img_res;
+    bool ir_timestamp;
     bool ir_fname;
     bool ir_comment;
     bool ir_min;

@@ -180,7 +180,7 @@ void tool_processing(bool *p_open, th_db_t * db)
         if (reset_changes) {
             s_refl_temp = h->refl_temp;
         }
-        value_changed = ImGui::DragFloat("reflected temp", &s_refl_temp, 0.01f, -20.0f, 300.0f, "%0.2f C");
+        value_changed = ImGui::DragFloat("reflected temp [C]", &s_refl_temp, 0.01f, -20.0f, 300.0f, "%0.2f C");
         if (value_changed) {
             db->p.flags |= OPT_SET_NEW_RT | OPT_SET_COMP;
             db->p.refl_temp = s_refl_temp;
@@ -225,6 +225,17 @@ void tool_processing(bool *p_open, th_db_t * db)
         if (value_changed) {
             db->p.flags |= OPT_SET_NEW_IWT | OPT_SET_COMP;
             db->p.iwt = s_iwt;
+            show_apply_button = 1;
+        }
+
+        static float s_iwtemp = h->iwtemp;
+        if (reset_changes) {
+            s_iwtemp = h->iwtemp;
+        }
+        value_changed = ImGui::DragFloat("ir window temperature [C]", &s_iwtemp, 1.0f, -20.0f, 300.0f, "%.02f C");
+        if (value_changed) {
+            db->p.flags |= OPT_SET_NEW_IWTEMP | OPT_SET_COMP;
+            db->p.iwtemp = s_iwtemp;
             show_apply_button = 1;
         }
 

@@ -55,9 +55,6 @@ void tool_preferences(bool *p_open, th_db_t * db)
         pref->thumbnail_size = s_thumbnail_size;
     }
 
-    ImGui::Separator();
-    ImGui::Text("viewport image");
-
     static uint8_t s_pal = DEF_PALETTE;
     value_changed = ImGui::Combo("palette", (int *) &s_pal,
                  "256\0color\0grey\0hmetal0\0hmetal1\0hmetal2\0hotblue1\0hotblue2\0iron\0per_true\0pericolor\0rainbow\0rainbow0\0\0");
@@ -65,6 +62,9 @@ void tool_preferences(bool *p_open, th_db_t * db)
         pref->palette_default = s_pal;
         db->p.pal = s_pal;
     }
+
+    ImGui::Separator();
+    ImGui::Text("viewport image");
 
     // zoom interpolation technique
     int s_zoom_int = pref->zoom_interpolation;
@@ -104,10 +104,8 @@ void tool_preferences(bool *p_open, th_db_t * db)
         ImGui::SameLine(); HelpMarker("control the visibility of items in the file properties table");
         ImGui::Checkbox("camera make", &v->camera_make);
         ImGui::Checkbox("camera model", &v->camera_model);
-        ImGui::Checkbox("image width", &v->raw_th_img_width);
-        ImGui::Checkbox("image height", &v->raw_th_img_height);
-        ImGui::Checkbox("image date", &v->ir_date);
-        ImGui::Checkbox("image time", &v->ir_time);
+        ImGui::Checkbox("image resolution", &v->raw_th_img_res);
+        ImGui::Checkbox("image timestamp", &v->ir_timestamp);
         ImGui::Checkbox("image file name", &v->ir_fname);
         ImGui::Checkbox("image comment", &v->ir_comment);
         ImGui::Checkbox("image min", &v->ir_min);

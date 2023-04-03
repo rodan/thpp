@@ -13,8 +13,9 @@
 #define           OPT_SET_NEW_AT  0x20
 #define           OPT_SET_NEW_RT  0x40
 #define           OPT_SET_NEW_RH  0x80
-#define           OPT_SET_NEW_IWT 0x100
-#define           OPT_SET_NEW_WR  0x200
+#define          OPT_SET_NEW_IWT  0x100
+#define       OPT_SET_NEW_IWTEMP  0x200
+#define           OPT_SET_NEW_WR  0x400
 
 #define                   FT_UNK  0
 
@@ -54,6 +55,7 @@ struct th_getopt {
     double refl_temp;       ///< reflected temperature in dC
     double rh;              ///< relative humidity
     double iwt;             ///< infrared window transmission
+    double iwtemp;          ///< infrared window temperature
     double wr;              ///< window reflectivity (0 if anti-reflective coating is present)
 };
 typedef struct th_getopt th_getopt_t;

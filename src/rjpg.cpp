@@ -102,6 +102,7 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     unsigned err = 0;
     char *camera_make;
     char *camera_model;
+    char *create_ts;
     char *rti;
     uint8_t ret = EXIT_FAILURE;
     int img_fd = -1;
@@ -217,14 +218,23 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
         goto cleanup;
     }
 
-    h->iwt = 1.0;
+    if (json_getd(item_obj, "IRWindowTransmission", &h->iwt) != EXIT_SUCCESS) {
+        h->iwt = 1.0;
+    }
+
+    if (json_getd(item_obj, "IRWindowTemperature", &h->iwtemp) != EXIT_SUCCESS) {
+        h->iwtemp = h->refl_temp;
+    }
+
     h->wr = 0;
 
     camera_make = json_get(item_obj, "Make");
     camera_model = json_get(item_obj, "Model");
+    create_ts = json_get(item_obj, "CreateDate");
 
-    snprintf(h->camera_make, 32, "%s", camera_make);
-    snprintf(h->camera_model, 32, "%s", camera_model);
+    snprintf(h->camera_make, TAG_SZ_MAX, "%s", camera_make);
+    snprintf(h->camera_model, TAG_SZ_MAX, "%s", camera_model);
+    snprintf(h->create_ts, TAG_SZ_MAX, "%s", create_ts);
 
     if (strlen(camera_model) > 2) {
         if (memcmp
@@ -555,6 +565,12 @@ uint8_t rjpg_rescale(th_db_t * d)
         IWT = h->iwt;
     }
 
+    if (p->flags & OPT_SET_NEW_IWTEMP) {
+        IRWTemp = p->iwtemp;
+    } else {
+        IRWTemp = h->iwtemp;
+    }
+
     if (p->flags & OPT_SET_NEW_WR) {
         WR = p->wr;
     } else {
@@ -562,7 +578,6 @@ uint8_t rjpg_rescale(th_db_t * d)
     }
 
     RTemp = h->refl_temp;
-    IRWTemp = RTemp;
     PR1 = h->planckR1;
     PB = h->planckB;
     PF = h->planckF;

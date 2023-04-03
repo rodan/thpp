@@ -26,11 +26,13 @@ struct rjpg_header {
     double t_max;
     double t_avg;
     double iwt;
+    double iwtemp;
     double wr;
     uint32_t raw_th_img_sz;
     uint8_t *raw_th_img;
     char camera_make[TAG_SZ_MAX];
     char camera_model[TAG_SZ_MAX];
+    char create_ts[TAG_SZ_MAX];
 };
 
 typedef struct rjpg_header rjpg_header_t;
