@@ -23,7 +23,7 @@
 // this compile-type define is provided to pick one of the open-source formulas to calculate the temperature from the raw data
 // enable USE_GLENN_ALGO in order to use the algorithm described in https://github.com/gtatters/Thermimage
 // otherwise the simplified https://github.com/kentavv/flir-batch-process algo will be applied
-#define USE_GLENN_ALGO
+#define  USE_GLENN_ALGO
 
 #define    RJPG_EXIFTOOL_BASE64_PREFIX  7       ///< number of bytes that need to be skipped during base64_decode
 
@@ -112,13 +112,13 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
     root_obj = json_object_from_file(json_file);
 
     if (root_obj == NULL) {
-        fprintf(stderr, "unable to parse json file\n");
+        fprintf(stderr, "error in json_object_from_file(), unable to parse json file %s\n", json_file);
         goto cleanup;
     }
 
     item_obj = json_object_array_get_idx(root_obj, 0);
     if (item_obj == NULL) {
-        fprintf(stderr, "unable to parse json file\n");
+        fprintf(stderr, "error in json_object_array_get_idx(), unable to parse json file %s\n", json_file);
         goto cleanup;
     }
 
@@ -365,9 +365,14 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
         errExit("fork");
     case 0:
         if (fd_json < 0) {
-            errExit("during mkstemp");
+            errMsg("during mkstemp");
+            return EXIT_FAILURE;
         }
-        dup2(fd_json, 1);
+        if (dup2(fd_json, 1) < 0) {
+            errMsg("during dup2()");
+            close(fd_json);
+            return EXIT_FAILURE;
+        }
         execlp("exiftool", "exiftool", "-b", "-json", in_file, (char *)NULL);
         exit(EXIT_SUCCESS);
     default:
@@ -384,6 +389,36 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
             }
 
             if (WIFEXITED(status) || WIFSIGNALED(status)) {
+
+                close(fd_json);
+                syncfs(fd_json);
+
+// to be removed
+// ------>8----
+
+                struct stat st;
+                int fd;
+
+                if ((fd = open(tmp_json, O_RDONLY)) < 0) {
+                    errMsg("opening input file");
+                    return EXIT_FAILURE;
+                }
+
+                if (fstat(fd, &st) < 0) {
+                    errMsg("reading input file");
+                    close(fd);
+                    return EXIT_FAILURE;
+                }
+
+                close(fd);
+                if (st.st_size < 1) {
+                    printf("%s size %ld\n", tmp_json, st.st_size);
+                    sync();
+                    usleep(100000);
+                }
+
+// -----8<----
+
                 // populated rjpg header with info from the json file
                 if (rjpg_extract_json(th, tmp_json) == EXIT_FAILURE) {
                     return EXIT_FAILURE;
@@ -502,6 +537,7 @@ uint8_t rjpg_rescale(th_db_t * d)
     tgram_t *src_th = d->in_th;
     tgram_t *dst_th = d->out_th;
     th_getopt_t *p = &(d->p);
+    double t_obj;
 
     rjpg_header_t *h = dst_th->head.rjpg;
 
@@ -641,7 +677,7 @@ uint8_t rjpg_rescale(th_db_t * d)
             raw = src_th->framew[i];
         }
 
-        double t_obj = rjpg_calc_glenn(raw);
+        t_obj = rjpg_calc_glenn(raw);
         d->temp_arr[i] = t_obj;
         if (h->t_min > t_obj) {
             h->t_min = t_obj;
@@ -651,6 +687,7 @@ uint8_t rjpg_rescale(th_db_t * d)
         }
         t_acc += raw;
     }
+
     h->t_avg = rjpg_calc_glenn(t_acc / h->raw_th_img_sz);
 
 #else

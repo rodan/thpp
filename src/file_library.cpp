@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <algorithm>
 #include <string>
+#include <omp.h>
+#include <unistd.h>
 #include "imgui.h"
 #include "proj.h"
 #include "opengl_helper.h"
@@ -12,25 +14,28 @@
 #include "version.h"
 #include "file_library.h"
 
-#define          FNAME_MAX  256
+#define         CONFIG_OMP
+#define CONFIG_OMP_THREADS  16
+#define          FNAME_MAX  1024
 //possible flags
 #define      FL_FILE_READY  0x1
 #define    FL_FILE_INVALID  0x2
 #define    FL_FILE_PREPARE  0x4
+#define   FL_FILE_NEED_TEX  0x8
 
 #ifndef __has_include
-  static_assert(false, "__has_include not supported");
+static_assert(false, "__has_include not supported");
 #else
-#  if __cplusplus >= 201703L && __has_include(<filesystem>)
-#    include <filesystem>
-     namespace fs = std::filesystem;
-#  elif __has_include(<experimental/filesystem>)
-#    include <experimental/filesystem>
-     namespace fs = std::experimental::filesystem;
-#  elif __has_include(<boost/filesystem.hpp>)
-#    include <boost/filesystem.hpp>
-     namespace fs = boost::filesystem;
-#  endif
+#if __cplusplus >= 201703L && __has_include(<filesystem>)
+#include <filesystem>
+namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#elif __has_include(<boost/filesystem.hpp>)
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
+#endif
 #endif
 
 uint32_t file_tx;
@@ -43,18 +48,21 @@ struct node {
     uint32_t texture;
     uint16_t width;
     uint16_t height;
+    th_db_t *thumb;
     struct node *next;
 };
 typedef struct node node_t;
 
 node_t *head = NULL;
 
-th_db_t thumb;
+//th_db_t thumb;
 
 void ll_print(node_t * head);
 node_t *ll_find_tail(node_t * head);
 node_t *ll_add(node_t ** head, const uint8_t val);
 node_t *ll_remove(node_t ** head, const uint8_t val);
+uint32_t ll_count(node_t * head);
+node_t *ll_get_by_index(node_t * head, uint32_t search_idx);
 
 void ll_print(node_t * head)
 {
@@ -135,6 +143,37 @@ node_t *ll_add(node_t ** head)
     return new_node;
 }
 
+uint32_t ll_count(node_t * head)
+{
+    uint32_t ret = 0;
+
+    node_t *p = head;
+
+    while (NULL != p) {
+        p = p->next;
+        ret++;
+    }
+
+    return ret;
+}
+
+node_t *ll_get_by_index(node_t * head, uint32_t search_idx)
+{
+    uint32_t index = 0;
+
+    node_t *p = head;
+
+    while (NULL != p) {
+        if (search_idx == index) {
+            return p;
+        }
+        p = p->next;
+        index++;
+    }
+
+    return NULL;
+}
+
 void file_library_init(void)
 {
     unsigned int w, h;
@@ -152,7 +191,6 @@ void file_library_init(void)
 void file_library_free(void)
 {
     ll_free_all(&head);
-    cleanup(&thumb);
 }
 
 std::string str_tolower(std::string s)
@@ -162,40 +200,38 @@ std::string str_tolower(std::string s)
     return s;
 }
 
-uint8_t node_populate(node_t * node, const char *abs_path)
+uint8_t node_populate(node_t * node)
 {
+    uint8_t ret = EXIT_FAILURE;
     global_preferences_t *pref = gp_get_ptr();
 
-    if (stat(abs_path, &node->st) < 0) {
+    if (stat(node->fname, &node->st) < 0) {
         node->flags |= FL_FILE_INVALID;
         return EXIT_FAILURE;
     }
 
-    cleanup(&thumb);
-    memset(&thumb, 0, sizeof(th_db_t));
+    node->thumb = (th_db_t *) calloc(1, sizeof(th_db_t));
 
-    if (thumb.p.in_file) {
-        free(thumb.p.in_file);
-    }
+    node->thumb->p.in_file = (char *)calloc(strlen(node->fname) + 1, sizeof(char));
+    strncpy(node->thumb->p.in_file, node->fname, strlen(node->fname));
+    node->thumb->p.pal = pref->palette_default;
+    node->thumb->p.zoom_level = 1;
 
-    thumb.p.in_file = (char *)calloc(strlen(abs_path) + 1, sizeof(char));
-    strncpy(thumb.p.in_file, abs_path, strlen(abs_path));
-    thumb.p.pal = pref->palette_default;
-    thumb.p.zoom_level = 1;
+    if (main_cli(node->thumb, 0) == EXIT_SUCCESS) {
+        //load_texture_from_mem(thumb->rgba[0].data, &node->texture, node->thumb->rgba[0].width,
+        //                      node->thumb->rgba[0].height);
 
-    if (main_cli(&thumb, 0) == EXIT_SUCCESS) {
-        load_texture_from_mem(thumb.rgba[0].data, &node->texture, thumb.rgba[0].width, thumb.rgba[0].height);
-        //printf("tex %u for %s\n", node->texture, abs_path);
-        node->width = thumb.rgba[0].width;
-        node->height = thumb.rgba[0].height;
-        node->flags = FL_FILE_READY;
-        return EXIT_SUCCESS;
+        //printf("tex %u sz %dx%d for %s, node %p\n", node->texture, thumb->rgba[0].width, thumb->rgba[0].height, node->fname, (void *) node);
+        node->width = node->thumb->rgba[0].width;
+        node->height = node->thumb->rgba[0].height;
+        node->flags = FL_FILE_NEED_TEX;
+        ret = EXIT_SUCCESS;
     } else {
-        fprintf(stderr, "warning: %s can't be opened as a thermal image\n", abs_path);
+        fprintf(stderr, "warning: %s can't be opened as a thermal image\n", node->fname);
         node->flags = FL_FILE_INVALID;
     }
 
-    return EXIT_FAILURE;
+    return ret;
 }
 
 node *node_search_fname(const char *fname)
@@ -218,17 +254,20 @@ uint8_t thumbnail_prepare(fs::path file)
     node_t *node_ptr;
     node_t *node_s;
 
-    if ((file.extension().string().compare(".dtv") == 0) || 
+    if ((file.extension().string().compare(".dtv") == 0) ||
         (file.extension().string().compare(".jpg") == 0)) {
         if (head == NULL) {
             node_ptr = ll_add(&head);
-            strncpy(&node_ptr->fname[0], file.filename().c_str(), FNAME_MAX - 1);
+            //strncpy(&node_ptr->fname[0], file.filename().c_str(), FNAME_MAX - 1);
+            strncpy(&node_ptr->fname[0], file.c_str(), FNAME_MAX - 1);
             node_ptr->flags = FL_FILE_PREPARE;
         } else {
-            node_s = node_search_fname(file.filename().c_str());
+            //node_s = node_search_fname(file.filename().c_str());
+            node_s = node_search_fname(file.c_str());
             if (node_s == NULL) {
                 node_ptr = ll_add(&head);
-                strncpy(&node_ptr->fname[0], file.filename().c_str(), FNAME_MAX - 1);
+                //strncpy(&node_ptr->fname[0], file.filename().c_str(), FNAME_MAX - 1);
+                strncpy(&node_ptr->fname[0], file.c_str(), FNAME_MAX - 1);
                 node_ptr->flags = FL_FILE_PREPARE;
             }
         }
@@ -255,7 +294,9 @@ void file_library(bool *p_open, th_db_t * db)
     node_t *search = NULL;
     uint32_t u;
     uint8_t entry_is_dir = 0;
-    uint16_t file_analyze = pref->thumbnail_gen_per_frame;
+    //uint16_t file_analyze = pref->thumbnail_gen_per_frame;
+    double runtime;
+    node_t *node = head;
 
     if (!ImGui::Begin("image library", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
@@ -317,7 +358,8 @@ void file_library(bool *p_open, th_db_t * db)
             abs_path = m_current_directory;
             abs_path /= filename_string;
 
-            if ((search = node_search_fname(filename_string.c_str())) != NULL) {
+            //if ((search = node_search_fname(filename_string.c_str())) != NULL) {
+            if ((search = node_search_fname(abs_path.c_str())) != NULL) {
                 // if file has been already opened and a texture has been created for it's thumbnail
                 if (search->flags & FL_FILE_READY) {
                     worthy_file = 1;
@@ -328,10 +370,12 @@ void file_library(bool *p_open, th_db_t * db)
                     }
                 } else if (search->flags & FL_FILE_PREPARE) {
                     worthy_file = 1;
+#if 0
                     if (file_analyze) {
                         node_populate(search, abs_path.c_str());
                         file_analyze--;
                     }
+#endif
                 }
             } else {
                 // file not present in the linked list
@@ -379,6 +423,84 @@ void file_library(bool *p_open, th_db_t * db)
         ImGui::TextWrapped(filename_string.c_str());
         ImGui::NextColumn();
         ImGui::PopID();
+    }
+
+    runtime = omp_get_wtime();
+
+#if defined CONFIG_OMP
+    uint32_t thumb_list_sz = ll_count(head);
+    omp_set_num_threads(CONFIG_OMP_THREADS);
+
+#pragma omp parallel private(node)
+    {
+        //node_t *node;
+        uint32_t i;
+        node = head;
+
+        int t_cnt = omp_get_num_threads();
+        int t_cur = omp_get_thread_num();
+
+        for (i = t_cur; i < thumb_list_sz; i += t_cnt) {
+            node = ll_get_by_index(head, i);
+
+            if (node == NULL) {
+                continue;
+            }
+
+            if (node->flags & FL_FILE_PREPARE) {
+                node_populate(node);
+            }
+        }
+    }
+
+#else
+    // single thread
+    //node_t *node;
+    node = head;
+
+    // single thread
+    while (node != NULL) {
+        if (node->flags & FL_FILE_PREPARE) {
+            node_populate(node);
+        }
+        node = node->next;
+    }
+#endif
+
+    runtime = omp_get_wtime() - runtime;
+    if (runtime > 0.001) {
+        printf("album ready in %lfs\n", runtime);
+    }
+
+    node = head;
+    while (node != NULL) {
+    //for (i = 0; i < thumb_list_sz; i++) {
+    //    node = ll_get_by_index(head, i);
+        if (node->flags & FL_FILE_NEED_TEX) {
+            if (node->thumb != NULL) {
+
+                load_texture_from_mem(node->thumb->rgba[0].data, &node->texture, node->thumb->rgba[0].width,
+                              node->thumb->rgba[0].height);
+
+                //printf("tex %u sz %dx%d for %s, node %p\n", node->texture, node->thumb->rgba[0].width, node->thumb->rgba[0].height, node->fname, (void *) node);
+
+                if (node->texture) {
+                    node->flags = FL_FILE_READY;
+                    if (node->thumb->p.in_file) {
+                        free(node->thumb->p.in_file);
+                    }
+                    cleanup(node->thumb);
+                    free(node->thumb);
+                    node->thumb = NULL;
+                } else {
+                    fprintf(stderr, "warning, empty texture\n");
+                }
+            } else {
+                fprintf(stderr, "error, node->thumb already freed\n");
+            }
+        }
+
+        node = node->next;
     }
 
     ImGui::End();
