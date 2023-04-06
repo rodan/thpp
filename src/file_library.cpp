@@ -417,15 +417,16 @@ void file_library(bool *p_open, th_db_t * db)
 
                     path_size = strlen(abs_path.c_str());
                     db->p.in_file = (char *)calloc(path_size + 1, sizeof(char));
-                    if (db->p.in_file == NULL) {
-                        errMsg("malloc error");
+                    if (db->p.in_file != NULL) {
+                        memcpy(db->p.in_file, abs_path.c_str(), path_size + 1);
+                        db->p.in_file[path_size] = 0;
+                        db->fe.return_state = RET_RST;
+                        //db->p.zoom_level = 1;
+                        main_cli(db, 0);
+                        viewport_refresh_vp(db);
+                    } else {
+                        errMsg("calloc error");
                     }
-                    memcpy(db->p.in_file, abs_path.c_str(), path_size + 1);
-                    db->p.in_file[path_size] = 0;
-                    db->fe.return_state = RET_RST;
-                    //db->p.zoom_level = 1;
-                    main_cli(db, 0);
-                    viewport_refresh_vp(db);
                 } else {
                     fprintf(stderr, "warning: unable to open %s\n", abs_path.c_str());
                 }

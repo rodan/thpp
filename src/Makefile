@@ -40,8 +40,8 @@ LOCAL_OBJECTS     = $(LOCAL_SRC_CPP:%.cpp=%.o) $(LOCAL_SRC_C:%.c=%.o)
 # Append specific CFLAGS/LDFLAGS
 CFLAGS_REL	 += -O3
 LDFLAGS_REL	 += -Wl,-s
-CFLAGS_DBG	 += -O1 -ggdb -DNDEBUG -pg
-LDFLAGS_DBG	 += -pg
+CFLAGS_DBG	 += -O1 -ggdb -DNDEBUG # -pg
+LDFLAGS_DBG	 += # -pg
 
 DEFAULT_FLAGS=-fPIC -pedantic -Wall -Wextra -Wa,-ahl=$(@:.o=.s) -fopenmp
 DEFAULT_LDFLAGS=-lm -lGL `pkg-config --static --libs glfw3` -fopenmp
