@@ -9,9 +9,8 @@
 #include <math.h>
 #include <arpa/inet.h>
 #include <locale.h>
+#include "ExifTool.h"
 #include "tinytiffreader.h"
-#include "apr_base64.h"
-#include "json_helper.h"
 #include "lodepng.h"
 #include "tlpi_hdr.h"
 #include "thermogram.h"
@@ -19,7 +18,6 @@
 #include "proj.h"
 #include "rjpg.h"
 
-// the digital-to-analog conversion algorithm is not provided by Flir
 // this compile-type define is provided to pick one of the open-source formulas to calculate the temperature from the raw data
 // enable USE_GLENN_ALGO in order to use the algorithm described in https://github.com/gtatters/Thermimage
 // otherwise the simplified https://github.com/kentavv/flir-batch-process algo will be applied
@@ -31,41 +29,44 @@ const uint8_t magic_number_png[8] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 
 const uint8_t magic_number_tiff_1[4] = { 0x49, 0x49, 0x2a, 0x00 };
 const uint8_t magic_number_tiff_2[4] = { 0x4d, 0x4d, 0x00, 0x2a };
 
-double E;                       ///< Emissivity - default 1, should be above 0.95 for sources that resemble a black body
-double OD;                      ///< Object Distance in metres
-double RTemp;                   ///< apparent Reflected Temperature - one value from FLIR file (dC), default 20dC
-double ATemp;                   ///< Atmospheric Temperature for transmission loss - one value from FLIR file (dC) - default = RTemp
-double IRWTemp;                 ///< Infrared Window Temperature - default = RTemp (dC)
-double IWT;                     ///< Infrared Window Transmission - default 1.  likely ~0.95-0.96. Should be empirically determined.
-double RH;                      ///< Relative humidity - float between 0 and 1
-double PR1;                     ///< PlanckR1 calibration constant
-double PB;                      ///< PlanckB calibration constant
-double PF;                      ///< PlanckF calibration constant
-double PO;                      ///< PlanckO calibration constant
-double PR2;                     ///< PlanckR2 calibration constant
-double ATA1;                    ///< Atmospheric Trans Alpha 1
-double ATA2;                    ///< Atmospheric Trans Alpha 2
-double ATB1;                    ///< Atmospheric Trans Beta 1
-double ATB2;                    ///< Atmospheric Trans Beta 2
-double ATX;                     ///< Atmospheric Trans X
-double WR;                      ///< Window Reflectivity (0 for window covered in anti-reflective coating)
+struct raw_conv {
+    double E;                       ///< Emissivity - default 1, should be above 0.95 for sources that resemble a black body
+    double OD;                      ///< Object Distance in metres
+    double RTemp;                   ///< apparent Reflected Temperature - one value from FLIR file (dC), default 20dC
+    double ATemp;                   ///< Atmospheric Temperature for transmission loss - one value from FLIR file (dC) - default = RTemp
+    double IRWTemp;                 ///< Infrared Window Temperature - default = RTemp (dC)
+    double IWT;                     ///< Infrared Window Transmission - default 1.  likely ~0.95-0.96. Should be empirically determined.
+    double RH;                      ///< Relative humidity - float between 0 and 1
+    double PR1;                     ///< PlanckR1 calibration constant
+    double PB;                      ///< PlanckB calibration constant
+    double PF;                      ///< PlanckF calibration constant
+    double PO;                      ///< PlanckO calibration constant
+    double PR2;                     ///< PlanckR2 calibration constant
+    double ATA1;                    ///< Atmospheric Trans Alpha 1
+    double ATA2;                    ///< Atmospheric Trans Alpha 2
+    double ATB1;                    ///< Atmospheric Trans Beta 1
+    double ATB2;                    ///< Atmospheric Trans Beta 2
+    double ATX;                     ///< Atmospheric Trans X
+    double WR;                      ///< Window Reflectivity (0 for window covered in anti-reflective coating)
 
-double h2o;
+    double h2o;
 
 #ifdef USE_GLENN_ALGO
-double tau1, tau2;
-double raw_refl1, raw_refl2;
-double raw_refl1_attn, raw_refl2_attn;
-double raw_atm1, raw_atm2, raw_wind;
-double raw_atm1_attn, raw_atm2_attn, raw_wind_attn;
+    double tau1, tau2;
+    double raw_refl1, raw_refl2;
+    double raw_refl1_attn, raw_refl2_attn;
+    double raw_atm1, raw_atm2, raw_wind;
+    double raw_atm1_attn, raw_atm2_attn, raw_wind_attn;
 #else
-double tau;
-double raw_atm;
-double tau_raw_atm;
-double raw_refl;
-double epsilon_tau_raw_refl;
-double ep_raw_refl;
+    double tau;
+    double raw_atm;
+    double tau_raw_atm;
+    double raw_refl;
+    double epsilon_tau_raw_refl;
+    double ep_raw_refl;
 #endif
+};
+typedef struct raw_conv raw_conv_t;
 
 uint8_t rjpg_new(tgram_t ** thermo)
 {
@@ -91,260 +92,17 @@ uint8_t rjpg_new(tgram_t ** thermo)
     return EXIT_SUCCESS;
 }
 
-uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
-{
-    json_object *root_obj = NULL;
-    json_object *item_obj = NULL;
-    char *img_name = NULL;
-    uint8_t *img_contents = NULL;
-    int decode_len;
-    unsigned x, y;
-    unsigned err = 0;
-    char *camera_make;
-    char *camera_model;
-    char *create_ts;
-    char *rti;
-    uint8_t ret = EXIT_FAILURE;
-    int img_fd = -1;
+uint8_t rjpg_check_th_validity(tgram_t * th) {
+    uint8_t ret = EXIT_SUCCESS;
+
+    if (th == NULL) {
+        return EXIT_FAILURE;
+    }
 
     rjpg_header_t *h = th->head.rjpg;
 
-    root_obj = json_object_from_file(json_file);
-
-    if (root_obj == NULL) {
-        fprintf(stderr, "error in json_object_from_file(), unable to parse json file %s\n", json_file);
-        goto cleanup;
-    }
-
-    item_obj = json_object_array_get_idx(root_obj, 0);
-    if (item_obj == NULL) {
-        fprintf(stderr, "error in json_object_array_get_idx(), unable to parse json file %s\n", json_file);
-        goto cleanup;
-    }
-
-    setlocale(LC_ALL | ~LC_NUMERIC, "");
-
-    rti = json_get(item_obj, "RawThermalImage");
-    if (rti == NULL) {
-        fprintf(stderr, "RawThermalImage tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "Emissivity", &h->emissivity) != EXIT_SUCCESS) {
-        fprintf(stderr, "Emissivity tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "ObjectDistance", &h->distance) != EXIT_SUCCESS) {
-        fprintf(stderr, "ObjectDistance tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "RelativeHumidity", &h->rh) != EXIT_SUCCESS) {
-        fprintf(stderr, "RelativeHumidity tag is missing\n");
-        goto cleanup;
-    }
-    h->rh /= 100.0;
-
-    if (json_getd(item_obj, "AtmosphericTransAlpha1", &h->alpha1) != EXIT_SUCCESS) {
-        fprintf(stderr, "AtmosphericTransAlpha1 tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "AtmosphericTransAlpha2", &h->alpha2) != EXIT_SUCCESS) {
-        fprintf(stderr, "AtmosphericTransAlpha2 tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "AtmosphericTransBeta1", &h->beta1) != EXIT_SUCCESS) {
-        fprintf(stderr, "AtmosphericTransBeta1 tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "AtmosphericTransBeta2", &h->beta2) != EXIT_SUCCESS) {
-        fprintf(stderr, "AtmosphericTransBeta2 tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "PlanckR1", &h->planckR1) != EXIT_SUCCESS) {
-        fprintf(stderr, "PlanckR1 tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "PlanckR2", &h->planckR2) != EXIT_SUCCESS) {
-        fprintf(stderr, "PlanckR2 tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "PlanckB", &h->planckB) != EXIT_SUCCESS) {
-        fprintf(stderr, "PlanckB tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "PlanckF", &h->planckF) != EXIT_SUCCESS) {
-        fprintf(stderr, "PlanckF tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "PlanckO", &h->planckO) != EXIT_SUCCESS) {
-        fprintf(stderr, "PlanckO tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "AtmosphericTransX", &h->atm_trans_X) != EXIT_SUCCESS) {
-        fprintf(stderr, "AtmosphericTransX tag is missing\n");
-        goto cleanup;
-    }
-
-    // air_temp keeps temperature in degrees C
-    if (json_getd(item_obj, "AtmosphericTemperature", &h->air_temp) != EXIT_SUCCESS) {
-        fprintf(stderr, "AtmosphericTemperature tag is missing\n");
-        goto cleanup;
-    }
-
-    // refl_temp keeps temperature in degrees C
-    if (json_getd(item_obj, "ReflectedApparentTemperature", &h->refl_temp) != EXIT_SUCCESS) {
-        fprintf(stderr, "ReflectedApparentTemperature tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getw(item_obj, "RawThermalImageWidth", &h->raw_th_img_width) != EXIT_SUCCESS) {
-        fprintf(stderr, "RawThermalImageWidth tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getw(item_obj, "RawThermalImageHeight", &h->raw_th_img_height) != EXIT_SUCCESS) {
-        fprintf(stderr, "RawThermalImageHeight tag is missing\n");
-        goto cleanup;
-    }
-
-    if (json_getd(item_obj, "IRWindowTransmission", &h->iwt) != EXIT_SUCCESS) {
-        h->iwt = 1.0;
-    }
-
-    if (json_getd(item_obj, "IRWindowTemperature", &h->iwtemp) != EXIT_SUCCESS) {
-        h->iwtemp = h->refl_temp;
-    }
-
-    h->wr = 0;
-
-    camera_make = json_get(item_obj, "Make");
-    camera_model = json_get(item_obj, "Model");
-    create_ts = json_get(item_obj, "CreateDate");
-
-    snprintf(h->camera_make, TAG_SZ_MAX, "%s", camera_make);
-    snprintf(h->camera_model, TAG_SZ_MAX, "%s", camera_model);
-    snprintf(h->create_ts, TAG_SZ_MAX, "%s", create_ts);
-
-    if (strlen(camera_model) > 2) {
-        if (memcmp
-            (camera_model, ID_FLIR_THERMACAM_E25,
-             min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_E25))) == 0) {
-            th->subtype = TH_FLIR_THERMACAM_E25;
-        } else if (memcmp
-                   (camera_model, ID_FLIR_THERMACAM_E65,
-                    min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_E65))) == 0) {
-            th->subtype = TH_FLIR_THERMACAM_E65;
-        } else if (memcmp
-                   (camera_model, ID_FLIR_THERMACAM_EX320,
-                    min(strlen(camera_model), strlen(ID_FLIR_THERMACAM_EX320))) == 0) {
-            th->subtype = TH_FLIR_THERMACAM_EX320;
-        } else if (memcmp
-                   (camera_model, ID_FLIR_P20_NTSC,
-                    min(strlen(camera_model), strlen(ID_FLIR_P20_NTSC))) == 0) {
-            th->subtype = TH_FLIR_P20_NTSC;
-        } else if (memcmp
-                   (camera_model, ID_FLIR_S65_NTSC,
-                    min(strlen(camera_model), strlen(ID_FLIR_S65_NTSC))) == 0) {
-            th->subtype = TH_FLIR_S65_NTSC;
-        }
-    }
-
-    // fill raw_th_img
-    decode_len = apr_base64_decode_len(rti + RJPG_EXIFTOOL_BASE64_PREFIX);
-
-    img_name = (char *)calloc(strlen(json_file) + 5, sizeof(char));
-    if (img_name == NULL) {
-        errExit("allocating png filename");
-        exit(EXIT_FAILURE);
-    }
-
-    img_contents = (uint8_t *) calloc(decode_len, sizeof(uint8_t));
-    if (img_contents == NULL) {
-        errExit("allocating png file");
-        exit(EXIT_FAILURE);
-    }
-
-    apr_base64_decode((char *)img_contents, rti + RJPG_EXIFTOOL_BASE64_PREFIX);
-
-    snprintf(img_name, strlen(json_file) + 5, "%s.img", json_file);
-
-    if ((img_fd = open(img_name, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
-        errMsg("opening file %s", img_name);
-        goto cleanup_no_close;
-    }
-
-    if (write(img_fd, img_contents, decode_len) < decode_len) {
-        errMsg("writing");
-        goto cleanup;
-    }
-
-    h->raw_th_img_sz = h->raw_th_img_width * h->raw_th_img_height;
-
-    if (memcmp(img_contents, magic_number_png, 8) == 0) {
-        // th->framew gets allocated by lodepng_decode_memory()
-        err =
-            lodepng_decode_memory((uint8_t **) & (th->framew), &x, &y, img_contents, decode_len,
-                                  LCT_GREY, 16);
-        if (err) {
-            fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
-            goto cleanup;
-        }
-        ret = EXIT_SUCCESS;
-    } else if ((memcmp(img_contents, magic_number_tiff_1, 4) == 0) ||
-               (memcmp(img_contents, magic_number_tiff_2, 4) == 0)) {
-
-        TinyTIFFReaderFile *tiffr = NULL;
-        tiffr = TinyTIFFReader_open(img_name);
-        if (!tiffr) {
-            fprintf(stderr, "decoder error TinyTIFFReader_open() has failed\n");
-            goto cleanup;
-        } else {
-            const uint32_t tiff_width = TinyTIFFReader_getWidth(tiffr);
-            const uint32_t tiff_height = TinyTIFFReader_getHeight(tiffr);
-
-            if ((tiff_width != h->raw_th_img_width) || (tiff_height != h->raw_th_img_height)) {
-                fprintf(stderr, "unexpected image size %u != %u or %u ! %u\n", tiff_width,
-                        h->raw_th_img_width, tiff_height, h->raw_th_img_height);
-                goto cleanup;
-            }
-
-            th->framew = (uint16_t *) calloc(tiff_width * tiff_height, sizeof(uint16_t));
-            TinyTIFFReader_getSampleData(tiffr, th->framew, 0);
-        }
-        TinyTIFFReader_close(tiffr);
-        ret = EXIT_SUCCESS;
-    }
-
- cleanup:
-
-    if (img_name) {
-        unlink(img_name);
-    }
-    if (img_fd >= 0) {
-        close(img_fd);
-    }
-
- cleanup_no_close:
-
-    if (root_obj) {
-        json_object_put(root_obj);
-    }
-    if (img_name) {
-        free(img_name);
-    }
-    if (img_contents) {
-        free(img_contents);
+    if ((!h->raw_th_img_sz) || (!h->raw_th_img_height) || (!h->raw_th_img_width)) {
+        return EXIT_FAILURE;
     }
 
     return ret;
@@ -352,85 +110,192 @@ uint8_t rjpg_extract_json(tgram_t * th, char *json_file)
 
 uint8_t rjpg_open(tgram_t * th, char *in_file)
 {
-    int status;
-    pid_t pid;
-    int fd_json;
-    char tmp_json[] = "/tmp/thpp_json_XXXXXX";
+    uint8_t ret = EXIT_FAILURE;
+    uint32_t rti_len;
+    uint8_t *rti_content = NULL;
+    TagInfo *i;
+    unsigned x, y;
+    unsigned err = 0;
+    int fd_rti;
+    char fn_rti[] = "/tmp/thpp_rti_XXXXXX";
 
-    umask(077);
-    fd_json = mkstemp(tmp_json);
+    rjpg_header_t *h = th->head.rjpg;
 
-    switch (fork()) {
-    case -1:
-        errExit("fork");
-    case 0:
-        if (fd_json < 0) {
-            errMsg("during mkstemp");
-            return EXIT_FAILURE;
+    // create our ExifTool object
+    ExifTool *et = new ExifTool();
+    // read metadata from the image
+    TagInfo *info = et->ImageInfo(in_file,"-b\n-RawThermalImageWidth\n-RawThermalImageHeight\n-RawThermalImage\n-Emissivity\n-ObjectDistance\n-RelativeHumidity\n-AtmosphericTransAlpha1\n-AtmosphericTransAlpha2\n-AtmosphericTransBeta1\n-AtmosphericTransBeta2\n-PlanckR1\n-PlanckR2\n-PlanckB\n-PlanckF\n-PlanckO\n-AtmosphericTransX\n-AtmosphericTemperature\n-ReflectedApparentTemperature\n-IRWindowTransmission\n-IRWindowTemperature\n-Make\n-Model\n-CreateDate",2);
+
+    if (!info) {
+        if (et->LastComplete() <= 0) {
+            fprintf(stderr, "error executing exiftool!\n");
         }
-        if (dup2(fd_json, 1) < 0) {
-            errMsg("during dup2()");
-            close(fd_json);
-            return EXIT_FAILURE;
-        }
-        execlp("exiftool", "exiftool", "-b", "-json", in_file, (char *)NULL);
-        exit(EXIT_SUCCESS);
-    default:
-        for (;;) {
-            pid = waitpid(-1, &status, WUNTRACED);
-            if (pid == -1) {
-                errMsg("during waitpid");
-                return EXIT_FAILURE;
+        goto cleanup;
+    }
+
+    // expected notation for floating point numbers
+    setlocale(LC_ALL | ~LC_NUMERIC, "");
+
+    for (i=info; i; i=i->next) {
+        if (strstr(i->name, "RawThermalImageHeight") != NULL) {
+            h->raw_th_img_height = strtol(i->value, NULL, 10);
+        } else if (strstr(i->name, "RawThermalImageWidth") != NULL) {
+            h->raw_th_img_width = strtol(i->value, NULL, 10);
+        } else if (strstr(i->name, "Emissivity") != NULL) {
+            h->emissivity = strtod(i->value, NULL);
+        } else if (strstr(i->name, "ObjectDistance") != NULL) {
+            h->distance = strtod(i->value, NULL);
+        } else if (strstr(i->name, "RelativeHumidity") != NULL) {
+            h->rh = strtod(i->value, NULL) / 100.0;
+        } else if (strstr(i->name, "AtmosphericTransAlpha1") != NULL) {
+            h->alpha1 = strtod(i->value, NULL);
+        } else if (strstr(i->name, "AtmosphericTransAlpha2") != NULL) {
+            h->alpha2 = strtod(i->value, NULL);
+        } else if (strstr(i->name, "AtmosphericTransBeta1") != NULL) {
+            h->beta1 = strtod(i->value, NULL);
+        } else if (strstr(i->name, "AtmosphericTransBeta2") != NULL) {
+            h->beta2 = strtod(i->value, NULL);
+        } else if (strstr(i->name, "PlanckR1") != NULL) {
+            h->planckR1 = strtod(i->value, NULL);
+        } else if (strstr(i->name, "PlanckR2") != NULL) {
+            h->planckR2 = strtod(i->value, NULL);
+        } else if (strstr(i->name, "PlanckB") != NULL) {
+            h->planckB = strtod(i->value, NULL);
+        } else if (strstr(i->name, "PlanckF") != NULL) {
+            h->planckF = strtod(i->value, NULL);
+        } else if (strstr(i->name, "PlanckO") != NULL) {
+            h->planckO = strtod(i->value, NULL);
+        } else if (strstr(i->name, "AtmosphericTransX") != NULL) {
+            h->atm_trans_X = strtod(i->value, NULL);
+        } else if (strstr(i->name, "AtmosphericTemperature") != NULL) {
+            h->air_temp = strtod(i->value, NULL);
+        } else if (strstr(i->name, "ReflectedApparentTemperature") != NULL) {
+            h->refl_temp = strtod(i->value, NULL);
+        } else if (strstr(i->name, "IRWindowTransmission") != NULL) {
+            h->iwt = strtod(i->value, NULL);
+        } else if (strstr(i->name, "IRWindowTemperature") != NULL) {
+            h->iwtemp = strtod(i->value, NULL);
+        } else if (strstr(i->name, "Make") != NULL) {
+            snprintf(h->camera_make, TAG_SZ_MAX, "%s", i->value);
+        } else if (strstr(i->name, "Model") != NULL) {
+            snprintf(h->camera_model, TAG_SZ_MAX, "%s", i->value);
+        } else if (strstr(i->name, "CreateDate") != NULL) {
+            snprintf(h->create_ts, TAG_SZ_MAX, "%s", i->value);
+        } else if (strstr(i->name, "RawThermalImage") != NULL) {
+            rti_len = i->valueLen;
+            rti_content = (uint8_t *) calloc(rti_len, sizeof(uint8_t));
+            if (rti_content == NULL) {
+                errMsg("allocating rti_content");
+                goto cleanup;
             }
+            memcpy(rti_content, i->value, rti_len);
 
-            if (status != 0) {
-                fprintf(stderr, "exiftool exited in error\n");
-                return EXIT_FAILURE;
-            }
-
-            if (WIFEXITED(status) || WIFSIGNALED(status)) {
-
-                close(fd_json);
-                syncfs(fd_json);
-
-// to be removed
-// ------>8----
-
-                struct stat st;
-                int fd;
-
-                if ((fd = open(tmp_json, O_RDONLY)) < 0) {
-                    errMsg("opening input file");
-                    return EXIT_FAILURE;
+            if (memcmp(rti_content, magic_number_png, 8) == 0) {
+                err =
+                    lodepng_decode_memory((uint8_t **) & (th->framew), &x, &y, rti_content, rti_len,
+                                          LCT_GREY, 16);
+                if (err) {
+                    fprintf(stderr, "decoder error %u: %s\n", err, lodepng_error_text(err));
+                    goto cleanup;
+                }
+            } else if ((memcmp(rti_content, magic_number_tiff_1, 4) == 0) ||
+                    (memcmp(rti_content, magic_number_tiff_2, 4) == 0)) {
+                // we got a tiff image and the lib cannot directly read from mem
+                umask(077);
+                fd_rti = mkstemp(fn_rti);
+                if (fd_rti < 0) {
+                    errMsg("during mkstemp(%s)", fn_rti);
+                    goto cleanup;
                 }
 
-                if (fstat(fd, &st) < 0) {
-                    errMsg("reading input file");
-                    close(fd);
-                    return EXIT_FAILURE;
+                if ((fd_rti = open(fn_rti, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR)) < 0) {
+                    errMsg("opening file %s", fn_rti);
+                    goto cleanup;
                 }
 
-                close(fd);
-                if (st.st_size < 1) {
-                    printf("%s size %ld\n", tmp_json, st.st_size);
-                    sync();
-                    usleep(100000);
+                if (write(fd_rti, rti_content, rti_len) < rti_len) {
+                    errMsg("writing");
+                    close(fd_rti);
+                    goto cleanup;
                 }
 
-// -----8<----
+                close(fd_rti);
 
-                // populated rjpg header with info from the json file
-                if (rjpg_extract_json(th, tmp_json) == EXIT_FAILURE) {
-                    return EXIT_FAILURE;
+                TinyTIFFReaderFile *tiffr = NULL;
+                tiffr = TinyTIFFReader_open(fn_rti);
+                if (!tiffr) {
+                    fprintf(stderr, "decoder error TinyTIFFReader_open() has failed\n");
+                    goto cleanup;
+                } else {
+                    const uint32_t tiff_width = TinyTIFFReader_getWidth(tiffr);
+                    const uint32_t tiff_height = TinyTIFFReader_getHeight(tiffr);
+
+                    if ((tiff_width != h->raw_th_img_width) || (tiff_height != h->raw_th_img_height)) {
+                        fprintf(stderr, "unexpected image size %u != %u or %u ! %u\n", tiff_width,
+                                h->raw_th_img_width, tiff_height, h->raw_th_img_height);
+                        goto cleanup;
+                    }
+
+                    th->framew = (uint16_t *) calloc(tiff_width * tiff_height, sizeof(uint16_t));
+                    TinyTIFFReader_getSampleData(tiffr, th->framew, 0);
                 }
-                unlink(tmp_json);
-                return EXIT_SUCCESS;
-            }
+                TinyTIFFReader_close(tiffr);
+            } // end tiff
+        } // end of strstr()
+    } // for (i = info ...)
+
+    h->wr = 0;
+    h->raw_th_img_sz = h->raw_th_img_width * h->raw_th_img_height;
+
+    err = rjpg_check_th_validity(th);
+    if (err) {
+        goto cleanup;
+    }
+
+    if (strlen(h->camera_model) > 2) {
+        if (memcmp
+            (h->camera_model, ID_FLIR_THERMACAM_E25,
+             min(strlen(h->camera_model), strlen(ID_FLIR_THERMACAM_E25))) == 0) {
+            th->subtype = TH_FLIR_THERMACAM_E25;
+        } else if (memcmp
+                   (h->camera_model, ID_FLIR_THERMACAM_E65,
+                    min(strlen(h->camera_model), strlen(ID_FLIR_THERMACAM_E65))) == 0) {
+            th->subtype = TH_FLIR_THERMACAM_E65;
+        } else if (memcmp
+                   (h->camera_model, ID_FLIR_THERMACAM_EX320,
+                    min(strlen(h->camera_model), strlen(ID_FLIR_THERMACAM_EX320))) == 0) {
+            th->subtype = TH_FLIR_THERMACAM_EX320;
+        } else if (memcmp
+                   (h->camera_model, ID_FLIR_P20_NTSC,
+                    min(strlen(h->camera_model), strlen(ID_FLIR_P20_NTSC))) == 0) {
+            th->subtype = TH_FLIR_P20_NTSC;
+        } else if (memcmp
+                   (h->camera_model, ID_FLIR_S65_NTSC,
+                    min(strlen(h->camera_model), strlen(ID_FLIR_S65_NTSC))) == 0) {
+            th->subtype = TH_FLIR_S65_NTSC;
         }
     }
 
-    return EXIT_SUCCESS;
+    ret = EXIT_SUCCESS;
+
+cleanup:
+
+    if (rti_content) {
+        free(rti_content);
+    }
+
+    if (info) {
+        delete info;
+    }
+
+    char *serr = et->GetError();
+    if (serr) {
+        fprintf(stderr, "%s\n", serr);
+    }
+    delete et;
+    return ret;
 }
+
 
 uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id)
 {
@@ -462,38 +327,38 @@ uint8_t rjpg_transfer(const tgram_t * th, uint8_t * image, const uint8_t pal_id)
 
 #ifdef USE_GLENN_ALGO
 
-double rjpg_calc_glenn(uint16_t raw)
+double rjpg_calc_glenn(raw_conv_t *r, uint16_t raw)
 {
     double raw_obj;
     double ret;
 
     raw_obj =
-        (1.0 * raw / E / tau1 / IWT / tau2 - raw_atm1_attn - raw_atm2_attn - raw_wind_attn -
-         raw_refl1_attn - raw_refl2_attn);
-    ret = PB / log(PR1 / (PR2 * (raw_obj + PO)) + PF) - 273.15;
+        (1.0 * raw / r->E / r->tau1 / r->IWT / r->tau2 - r->raw_atm1_attn - r->raw_atm2_attn - r->raw_wind_attn -
+         r->raw_refl1_attn - r->raw_refl2_attn);
+    ret = r->PB / log(r->PR1 / (r->PR2 * (raw_obj + r->PO)) + r->PF) - 273.15;
 
     return ret;
 }
 
 #else
-double rjpg_calc_distcomp(uint16_t raw)
+double rjpg_calc_distcomp(raw_conv_t *r, uint16_t raw)
 {
     double raw_obj;
     double ret;
 
-    raw_obj = (1.0 * raw - tau_raw_atm - epsilon_tau_raw_refl) / E / tau;
-    ret = PB / log(PR1 / (PR2 * (raw_obj + PO)) + PF) - RJPG_K;
+    raw_obj = (1.0 * raw - r->tau_raw_atm - r->epsilon_tau_raw_refl) / r->E / r->tau;
+    ret = r->PB / log(r->PR1 / (r->PR2 * (raw_obj + r->PO)) + r->PF) - RJPG_K;
 
     return ret;
 }
 
-double rjpg_calc_nodistcomp(uint16_t raw)
+double rjpg_calc_nodistcomp(raw_conv_t *r, uint16_t raw)
 {
     double raw_obj;
     double ret;
 
-    raw_obj = (1.0 * raw - ep_raw_refl) / E;
-    ret = PB / log(PR1 / (PR2 * (raw_obj + PO)) + PF) - RJPG_K;
+    raw_obj = (1.0 * raw - r->ep_raw_refl) / r->E;
+    ret = r->PB / log(r->PR1 / (r->PR2 * (raw_obj + r->PO)) + r->PF) - RJPG_K;
 
     return ret;
 }
@@ -538,7 +403,8 @@ uint8_t rjpg_rescale(th_db_t * d)
     tgram_t *dst_th = d->out_th;
     th_getopt_t *p = &(d->p);
     double t_obj;
-
+    raw_conv_t *r = NULL;
+    uint8_t ret = EXIT_FAILURE;
     rjpg_header_t *h = dst_th->head.rjpg;
 
     // populate dst thermo header
@@ -548,7 +414,7 @@ uint8_t rjpg_rescale(th_db_t * d)
     dst_th->framew = (uint16_t *) calloc(h->raw_th_img_sz, sizeof(uint16_t));
     if (dst_th->framew == NULL) {
         errMsg("allocating buffer");
-        return EXIT_FAILURE;
+        goto cleanup;
     }
 
     if (d->temp_arr != NULL) {
@@ -559,71 +425,78 @@ uint8_t rjpg_rescale(th_db_t * d)
     d->temp_arr = (double *)calloc(h->raw_th_img_sz, sizeof(double));
     if (d->temp_arr == NULL) {
         errMsg("allocating buffer");
-        return EXIT_FAILURE;
+        goto cleanup;
     }
 
     h->t_min = 32000.0;
     h->t_max = -32000.0;
 
+    // alloc conversion structure
+    r = (raw_conv_t *) calloc(1, sizeof(raw_conv_t));
+    if (r == NULL) {
+        errMsg("allocating buffer");
+        goto cleanup;
+    }
+
     if (p->flags & OPT_SET_NEW_DISTANCE) {
-        OD = p->distance;
+        r->OD = p->distance;
     } else {
-        OD = h->distance;
+        r->OD = h->distance;
     }
 
     if (p->flags & OPT_SET_NEW_EMISSIVITY) {
-        E = p->emissivity;
+        r->E = p->emissivity;
     } else {
-        E = h->emissivity;
+        r->E = h->emissivity;
     }
 
     if (p->flags & OPT_SET_NEW_AT) {
-        ATemp = p->atm_temp;
+        r->ATemp = p->atm_temp;
     } else {
-        ATemp = h->air_temp;
+        r->ATemp = h->air_temp;
     }
 
     if (p->flags & OPT_SET_NEW_RT) {
-        RTemp = p->refl_temp;
+        r->RTemp = p->refl_temp;
     } else {
-        RTemp = h->refl_temp;
+        r->RTemp = h->refl_temp;
     }
 
     if (p->flags & OPT_SET_NEW_RH) {
-        RH = p->rh;
+        r->RH = p->rh;
     } else {
-        RH = h->rh;
+        r->RH = h->rh;
     }
 
     if (p->flags & OPT_SET_NEW_IWT) {
-        IWT = p->iwt;
+        r->IWT = p->iwt;
     } else {
-        IWT = h->iwt;
+        r->IWT = h->iwt;
     }
 
     if (p->flags & OPT_SET_NEW_IWTEMP) {
-        IRWTemp = p->iwtemp;
+        r->IRWTemp = p->iwtemp;
     } else {
-        IRWTemp = h->iwtemp;
+        r->IRWTemp = h->iwtemp;
     }
 
     if (p->flags & OPT_SET_NEW_WR) {
-        WR = p->wr;
+        r->WR = p->wr;
     } else {
-        WR = h->wr;
+        r->WR = h->wr;
     }
 
-    RTemp = h->refl_temp;
-    PR1 = h->planckR1;
-    PB = h->planckB;
-    PF = h->planckF;
-    PO = h->planckO;
-    PR2 = h->planckR2;
-    ATA1 = h->alpha1;
-    ATA2 = h->alpha2;
-    ATB1 = h->beta1;
-    ATB2 = h->beta2;
-    ATX = h->atm_trans_X;
+    r->RTemp = h->refl_temp;
+    r->PR1 = h->planckR1;
+    r->PB = h->planckB;
+    r->PF = h->planckF;
+    r->PO = h->planckO;
+    r->PR2 = h->planckR2;
+    r->ATA1 = h->alpha1;
+    r->ATA2 = h->alpha2;
+    r->ATB1 = h->beta1;
+    r->ATB2 = h->beta2;
+    r->ATX = h->atm_trans_X;
 
     switch (src_th->subtype) {
     case TH_FLIR_THERMACAM_E25:
@@ -644,31 +517,28 @@ uint8_t rjpg_rescale(th_db_t * d)
 #ifdef USE_GLENN_ALGO
     // algorithm expects all temperature variable input in degrees C
 
-    h2o =
-        RH * exp(1.5587 + 0.06939 * ATemp - 0.00027816 * pow(ATemp, 2) +
-                 0.00000068455 * pow(ATemp, 3));
-    tau1 =
-        ATX * exp(-sqrt(OD / 2) * (ATA1 + ATB1 * sqrt(h2o))) + (1 -
-                                                                ATX) * exp(-sqrt(OD / 2) * (ATA2 +
-                                                                                            ATB2 *
-                                                                                            sqrt
-                                                                                            (h2o)));
-    tau2 = tau1;
+    r->h2o =
+        r->RH * exp(1.5587 + 0.06939 * r->ATemp - 0.00027816 * pow(r->ATemp, 2) +
+                 0.00000068455 * pow(r->ATemp, 3));
+    r->tau1 =
+        r->ATX * exp(-sqrt(r->OD / 2) * (r->ATA1 + r->ATB1 * sqrt(r->h2o))) + (1 -
+            r->ATX) * exp(-sqrt(r->OD / 2) * (r->ATA2 + r->ATB2 * sqrt(r->h2o)));
+    r->tau2 = r->tau1;
 
-    raw_refl1 = PR1 / (PR2 * (exp(PB / (RTemp + 273.15)) - PF)) - PO;
-    raw_refl1_attn = (1 - E) / E * raw_refl1;
+    r->raw_refl1 = r->PR1 / (r->PR2 * (exp(r->PB / (r->RTemp + 273.15)) - r->PF)) - r->PO;
+    r->raw_refl1_attn = (1 - r->E) / r->E * r->raw_refl1;
 
-    raw_atm1 = PR1 / (PR2 * (exp(PB / (ATemp + 273.15)) - PF)) - PO;
-    raw_atm1_attn = (1 - tau1) / E / tau1 * raw_atm1;
+    r->raw_atm1 = r->PR1 / (r->PR2 * (exp(r->PB / (r->ATemp + 273.15)) - r->PF)) - r->PO;
+    r->raw_atm1_attn = (1 - r->tau1) / r->E / r->tau1 * r->raw_atm1;
 
-    raw_wind = PR1 / (PR2 * (exp(PB / (IRWTemp + 273.15)) - PF)) - PO;
-    raw_wind_attn = (1.0 - IWT) / E / tau1 / IWT * raw_wind;
+    r->raw_wind = r->PR1 / (r->PR2 * (exp(r->PB / (r->IRWTemp + 273.15)) - r->PF)) - r->PO;
+    r->raw_wind_attn = (1.0 - r->IWT) / r->E / r->tau1 / r->IWT * r->raw_wind;
 
-    raw_refl2 = raw_refl1;
-    raw_refl2_attn = WR / E / tau1 / IWT * raw_refl2;
+    r->raw_refl2 = r->raw_refl1;
+    r->raw_refl2_attn = r->WR / r->E / r->tau1 / r->IWT * r->raw_refl2;
 
-    raw_atm2 = raw_atm1;
-    raw_atm2_attn = (1 - tau2) / E / tau1 / IWT / tau2 * raw_atm2;
+    r->raw_atm2 = r->raw_atm1;
+    r->raw_atm2_attn = (1 - r->tau2) / r->E / r->tau1 / r->IWT / r->tau2 * r->raw_atm2;
 
     for (i = 0; i < h->raw_th_img_sz; i++) {
         if (framew_needs_flippage) {
@@ -677,7 +547,7 @@ uint8_t rjpg_rescale(th_db_t * d)
             raw = src_th->framew[i];
         }
 
-        t_obj = rjpg_calc_glenn(raw);
+        t_obj = rjpg_calc_glenn(r, raw);
         d->temp_arr[i] = t_obj;
         if (h->t_min > t_obj) {
             h->t_min = t_obj;
@@ -688,28 +558,26 @@ uint8_t rjpg_rescale(th_db_t * d)
         t_acc += raw;
     }
 
-    h->t_avg = rjpg_calc_glenn(t_acc / h->raw_th_img_sz);
+    h->t_avg = rjpg_calc_glenn(r, t_acc / h->raw_th_img_sz);
 
 #else
     // algorithm expects all temperature variable input in degrees K
 
-    RTemp += RJPG_K;
-    ATemp += RJPG_K;
+    r->RTemp += RJPG_K;
+    r->ATemp += RJPG_K;
 
     if (p->flags & OPT_SET_COMP) {
         //if (1) {
-        h2o =
-            RH * exp(1.5587 + 0.06939 * ATemp - 0.00027816 * pow(ATemp, 2) +
-                     0.00000068455 * pow(ATemp, 3));
-        tau =
-            ATX * exp(-sqrt(OD) * (ATA1 + ATB1 * sqrt(h2o))) + (1 -
-                                                                ATX) * exp(-sqrt(OD) * (ATA2 +
-                                                                                        ATB2 *
-                                                                                        sqrt(h2o)));
-        raw_atm = PR1 / (PR2 * (exp(PB / ATemp) - PF)) - PO;
-        tau_raw_atm = raw_atm * (1 - tau);
-        raw_refl = PR1 / (PR2 * (exp(PB / (RTemp)) - PF)) - PO;
-        epsilon_tau_raw_refl = raw_refl * (1 - E) * tau;
+        r->h2o =
+            r->RH * exp(1.5587 + 0.06939 * r->ATemp - 0.00027816 * pow(r->ATemp, 2) +
+                     0.00000068455 * pow(r->ATemp, 3));
+        r->tau =
+            r->ATX * exp(-sqrt(r->OD) * (r->ATA1 + r->ATB1 * sqrt(r->h2o))) + 
+               (1 - r->ATX) * exp(-sqrt(r->OD) * (r->ATA2 + r->ATB2 * sqrt(r->h2o)));
+        r->raw_atm = r->PR1 / (r->PR2 * (exp(r->PB / r->ATemp) - r->PF)) - r->PO;
+        r->tau_raw_atm = r->raw_atm * (1 - r->tau);
+        r->raw_refl = r->PR1 / (r->PR2 * (exp(r->PB / (r->RTemp)) - r->PF)) - r->PO;
+        r->epsilon_tau_raw_refl = r->raw_refl * (1 - r->E) * r->tau;
         t_acc = 0;
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
@@ -719,30 +587,7 @@ uint8_t rjpg_rescale(th_db_t * d)
                 raw = src_th->framew[i];
             }
 
-            double t_obj_dc = rjpg_calc_distcomp(raw);
-            d->temp_arr[i] = t_obj_dc;
-            if (h->t_min > t_obj_dc) {
-                h->t_min = t_obj_dc;
-            }
-            if (h->t_max < t_obj_dc) {
-                h->t_max = t_obj_dc;
-            }
-            t_acc += raw;
-        }
-        h->t_avg = rjpg_calc_distcomp(t_acc / h->raw_th_img_sz);
-    } else {
-        raw_refl = PR1 / (PR2 * (exp(PB / RTemp) - PF)) - PO;
-        ep_raw_refl = raw_refl * (1 - E);
-        t_acc = 0;
-
-        for (i = 0; i < h->raw_th_img_sz; i++) {
-            if (framew_needs_flippage) {
-                // data in the exif-png gets here in big endian words
-                raw = htons(src_th->framew[i]);
-            } else {
-                raw = src_th->framew[i];
-            }
-            double t_obj = rjpg_calc_nodistcomp(raw);
+            t_obj = rjpg_calc_distcomp(r, raw);
             d->temp_arr[i] = t_obj;
             if (h->t_min > t_obj) {
                 h->t_min = t_obj;
@@ -752,7 +597,30 @@ uint8_t rjpg_rescale(th_db_t * d)
             }
             t_acc += raw;
         }
-        h->t_avg = rjpg_calc_nodistcomp(t_acc / h->raw_th_img_sz);
+        h->t_avg = rjpg_calc_distcomp(r, t_acc / h->raw_th_img_sz);
+    } else {
+        r->raw_refl = r->PR1 / (r->PR2 * (exp(r->PB / r->RTemp) - r->PF)) - r->PO;
+        r->ep_raw_refl = r->raw_refl * (1 - r->E);
+        t_acc = 0;
+
+        for (i = 0; i < h->raw_th_img_sz; i++) {
+            if (framew_needs_flippage) {
+                // data in the exif-png gets here in big endian words
+                raw = htons(src_th->framew[i]);
+            } else {
+                raw = src_th->framew[i];
+            }
+            t_obj = rjpg_calc_nodistcomp(r, raw);
+            d->temp_arr[i] = t_obj;
+            if (h->t_min > t_obj) {
+                h->t_min = t_obj;
+            }
+            if (h->t_max < t_obj) {
+                h->t_max = t_obj;
+            }
+            t_acc += raw;
+        }
+        h->t_avg = rjpg_calc_nodistcomp(r, t_acc / h->raw_th_img_sz);
     }
 #endif
 
@@ -770,7 +638,7 @@ uint8_t rjpg_rescale(th_db_t * d)
 
     if (l_max <= l_min) {
         fprintf(stderr, "invalid min %.2f/max %.2f values\n", l_min, l_max);
-        return EXIT_FAILURE;
+        goto cleanup;
     }
 
     l_res = (l_max - l_min) / 65535.0;
@@ -786,9 +654,16 @@ uint8_t rjpg_rescale(th_db_t * d)
         dst_th->framew[i] = ftemp;
     }
 
+    ret = EXIT_SUCCESS;
+
     //rjpg_temp2csv(d);
 
-    return EXIT_SUCCESS;
+cleanup:
+    if (r) {
+        free(r);
+    }
+
+    return ret;
 }
 
 

@@ -28,8 +28,8 @@ IMPLOT_DIR = ../lib/implot/
 IMPLOT_SRC = $(IMPLOT_DIR)/implot.cpp $(IMPLOT_DIR)/implot_demo.cpp $(IMPLOT_DIR)/implot_items.cpp
 IMPLOT_OBJ = $(addsuffix .o, $(basename $(IMPLOT_SRC)))
 
-INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TINYTIFF_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I $(IMPLOT_DIR) -I $(EXIFTOOL_DIR)/inc/ -I `apr-1-config --includedir` 
-LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp json_helper.cpp dtv.cpp rjpg.cpp graphics.cpp main_menu.cpp viewport.cpp tool_processing.cpp tool_histogram.cpp tool_profile.cpp tool_scale.cpp tool_preferences.cpp help_about.cpp file_library.cpp file_properties.cpp # $(wildcard *.cpp)
+INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TINYTIFF_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I $(IMPLOT_DIR) -I $(EXIFTOOL_DIR)/inc/ 
+LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp dtv.cpp rjpg.cpp graphics.cpp main_menu.cpp viewport.cpp tool_processing.cpp tool_histogram.cpp tool_profile.cpp tool_scale.cpp tool_preferences.cpp help_about.cpp file_library.cpp file_properties.cpp # $(wildcard *.cpp)
 LOCAL_SRC_C := # $(wildcard *.c)
 SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C) $(TINYTIFF_SRC_C)
 #EXOBJECT   = $(PROJ).o
@@ -44,7 +44,7 @@ CFLAGS_DBG	 += -O1 -ggdb -DNDEBUG -pg
 LDFLAGS_DBG	 += -pg
 
 DEFAULT_FLAGS=-fPIC -pedantic -Wall -Wextra -Wa,-ahl=$(@:.o=.s) -fopenmp
-DEFAULT_LDFLAGS=-lm -ljson-c -lapr-1 -laprutil-1 -lGL `pkg-config --static --libs glfw3` -fopenmp
+DEFAULT_LDFLAGS=-lm -lGL `pkg-config --static --libs glfw3` -fopenmp
 
 # First set the flags to their defaults if not supplied externally.
 CFLAGS?=$(DEFAULT_FLAGS)
@@ -92,7 +92,7 @@ version.h: $(SRC)
 	@echo -e " * $(@F)"
 	@$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
 
-$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TINYTIFF_LIB) $(TLPI_LIB) $(EXOBJECT) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ)
+$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TINYTIFF_LIB) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ)
 	@echo -e "\n>> Building $@ as target $(TARGET)"
 	$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TINYTIFF_LIB) $(TLPI_LIB) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ) -o $@ && size $@
 
