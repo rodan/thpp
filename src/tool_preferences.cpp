@@ -92,11 +92,14 @@ void tool_preferences(bool *p_open, th_db_t * db)
     }
     if (value_changed) {
         if (s_zoom > pref->zoom_level) {
-            set_zoom(db, ZOOM_INCREMENT);
+            if (set_zoom(db, ZOOM_INCREMENT)) {
+                viewport_refresh_vp(db);
+            }
         } else {
-            set_zoom(db, ZOOM_DECREMENT);
+            if (set_zoom(db, ZOOM_DECREMENT)) {
+                viewport_refresh_vp(db);
+            }
         }
-        viewport_refresh_vp(db);
     }
 
     ImGui::Separator();

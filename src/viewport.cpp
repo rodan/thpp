@@ -103,7 +103,7 @@ void viewport_render(th_db_t * db)
         prev_img_pos_x = img_pos_x;
         prev_img_pos_y = img_pos_y;
         db->pr.do_refresh = 1;
-        printf("do refresh\n");
+        //printf("do refresh\n");
     }
 
     if (pointer_inside_image && ImGui::IsMouseDown(0) && pointer_over_viewport) {
@@ -120,13 +120,15 @@ void viewport_render(th_db_t * db)
     }
 
     if (pointer_inside_image && (io.MouseWheel < 0)) {
-        set_zoom(db, ZOOM_DECREMENT);
-        viewport_refresh_vp(db);
+        if (set_zoom(db, ZOOM_DECREMENT)) {
+            viewport_refresh_vp(db);
+        }
     }
 
     if (pointer_inside_image && (io.MouseWheel > 0)) {
-        set_zoom(db, ZOOM_INCREMENT);
-        viewport_refresh_vp(db);
+        if (set_zoom(db, ZOOM_INCREMENT)) {
+            viewport_refresh_vp(db);
+        }
     }
 
     ImGui::Image((void *)(intptr_t) db->fe.vp_texture, ImVec2(db->fe.vp_width, db->fe.vp_height));

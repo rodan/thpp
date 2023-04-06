@@ -318,6 +318,11 @@ uint8_t image_zoom(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom_level, con
             break;
     }
 
+    if (zoom_level == 1) {
+        ret = image_zoom_nearest(dst, src, zoom_level);
+        return ret;
+    }
+
     switch (interpolation) {
         case ZOOM_INTERP_NEAREST:
             ret = image_zoom_nearest(dst, src, zoom_level);

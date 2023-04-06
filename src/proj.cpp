@@ -429,10 +429,13 @@ th_db_t *db_get_ptr(void)
     return &db;
 }
 
-void set_zoom(th_db_t * db, const uint8_t flags)
+// returns 1 if image needs to be refreshed
+uint8_t set_zoom(th_db_t * db, const uint8_t flags)
 {
     global_preferences_t *pref = gp_get_ptr();
     uint8_t initial_zoom = pref->zoom_level;
+
+    //printf("set_zoom db %d pref %d flags %d\n", db->p.zoom_level, pref->zoom_level, flags);
 
     switch (flags) {
         case ZOOM_DECREMENT:
@@ -477,6 +480,11 @@ void set_zoom(th_db_t * db, const uint8_t flags)
             break;
     }
 
+    if (pref->zoom_level != initial_zoom) {
+        return 1;
+    }
+
+    return 0;
 }
 
 void print_buf(uint8_t * data, const uint16_t size)

@@ -174,7 +174,7 @@ void style_init(void);
 
 void gp_init(th_getopt_t *p);
 
-void set_zoom(th_db_t * db, const uint8_t flags);
+uint8_t set_zoom(th_db_t * db, const uint8_t flags);
 
 #ifdef __cplusplus
 }
