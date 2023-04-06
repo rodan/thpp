@@ -49,8 +49,7 @@ uint8_t load_texture_from_mem(uint8_t * rgba_data, GLuint * out_texture,
 
     *out_texture = image_texture;
 
-    printf("tex %d %dx%d\n", *out_texture, image_width, image_height);
-
+    //printf("tex %d %dx%d\n", *out_texture, image_width, image_height);
     return EXIT_SUCCESS;
 }
 

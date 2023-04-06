@@ -30,6 +30,8 @@
 
 #include "error_functions.h"  /* Declares our error-handling functions */
 
+
+
 /* Unfortunately some UNIX implementations define FALSE and TRUE -
    here we'll undefine them */
 
@@ -43,6 +45,7 @@
 
 typedef enum { FALSE, TRUE } Boolean;
 
+#if 0
 #define min(m,n) ((m) < (n) ? (m) : (n))
 #define max(m,n) ((m) > (n) ? (m) : (n))
 
@@ -78,6 +81,8 @@ typedef int socklen_t;
 
 #define sival_int sigval_int
 #define sival_ptr sigval_ptr
+#endif
+
 #endif
 
 #endif

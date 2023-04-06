@@ -183,6 +183,9 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
             snprintf(h->create_ts, TAG_SZ_MAX, "%s", i->value);
         } else if (strstr(i->name, "RawThermalImage") != NULL) {
             rti_len = i->valueLen;
+            if (rti_content) {
+                free(rti_content);
+            }
             rti_content = (uint8_t *) calloc(rti_len, sizeof(uint8_t));
             if (rti_content == NULL) {
                 errMsg("allocating rti_content");
@@ -240,6 +243,7 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
                     TinyTIFFReader_getSampleData(tiffr, th->framew, 0);
                 }
                 TinyTIFFReader_close(tiffr);
+                unlink(fn_rti);
             } // end tiff
         } // end of strstr()
     } // for (i = info ...)
@@ -255,23 +259,23 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
     if (strlen(h->camera_model) > 2) {
         if (memcmp
             (h->camera_model, ID_FLIR_THERMACAM_E25,
-             min(strlen(h->camera_model), strlen(ID_FLIR_THERMACAM_E25))) == 0) {
+             std::min(strlen(h->camera_model), strlen(ID_FLIR_THERMACAM_E25))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_E25;
         } else if (memcmp
                    (h->camera_model, ID_FLIR_THERMACAM_E65,
-                    min(strlen(h->camera_model), strlen(ID_FLIR_THERMACAM_E65))) == 0) {
+                    std::min(strlen(h->camera_model), strlen(ID_FLIR_THERMACAM_E65))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_E65;
         } else if (memcmp
                    (h->camera_model, ID_FLIR_THERMACAM_EX320,
-                    min(strlen(h->camera_model), strlen(ID_FLIR_THERMACAM_EX320))) == 0) {
+                    std::min(strlen(h->camera_model), strlen(ID_FLIR_THERMACAM_EX320))) == 0) {
             th->subtype = TH_FLIR_THERMACAM_EX320;
         } else if (memcmp
                    (h->camera_model, ID_FLIR_P20_NTSC,
-                    min(strlen(h->camera_model), strlen(ID_FLIR_P20_NTSC))) == 0) {
+                    std::min(strlen(h->camera_model), strlen(ID_FLIR_P20_NTSC))) == 0) {
             th->subtype = TH_FLIR_P20_NTSC;
         } else if (memcmp
                    (h->camera_model, ID_FLIR_S65_NTSC,
-                    min(strlen(h->camera_model), strlen(ID_FLIR_S65_NTSC))) == 0) {
+                    std::min(strlen(h->camera_model), strlen(ID_FLIR_S65_NTSC))) == 0) {
             th->subtype = TH_FLIR_S65_NTSC;
         }
     }

@@ -6,6 +6,7 @@
 #include <string>
 #include <omp.h>
 #include <unistd.h>
+#include "tlpi_hdr.h"
 #include "imgui.h"
 #include "proj.h"
 #include "opengl_helper.h"
@@ -14,8 +15,8 @@
 #include "version.h"
 #include "file_library.h"
 
-//#define         CONFIG_OMP
-//#define CONFIG_OMP_THREADS  16
+#define         CONFIG_OMP
+#define CONFIG_OMP_THREADS  12
 #define          FNAME_MAX  1024
 //possible flags
 #define      FL_FILE_READY  0x1
@@ -107,12 +108,7 @@ void ll_free_all(node_t ** head)
         if (del->texture) {
             free_textures(1, &del->texture);
         }
-        if (del->thumb->p.in_file) {
-            free(del->thumb->p.in_file);
-        }
-        if (del->thumb) {
-            free(del->thumb);
-        }
+        //del->thumb is freed in file_library()
         p = p->next;
         free(del);
     }
@@ -127,7 +123,7 @@ node_t *ll_add(node_t ** head)
 
     new_node = (node_t *) calloc(1, sizeof(node_t));
     if (new_node == NULL) {
-        printf("malloc error\n");
+        errMsg("malloc error");
         return NULL;
     } else {
         //printf("new node @%p\n", (void *)new_node);
@@ -209,31 +205,40 @@ uint8_t node_populate(node_t * node)
     uint8_t ret = EXIT_FAILURE;
     global_preferences_t *pref = gp_get_ptr();
 
-    printf("node_populate %p %d %s\n", (void *) node, node->flags, node->fname);
+    //printf("node_populate %p %d %s\n", (void *) node, node->flags, node->fname);
     if (stat(node->fname, &node->st) < 0) {
         node->flags = FL_FILE_INVALID;
-        return EXIT_FAILURE;
+        errMsg("stat() error for %s", node->fname);
+        goto cleanup;
     }
 
-    node->thumb = (th_db_t *)calloc(1, sizeof(th_db_t));
+    node->thumb = (th_db_t *) calloc(1, sizeof(th_db_t));
+    if (node->thumb == NULL) {
+        errMsg("calloc() error");
+        goto cleanup;
+    }
 
     node->thumb->p.in_file = (char *)calloc(strlen(node->fname) + 1, sizeof(char));
+    if (node->thumb->p.in_file == NULL) {
+        errMsg("calloc() error");
+        goto cleanup;
+    }
+
     strncpy(node->thumb->p.in_file, node->fname, strlen(node->fname));
     node->thumb->p.pal = pref->palette_default;
     node->thumb->p.zoom_level = 1;
 
     if (main_cli(node->thumb, 0) == EXIT_SUCCESS) {
-        node->flags = FL_FILE_READY;
-        load_texture_from_mem(node->thumb->rgba[0].data, &node->texture, node->thumb->rgba[0].width, node->thumb->rgba[0].height);
-        //load_texture_from_file("/tmp/tex.png", &node->texture, &w, &h);
-        printf("tex ret %u for %s, %dx%d\n", node->texture, node->fname, node->thumb->rgba[0].width, node->thumb->rgba[0].height);
         node->width = node->thumb->rgba[0].width;
         node->height = node->thumb->rgba[0].height;
-        return EXIT_SUCCESS;
+        node->flags = FL_FILE_NEED_TEX;
+        ret = EXIT_SUCCESS;
     } else {
         fprintf(stderr, "warning: %s can't be opened as a thermal image\n", node->fname);
         node->flags = FL_FILE_INVALID;
     }
+
+cleanup:
 
     return ret;
 }
@@ -298,7 +303,9 @@ void file_library(bool *p_open, th_db_t * db)
     node_t *search = NULL;
     uint32_t u;
     uint8_t entry_is_dir = 0;
-    uint16_t file_analyze = pref->thumbnail_gen_per_frame;
+    //uint16_t file_analyze = pref->thumbnail_gen_per_frame;
+    double runtime;
+    node_t *node;
 
     if (!ImGui::Begin("image library", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
@@ -372,10 +379,12 @@ void file_library(bool *p_open, th_db_t * db)
                     }
                 } else if (search->flags & FL_FILE_PREPARE) {
                     worthy_file = 1;
+#if 0
                     if (file_analyze) {
                         node_populate(search);
                         file_analyze--;
                     }
+#endif
                 }
             } else {
                 // file not present in the linked list
@@ -408,6 +417,9 @@ void file_library(bool *p_open, th_db_t * db)
 
                     path_size = strlen(abs_path.c_str());
                     db->p.in_file = (char *)calloc(path_size + 1, sizeof(char));
+                    if (db->p.in_file == NULL) {
+                        errMsg("malloc error");
+                    }
                     memcpy(db->p.in_file, abs_path.c_str(), path_size + 1);
                     db->p.in_file[path_size] = 0;
                     db->fe.return_state = RET_RST;
@@ -423,6 +435,81 @@ void file_library(bool *p_open, th_db_t * db)
         ImGui::TextWrapped(filename_string.c_str());
         ImGui::NextColumn();
         ImGui::PopID();
+    }
+
+    runtime = omp_get_wtime();
+
+#if defined CONFIG_OMP
+    uint32_t thumb_list_sz = ll_count(head);
+    omp_set_num_threads(CONFIG_OMP_THREADS);
+
+#pragma omp parallel private(node)
+    {
+        //node_t *node;
+        uint32_t i;
+
+        int t_cnt = omp_get_num_threads();
+        int t_cur = omp_get_thread_num();
+
+        for (i = t_cur; i < thumb_list_sz; i += t_cnt) {
+            node = ll_get_by_index(head, i);
+
+            if (node == NULL) {
+                continue;
+            }
+
+            if (node->flags & FL_FILE_PREPARE) {
+                node_populate(node);
+            }
+        }
+    }
+
+#else
+    // single thread
+    //node_t *node;
+    node = head;
+
+    // single thread
+    while (node != NULL) {
+        if (node->flags & FL_FILE_PREPARE) {
+            node_populate(node);
+        }
+        node = node->next;
+    }
+#endif
+
+    runtime = omp_get_wtime() - runtime;
+    if (runtime > 0.001) {
+        printf("album ready in %lfs\n", runtime);
+    }
+
+    node = head;
+    while (node != NULL) {
+        if (node->flags & FL_FILE_NEED_TEX) {
+            if (node->thumb != NULL) {
+
+                load_texture_from_mem(node->thumb->rgba[0].data, &node->texture, node->thumb->rgba[0].width,
+                              node->thumb->rgba[0].height);
+
+                //printf("tex %u sz %dx%d for %s, node %p\n", node->texture, node->thumb->rgba[0].width, 
+                //              node->thumb->rgba[0].height, node->fname, (void *) node);
+
+                if (node->texture) {
+                    node->flags = FL_FILE_READY;
+                    if (node->thumb->p.in_file) {
+                        free(node->thumb->p.in_file);
+                    }
+                    cleanup(node->thumb);
+                    free(node->thumb);
+                    node->thumb = NULL;
+                } else {
+                    fprintf(stderr, "warning, empty texture\n");
+                }
+            } else {
+                fprintf(stderr, "error, node->thumb already freed\n");
+            }
+        }
+        node = node->next;
     }
 
     ImGui::End();
