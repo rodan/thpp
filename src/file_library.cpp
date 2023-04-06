@@ -14,8 +14,8 @@
 #include "version.h"
 #include "file_library.h"
 
-#define         CONFIG_OMP
-#define CONFIG_OMP_THREADS  16
+//#define         CONFIG_OMP
+//#define CONFIG_OMP_THREADS  16
 #define          FNAME_MAX  1024
 //possible flags
 #define      FL_FILE_READY  0x1
@@ -48,13 +48,12 @@ struct node {
     uint32_t texture;
     uint16_t width;
     uint16_t height;
+    th_db_t *thumb;
     struct node *next;
 };
 typedef struct node node_t;
 
 node_t *head = NULL;
-
-th_db_t thumb;
 
 void ll_print(node_t * head);
 node_t *ll_find_tail(node_t * head);
@@ -107,6 +106,12 @@ void ll_free_all(node_t ** head)
         del = p;
         if (del->texture) {
             free_textures(1, &del->texture);
+        }
+        if (del->thumb->p.in_file) {
+            free(del->thumb->p.in_file);
+        }
+        if (del->thumb) {
+            free(del->thumb);
         }
         p = p->next;
         free(del);
@@ -190,7 +195,6 @@ void file_library_init(void)
 void file_library_free(void)
 {
     ll_free_all(&head);
-    cleanup(&thumb);
 }
 
 std::string str_tolower(std::string s)
@@ -202,31 +206,31 @@ std::string str_tolower(std::string s)
 
 uint8_t node_populate(node_t * node, const char *abs_path)
 {
+    unsigned int w, h;
     global_preferences_t *pref = gp_get_ptr();
 
+    printf("node_populate %p %d %s\n", (void *) node, node->flags, abs_path);
+
     if (stat(abs_path, &node->st) < 0) {
-        node->flags |= FL_FILE_INVALID;
+        node->flags = FL_FILE_INVALID;
         return EXIT_FAILURE;
     }
 
-    cleanup(&thumb);
-    memset(&thumb, 0, sizeof(th_db_t));
+    node->thumb = (th_db_t *)calloc(1, sizeof(th_db_t));
 
-    if (thumb.p.in_file) {
-        free(thumb.p.in_file);
-    }
+    node->thumb->p.in_file = (char *)calloc(strlen(abs_path) + 1, sizeof(char));
 
-    thumb.p.in_file = (char *)calloc(strlen(abs_path) + 1, sizeof(char));
-    strncpy(thumb.p.in_file, abs_path, strlen(abs_path));
-    thumb.p.pal = pref->palette_default;
-    thumb.p.zoom_level = 1;
+    strncpy(node->thumb->p.in_file, abs_path, strlen(abs_path));
+    node->thumb->p.pal = pref->palette_default;
+    node->thumb->p.zoom_level = 1;
 
-    if (main_cli(&thumb, 0) == EXIT_SUCCESS) {
-        load_texture_from_mem(thumb.rgba[0].data, &node->texture, thumb.rgba[0].width, thumb.rgba[0].height);
-        //printf("tex %u for %s\n", node->texture, abs_path);
-        node->width = thumb.rgba[0].width;
-        node->height = thumb.rgba[0].height;
+    if (main_cli(node->thumb, 0) == EXIT_SUCCESS) {
         node->flags = FL_FILE_READY;
+        load_texture_from_mem(node->thumb->rgba[0].data, &node->texture, node->thumb->rgba[0].width, node->thumb->rgba[0].height);
+        //load_texture_from_file("/tmp/tex.png", &node->texture, &w, &h);
+        printf("tex ret %u for %s, %dx%d\n", node->texture, abs_path, node->thumb->rgba[0].width, node->thumb->rgba[0].height);
+        node->width = node->thumb->rgba[0].width;
+        node->height = node->thumb->rgba[0].height;
         return EXIT_SUCCESS;
     } else {
         fprintf(stderr, "warning: %s can't be opened as a thermal image\n", abs_path);
