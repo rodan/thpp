@@ -204,23 +204,21 @@ std::string str_tolower(std::string s)
     return s;
 }
 
-uint8_t node_populate(node_t * node, const char *abs_path)
+uint8_t node_populate(node_t * node)
 {
-    unsigned int w, h;
+    uint8_t ret = EXIT_FAILURE;
     global_preferences_t *pref = gp_get_ptr();
 
-    printf("node_populate %p %d %s\n", (void *) node, node->flags, abs_path);
-
-    if (stat(abs_path, &node->st) < 0) {
+    printf("node_populate %p %d %s\n", (void *) node, node->flags, node->fname);
+    if (stat(node->fname, &node->st) < 0) {
         node->flags = FL_FILE_INVALID;
         return EXIT_FAILURE;
     }
 
     node->thumb = (th_db_t *)calloc(1, sizeof(th_db_t));
 
-    node->thumb->p.in_file = (char *)calloc(strlen(abs_path) + 1, sizeof(char));
-
-    strncpy(node->thumb->p.in_file, abs_path, strlen(abs_path));
+    node->thumb->p.in_file = (char *)calloc(strlen(node->fname) + 1, sizeof(char));
+    strncpy(node->thumb->p.in_file, node->fname, strlen(node->fname));
     node->thumb->p.pal = pref->palette_default;
     node->thumb->p.zoom_level = 1;
 
@@ -228,16 +226,16 @@ uint8_t node_populate(node_t * node, const char *abs_path)
         node->flags = FL_FILE_READY;
         load_texture_from_mem(node->thumb->rgba[0].data, &node->texture, node->thumb->rgba[0].width, node->thumb->rgba[0].height);
         //load_texture_from_file("/tmp/tex.png", &node->texture, &w, &h);
-        printf("tex ret %u for %s, %dx%d\n", node->texture, abs_path, node->thumb->rgba[0].width, node->thumb->rgba[0].height);
+        printf("tex ret %u for %s, %dx%d\n", node->texture, node->fname, node->thumb->rgba[0].width, node->thumb->rgba[0].height);
         node->width = node->thumb->rgba[0].width;
         node->height = node->thumb->rgba[0].height;
         return EXIT_SUCCESS;
     } else {
-        fprintf(stderr, "warning: %s can't be opened as a thermal image\n", abs_path);
+        fprintf(stderr, "warning: %s can't be opened as a thermal image\n", node->fname);
         node->flags = FL_FILE_INVALID;
     }
 
-    return EXIT_FAILURE;
+    return ret;
 }
 
 node *node_search_fname(const char *fname)
@@ -260,17 +258,20 @@ uint8_t thumbnail_prepare(fs::path file)
     node_t *node_ptr;
     node_t *node_s;
 
-    if ((file.extension().string().compare(".dtv") == 0) || 
+    if ((file.extension().string().compare(".dtv") == 0) ||
         (file.extension().string().compare(".jpg") == 0)) {
         if (head == NULL) {
             node_ptr = ll_add(&head);
-            strncpy(&node_ptr->fname[0], file.filename().c_str(), FNAME_MAX - 1);
+            //strncpy(&node_ptr->fname[0], file.filename().c_str(), FNAME_MAX - 1);
+            strncpy(&node_ptr->fname[0], file.c_str(), FNAME_MAX - 1);
             node_ptr->flags = FL_FILE_PREPARE;
         } else {
-            node_s = node_search_fname(file.filename().c_str());
+            //node_s = node_search_fname(file.filename().c_str());
+            node_s = node_search_fname(file.c_str());
             if (node_s == NULL) {
                 node_ptr = ll_add(&head);
-                strncpy(&node_ptr->fname[0], file.filename().c_str(), FNAME_MAX - 1);
+                //strncpy(&node_ptr->fname[0], file.filename().c_str(), FNAME_MAX - 1);
+                strncpy(&node_ptr->fname[0], file.c_str(), FNAME_MAX - 1);
                 node_ptr->flags = FL_FILE_PREPARE;
             }
         }
@@ -359,7 +360,8 @@ void file_library(bool *p_open, th_db_t * db)
             abs_path = m_current_directory;
             abs_path /= filename_string;
 
-            if ((search = node_search_fname(filename_string.c_str())) != NULL) {
+            //if ((search = node_search_fname(filename_string.c_str())) != NULL) {
+            if ((search = node_search_fname(abs_path.c_str())) != NULL) {
                 // if file has been already opened and a texture has been created for it's thumbnail
                 if (search->flags & FL_FILE_READY) {
                     worthy_file = 1;
@@ -371,7 +373,7 @@ void file_library(bool *p_open, th_db_t * db)
                 } else if (search->flags & FL_FILE_PREPARE) {
                     worthy_file = 1;
                     if (file_analyze) {
-                        node_populate(search, abs_path.c_str());
+                        node_populate(search);
                         file_analyze--;
                     }
                 }
