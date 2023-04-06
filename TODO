@@ -1,11 +1,3 @@
- [x] open new file functionality
- [x] add scale (with palette and overlay containing text and grid)
- [x] image library with thumbnails to replace open dialog
- [x] caching of palette transient
- [x] zoom based on image oversampling techniques
- [x] mouse-based scroll-wheel zoom of the image
- [x] add configurable properties table with image info
- [ ] fix scan-build cxx11 compilation errors
  [ ] redo build script to allow compilation of both console-only version and gui version
  [ ] add overlay image containing spot targets and measurement lines
  [ ] selectable theme (for switching between dark mode for visualisation and white mode for printing) in preference dialog
@@ -15,4 +7,3 @@
  [ ] read initial parent window size from imgui.ini
  [ ] a more portable way of defining temporary paths for mkstemp
  [ ] actually test application on a big endian system
- [ ] replace exiftool functionality with C code

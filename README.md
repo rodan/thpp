@@ -34,6 +34,9 @@ error checking based on the Linux Programming Interface book's library
  source:        https://nostarch.com/tlpi/
  author:        Michael Kerrisk
  license:       GNU GPLv3
+
+multi-threading provided by OpenMP
+ source:        https://www.openmp.org/
 ```
 
 ### git clone
@@ -42,7 +45,7 @@ this repository is using a few submodules that will get linked into the final bi
 so when you clone the repo make sure you also retrieve the submodules, like so:
 
 ```
-git clone --recurse-submodules git@github.com:rodan/thpp.git
+git clone --recurse-submodules https://github.com/rodan/thpp.git
 ```
 
 ### Functionality
@@ -138,10 +141,8 @@ currently supported functions:
 
 the code depends on the headers and libraries provided by the following packages:
 
- * dev-libs/json-c-0.16 (JSON implementation in C)
- * dev-libs/apr-util-1.6.3 (Apache Portable Runtime Utility Library)
+ * gcc-based toolchain with OpenMP support
  * media-libs/glfw-3.3.8 (Portable OpenGL FrameWork)
- * media-libs/libglvnd-1.6.0 (The GL Vendor-Neutral Dispatch library)
 
 compilation is simple, one only needs to
 ```
