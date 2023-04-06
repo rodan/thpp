@@ -1,0 +1,852 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title>C++ Interface for ExifTool (by Phil Harvey)</title>
+<meta name="description" content="A C++ library interface for the exiftool application.">
+<meta name="KeyWords" content="C++ interface ExifTool, meta, information, metadata, EXIF,
+  XMP, IPTC, GPS, read, write, edit, editor, update, extract, images, thumbnail,
+  preview, geotag, geocode, Perl, library, module, RAW, NEF, CR2, MRW, JPEG, TIFF,
+  ID3, Windows, OSX, Unix">
+<link rel=stylesheet type='text/css' href='style.css' title='Style'>
+</head>
+<body>
+<div class='index'>
+<a href="#Features">Interface Features</a>
+<br><a href="#Requirements">Requirements</a>
+<br><a href="#License">License</a>
+<br><a href="#Methods">ExifTool Methods</a>
+<br><a href="#Examples">Programming Examples</a>
+<br><a href="#Errors">Error Codes</a>
+<br><a href="#History">Revision History</a>
+</div>
+<h1><a name="top">C++ Interface for ExifTool (by Phil Harvey)</a></h1>
+<p>The <b>C++ interface for ExifTool</b> provides the source code for a set of
+objects that allow <b>C++ applications</b> to easily <b>leverage the full power of the
+<a href="http://exiftool.org/">exiftool application</a></b> through a simple
+interface.  This interface handles all the hard work of launching, monitoring,
+controlling, and communicating with an <b>external exiftool process</b>.</p>
+
+<blockquote><table class='dl lg'><tr><td><b>
+<a href="http://exiftool.org/cpp_exiftool/cpp_exiftool.tar.gz">Download
+Version 1.08</a> (23 kB)
+<a href="#History">May 24, 2019</a></b></td></tr></table></blockquote>
+
+<p>The download package contains the source code for the C++ interface for
+ExifTool, plus a few example programs.  Unpack and type "make" to compile the
+example programs.</p>
+
+<h2><a name="Features">Interface Features</a></h2>
+<ul>
+<li>Avoids startup overhead by using the exiftool <code>-stay_open</code> feature.</li>
+<li>Allows access to all features of the exiftool application.</li>
+<li>Queues operations and processes them sequentially.</li>
+<li>Easily parallelizable for performance-demanding applications.</li>
+</ul>
+
+<h2><a name="Requirements">Requirements</a></h2>
+
+<p>The <a href="http://exiftool.org/">exiftool application</a> must exist on the
+system.  This interface should be platform independent, and has been tested on
+Mac OS X, Linux, and Windows (Cygwin).</p>
+
+<h2><a name="License">License</a></h2>
+
+<p>Copyright &copy; 2013-2019, Phil Harvey (philharvey66 at gmail.com)</p>
+
+<p>This is software, in whole or part, is free for use in non-commercial
+applications, provided that this copyright notice is retained in the code.  A
+licensing fee may be required for use in a commercial application.  Contact Phil
+Harvey for more information.</p>
+
+<hr><h2><a name="Methods">ExifTool Object Methods</a></h2>
+
+<p>The ExifTool object provides the C++ application programming interface for
+running exiftool.  All exiftool features are accessible through these public
+methods of the ExifTool object.</p>
+
+<p>Note that the methods should not be accessed concurrently in multiple threads
+for a single ExifTool object.  Parallelization is accomplished by creating
+multiple ExifTool objects.</p>
+
+<table><tr><td valign=top>
+<ul>
+<li><a href="#constructor">ExifTool (constructor)</a></li>
+<li><a href="#destructor">~ExifTool (destructor)</a></li>
+<li><a href="#ImageInfo">ImageInfo</a></li>
+<li><a href="#ExtractInfo">ExtractInfo</a></li>
+<li><a href="#GetInfo">GetInfo</a></li>
+</ul>
+</td><td valign=top>
+<ul>
+<li><a href="#SetNewValue">SetNewValue</a></li>
+<li><a href="#WriteInfo">WriteInfo</a></li>
+<li><a href="#Command">Command</a></li>
+<li><a href="#Complete">Complete</a></li>
+<li><a href="#LastComplete">LastComplete</a></li>
+</ul>
+</td><td valign=top>
+<ul>
+<li><a href="#SetLastComplete">SetLastComplete</a></li>
+<li><a href="#GetOutput">GetOutput</a></li>
+<li><a href="#GetOutputLen">GetOutputLen</a></li>
+<li><a href="#GetError">GetError</a></li>
+<li><a href="#GetSummary">GetSummary</a></li>
+</ul>
+</td><td valign=top>
+<ul>
+<li><a href="#IsRunning">IsRunning</a></li>
+<li><a href="#SetWaitTime">SetWaitTime</a></li>
+</ul>
+</td></tr></table>
+
+<hr><h2><a name="Examples">Programming Examples</a></h2>
+
+<p>Below is a complete C++ code example of how to use an ExifTool object
+to extract information from a file (example1.cpp in the distribution):</p>
+
+<blockquote><table class='box'><tr><td><pre>
+#include &lt;iostream&gt;
+#include "ExifTool.h"
+
+using namespace std;
+
+int main(int argc, char **argv)
+{
+    if (argc &lt; 2) {
+        cout &lt;&lt; "Example1: Read metadata from an image." &lt;&lt; endl;
+        cout &lt;&lt; "Please specify input file name" &lt;&lt; endl;
+        return 1;
+    }
+    <span class=com>// create our ExifTool object</span>
+    ExifTool *et = new ExifTool();
+    <span class=com>// read metadata from the image</span>
+    TagInfo *info = et-&gt;ImageInfo(argv[1]);
+    if (info) {
+        <span class=com>// print returned information</span>
+        for (TagInfo *i=info; i; i=i-&gt;next) {
+            cout &lt;&lt; i-&gt;name &lt;&lt; " = " &lt;&lt; i-&gt;value &lt;&lt; endl;
+        }
+        <span class=com>// we are responsible for deleting the information when done</span>
+        delete info;
+    } else if (et-&gt;LastComplete() &lt;= 0) {
+        cerr &lt;&lt; "Error executing exiftool!" &lt;&lt; endl;
+    }
+    <span class=com>// print exiftool stderr messages</span>
+    char *err = et-&gt;GetError();
+    if (err) cout &lt;&lt; err;
+    delete et;      <span class=com>// delete our ExifTool object</span>
+    return 0;
+}
+</pre></td></tr></table></blockquote>
+
+<p>And here is the technique for writing tags (from example2.cpp in the distribution):</p>
+
+<blockquote><table class='box'><tr><td><pre>
+<span class=com>// set new values of tags to write</span>
+et-&gt;SetNewValue("XMP:Title", title);
+et-&gt;SetNewValue("XMP:Description", desc);
+<span class=com>// write the information</span>
+et-&gt;WriteInfo(argv[1]);
+<span class=com>// wait for exiftool to finish writing</span>
+int result = et-&gt;Complete(); 
+if (result &lt;= 0) cerr &lt;&lt; "Error executing exiftool!" &lt;&lt; endl;
+</pre></td></tr></table></blockquote>
+
+<p>The following example programs are included in the example directory
+of the distribution:</p>
+
+<blockquote><b>example1</b> - extract all metadata from a file
+<br><b>example2</b> - write XMP:Title and XMP:Description to a file
+<br><b>example3</b> - read/write metadata from/to files
+<br><b>example4</b> - read a ThumbnailImage from one file and write it to another
+<br><b>example5</b> - interleaved command send/receive test
+</blockquote>
+
+<p>To compile the included example programs, unpack the distribution tarball,
+then type "make" from within the distribution directory.  This will compile
+the programs in the "example" directory.</p>
+
+<p>See the comments in the source files for more details about each example.  To
+run successfully, these examples require that the exiftool application exists in
+the current path.</p>
+
+<hr><h2><a name="constructor">ExifTool (constructor)</a></h2>
+
+<p>Create ExifTool object and launch an exiftool application as a separate process.
+Internally, the arguments sent to exiftool are "<code>-stay_open true -@ -</code>".
+Each new ExifTool object maintains an independent exiftool application.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>ExifTool(const char *exec=NULL, const char *arg1=NULL);</code></td></tr>
+<tr><td><b>Inputs</b></td><td class=tight><table class=clear>
+    <tr><td class="t l"><code>const char *exec</code> &nbsp;</td>
+        <td class="t r">Application to execute.  If NULL, "exiftool" is assumed.</td></tr>
+    <tr><td class="b l"><code>const char *arg1</code></td>
+        <td class="b r">Optional first argument for application.</td></tr>
+</table></td></tr>
+<tr><td><b>Returns</b></td><td>Pointer to ExifTool object.</td></tr>
+</table></blockquote>
+
+<p><b>Examples:</b></p>
+
+<blockquote><table class='box'><tr><td><pre>
+#include "ExifTool.h"
+ExifTool *et = new ExifTool();
+</pre></td></tr></table></blockquote>
+
+<blockquote><table class='box'><tr><td><pre>
+ExifTool *et = new ExifTool("/Users/phil/Desktop/exiftool");
+</pre></td></tr></table></blockquote>
+
+<blockquote><table class='box'><tr><td><pre>
+ExifTool *et = new ExifTool("C:\\WINDOWS\\exiftool.exe");
+</pre></td></tr></table></blockquote>
+
+<blockquote><table class='box'><tr><td><pre>
+ExifTool *et = new ExifTool("/usr/bin/perl", "/usr/local/bin/exiftool");
+</pre></td></tr></table></blockquote>
+
+<p>If the directory is not specified in the <code>exec</code> argument, then
+the executable must be located somewhere in the system PATH.</p>
+
+<p><b>Notes:</b></p>
+
+<p>This constructor forks and execs an exiftool application process as well as
+forking a watchdog process to monitor the main program.  The watchdog is used to
+terminate the exiftool process if the main program exits for any reason while
+the exiftool process is still running.  This prevents orphan exiftool processes
+from remaining if the main program exits without properly destructing all
+ExifTool objects (which could happen if the main program crashes).  If
+necessary, the public static int <code>ExifTool::sNoWatchdog</code> may be set
+to a non-zero value before creating an ExifTool object to prevent the watchdog
+process from being created.</p>
+
+<p>This constructor installs a signal handler to catch SIGPIPE messages to
+prevent the main program from being terminated by any communication problem with
+the exiftool process.  If necessary, the public static int
+<code>ExifTool::sNoSigPipe</code> may be set to a non-zero value before
+creating any ExifTool object to bypass installing this SIGPIPE handler.</p>
+
+<p>If <a href="#IsRunning">IsRunning</a> returns false for a newly created
+ExifTool object, make sure that the path to exiftool is correct.  See the last
+three examples above for techniques for specifying the path.  If the path is not
+specified, then exiftool must exist in the system PATH when the program is
+run.</p>
+
+<hr><h2><a name="destructor">~ExifTool (destructor)</a></h2>
+
+<p>Delete ExifTool object and terminate the associated exiftool process.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>virtual ~ExifTool();</code></td></tr>
+<tr><td><b>Inputs</b></td><td>(none)</td></tr>
+<tr><td><b>Returns</b></td><td>(none)</td></tr>
+</table></blockquote>
+
+<p><b>Example:</b></p>
+
+<blockquote><table class='box'><tr><td><pre>
+delete et;
+</pre></td></tr></table></blockquote>
+
+<p>It is safe to call the destructor at any time.  If the exiftool process is
+still working, the destructor will wait until all commands have completed before
+terminating the process.  This also terminates the watchdog process if it was
+created, but does not uninstall the SIGPIPE handler.</p>
+
+<hr><h2><a name="ImageInfo">ImageInfo</a></h2>
+
+<p>Read one or more image files and/or directories, and return the extracted
+meta information as a linked-list of TagInfo structures.  This is the one-step
+function for retrieving meta information from an image.  Internally,
+<b>ImageInfo</b> calls <a href="#ExtractInfo">ExtractInfo</a> to send the
+appropriate <a href="#Command">Command</a> to the exiftool process, then
+<a href="#GetInfo">GetInfo</a> to <a href="#Complete">Complete</a> the command
+and convert the result into a linked list of <a href="#TagInfo">TagInfo</a>
+structures.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>TagInfo *ImageInfo(const char *file, const char *opts=NULL, double timeout=NEVER);</code></td></tr>
+<tr><td><b>Inputs</b></td><td class=tight><table class=clear>
+    <tr><td class="t l"><code>const char *file</code></td>
+        <td class="t r">Name of files and/or directories to process.
+        Names are separated by newline characters ('\n').</td></tr>
+    <tr><td class="l"><code>const char *opts</code></td>
+        <td class="r">Additional exiftool options, separated by newlines. 
+        See <a href="#notes">notes 2, 3 and 5</a>. Only the following exiftool options are allowed:
+        <br>-TAG -x -b -c -charset -d -L -lang -listItem -n -sep -sort --a -e -ee -ext -F -fast
+        -fileOrder -i -if -m -password -r -scanForXMP -u -U -z -globalTimeShift -use -@ -api
+        </td></tr>
+    <tr><td class="b l"><code>double timeout</code></td>
+        <td class="b r">Maximum number of seconds to wait for exiftool to
+        complete the command.  The default of <code>NEVER</code> waits forever
+        (provided the exiftool process doesn't terminate). <code>NOW</code> or 0
+        returns immediately.</td></tr>
+</table></td></tr>
+<tr><td><b>Returns</b></td><td>Pointer to linked list of TagInfo objects (see
+below).  The returned pointer may be NULL if any error occurred during
+processing or if the timeout time was exceeded (see
+<a href="#notes">note 1</a>).  The first TagInfo structure for each processed
+file will have a <code>name</code> of "SourceFile", and a <code>value</code>
+that gives the file path.  Only the <code>name</code>, <code>value</code>
+and <code>num</code> pointers are guaranteed to exist.  Any other pointer in a
+TagInfo structure may be NULL.  <u>The caller is responsible for deleting the
+returned TagInfo list when done</u> (deleting the first element deletes the
+entire list).</td></tr>
+</table></blockquote>
+
+<p><b><a name="TagInfo">The TagInfo structure:</a></b></p>
+
+<blockquote><table class='box'><tr><td><pre>
+struct TagInfo
+{
+    TagInfo();
+    virtual ~TagInfo();
+
+    char    *group[3];  <span class=com>// family 0-2 group names</span>
+    char    *name;      <span class=com>// tag name</span>
+    char    *desc;      <span class=com>// tag description</span>
+    char    *id;        <span class=com>// tag ID</span>
+    char    *value;     <span class=com>// converted value</span>
+    int     valueLen;   <span class=com>// length of value in bytes (not including null terminator)</span>
+    char    *num;       <span class=com>// "numerical" value</span>
+    int     numLen;     <span class=com>// length of numerical value</span>
+    int     copyNum;    <span class=com>// copy number for this tag name</span>
+    TagInfo *next;      <span class=com>// next TagInfo in linked list</span>
+};
+</pre></td></tr></table></blockquote>
+
+<p><b>Examples:</b></p>
+
+<blockquote><table class='box'><tr><td><pre>
+TagInfo *info = et->ImageInfo("image.jpg");
+<span class=com>/* &lt;&lt; do stuff with the returned TagInfo list here &gt;&gt; */</span>
+delete info;  <span class=com>// must delete the TagInfo list when done</span>
+</pre></td></tr></table></blockquote>
+
+<blockquote>Extract preview images from all files in a directory (recursively):
+<table class='box'><tr><td><pre>
+TagInfo *info = et->ImageInfo("c:\\images","-b\n-r\n-previewimage");
+</pre></td></tr></table></blockquote>
+
+<p><b><a name="notes">Notes:</a></b></p>
+
+<p>1. If this routine returns NULL and <a href="#LastComplete">LastComplete</a>
+returns 0, then a timeout occurred.  In this case, <a href="#GetInfo">GetInfo</a>
+may still successfully return the metadata after waiting for the exiftool process
+to complete the operation.  A negative value from <a href="#LastComplete">LastComplete</a>
+indicates an (usually unrecoverable) error in the ExifTool process, and if this
+happens the solution is to delete and recreate the ExifTool object.  A NULL
+return and a positive value from <a href="#LastComplete">LastComplete</a>
+indicates that exiftool ran, but returned no information from this file -- in
+this case, <a href="#GetError">GetError</a> should return an error message from
+the exiftool process.</p>
+
+<p>2. The <code>-b</code> option must be used to extract binary information.</p>
+
+<p>3. This routine uses <code>-sep ", "</code> to combine list items into a
+single string, but the separator may be changed by specifying a different
+<code>-sep</code> option in the <code>opts</code> argument.</p>
+
+<p>4. The metadata returned for the processed files is all stored in memory, so
+processing a large number of files at once may use a significant amount of
+memory.</p>
+
+<p>5. Internally, <a href="#ExtractInfo">ExtractInfo</a> uses
+<code>-php -l -G:0:1:2:4 -D</code> to retrieve detailed information in PHP
+format with group names.  This combination implies <code>-a</code>, so duplicate
+tags are extracted by default, but this may be disabled by using the
+<code>--a</code> option.</p>
+
+<hr><h2><a name="ExtractInfo">ExtractInfo</a></h2>
+
+<p>Send command to exiftool process with the necessary arguments to extract
+information for reading and parsing by <a href="#GetInfo">GetInfo</a>.  This
+routine always returns immediately, and the command is queued if the exiftool
+process wasn't able to receive it immediately.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>int ExtractInfo(const char *file, const char *opts=NULL);</code></td></tr>
+<tr><td><b>Inputs</b></td><td class=tight><table class=clear>
+    <tr><td class="t l"><code>const char *file</code></td>
+        <td class="t r">Name of one or more files and/or directories to write, separated by newlines.</td></tr>
+    <tr><td class="b l"><code>const char *opts</code></td>
+        <td class="b r">Additional exiftool options, separated by newlines.  See
+        <a href="#ImageInfo">ImageInfo</a> for more details.</td></tr>
+</table></td></tr>
+<tr><td><b>Returns</b></td><td>ID number for this command (&gt;0), or an
+<a href="#Errors">error code</a> (&lt;0).</td></tr>
+</table></blockquote>
+
+<p><b>Example:</b></p>
+
+<blockquote><table class='box'><tr><td><pre>
+int cmdNum = et->ExtractInfo("test.jpg", "-b");
+</pre></td></tr></table></blockquote>
+
+<hr><h2><a name="GetInfo">GetInfo</a></h2>
+
+<p>Read and parse information returned after call to <a href="#ExtractInfo">ExtractInfo</a>.
+This routine calls <a href="#Complete">Complete</a> internally to wait for the
+command to complete (unless <code>cmdNum</code> is -1), then reads the output
+and converts it into a linked list of TagInfo structures.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>TagInfo *GetInfo(int cmdNum=0, double timeout=NEVER);</code></td></tr>
+<tr><td><b>Inputs</b></td><td class=tight><table class=clear>
+    <tr><td class="t l"><code>int cmdNum</code></td>
+        <td class="t r">Command number returned by  <a href="#ExtractInfo">ExtractInfo</a>,
+        0 to process the results from the next available command, or -1
+        to parse the results of the previously completed command.</td></tr>
+    <tr><td class="b l"><code>double timeout</code></td>
+        <td class="b r">Maximum time in seconds to wait for the response. The
+        default (<code>NEVER</code>) will wait forever for the next command to
+        complete. Specify <code>NOW</code> to return immediately (with a return
+        value of NULL if the command hasn't completed).</td></tr>
+</table></td></tr>
+<tr><td><b>Returns</b></td><td>Pointer to linked list of TagInfo structures,
+or NULL on timeout or error or if exiftool doesn't return any information. <u>The
+caller is responsible for deleting this list when done</u>. See
+<a href="#ImageInfo">ImageInfo</a> for more details.</td></tr>
+</table></blockquote>
+
+<p><b>Example:</b></p>
+
+<blockquote><table class='box'><tr><td><pre>
+TagInfo *info = et->GetInfo(cmdNum, 0.5);   <span class=com>// wait for up to 0.5 seconds</span>
+</pre></td></tr></table></blockquote>
+
+<p>After calling <b>GetInfo</b>, <a href="#LastComplete">LastComplete</a> may be
+called to obtain the command ID number or error code from this operation, and
+<a href="#GetError">GetError</a> may be called to return any error output from
+exiftool.</p>
+
+<p><b>Note:</b></p>
+
+<p>Responses from commands must be obtained in sequence.  If an out-of-sequence
+command ID is passed to this routine, then earlier command responses are
+discarded until the response from the specified command is received.</p>
+
+<hr><h2><a name="SetNewValue">SetNewValue</a></h2>
+
+<p>Assign a new value for a tag.  This is a convenience routine that automates
+handling of the TagInfo list passed to <a href="#WriteInfo">WriteInfo</a>.  It
+should be called separately for each tag assignment before calling
+<a href="#WriteInfo">WriteInfo</a> to actually write the information to file.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>int SetNewValue(const char *tag=NULL, const char *value=NULL, int len=-1);</code></td></tr>
+<tr><td><b>Inputs</b></td><td class=tight><table class=clear>
+    <tr><td class="t l"><code>const char *tag</code></td>
+        <td class="t r">Name of tag to write.  May be prefixed by one or more group
+        names, separated by colons, and/or suffixed by a '#' to write the
+        "numerical" value.  See the exiftool application documentation for details.
+        Set to NULL to clear the internal list of new values set from previous
+        calls to <b>SetNewValue</b>.</td></tr>
+    <tr><td class="l"><code>const char *value</code></td>
+        <td class="r">Value to write for the tag.  Set to NULL or an empty string to
+        delete the tag.</td></tr>
+    <tr><td class="b l"><code>int len</code></td>
+        <td class="b r">Length of value in bytes.  This must be set only for binary data
+        values.  For simple string values, the default of -1 causes the
+        string length to be used.</td></tr>
+</table></td></tr>
+<tr><td><b>Returns</b></td><td>The total number of tag values set up to this
+point, or -3 on an out-of-memory error.</td></tr>
+</table></blockquote>
+
+<p><b>Examples:</b></p>
+
+<blockquote><table class='box'><tr><td><pre>
+int count = et->SetNewValue("XMP:Title", "some title");
+</pre></td></tr></table></blockquote>
+
+<blockquote><table class='box'><tr><td><pre>
+et->SetNewValue("Orientation#", "1");   <span class=com>// set "numerical" value</span>
+</pre></td></tr></table></blockquote>
+
+<hr><h2><a name="WriteInfo">WriteInfo</a></h2>
+
+<p>Write new tag values to one or more files. This routine always returns
+immediately.  Call <a href="#Complete">Complete</a> afterwards to wait
+for the command to complete before checking the output and error messages
+with <a href="#GetOutput">GetOutput</a> and <a href="#GetError">GetError</a>.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>int WriteInfo(const char *file, const char *opts=NULL, TagInfo *info=NULL);</code></td></tr>
+<tr><td><b>Inputs</b></td><td class=tight><table class=clear>
+    <tr><td class="t l"><code>const char *file</code></td>
+        <td class="t r">Name of one or more files and/or directories to write, separated by newlines.</td></tr>
+    <tr><td class="l"><code>const char *opts</code></td>
+        <td class="r">Additional exiftool options, separated by newlines.  Most
+        writing options are compatible with this routine, provided the
+        <code>-ex</code> option used internally is not overridden.</td></tr>
+    <tr><td class="b l"><code>TagInfo *info</code></td>
+        <td class="b r">Pointer to linked list of TagInfo structures for the
+        tags to write.  See the <a href="#ImageInfo">ImageInfo</a> section
+        for details about <a href="#TagInfo">the TagInfo structure</a>. If NULL,
+        the internal list of tags generated by previous calls to
+        <a href="#SetNewValue">SetNewValue</a> is used.  If not NULL, tag values
+        set by previous calls to <a href="#SetNewValue">SetNewValue</a> have no
+        effect.</td></tr>
+</table></td></tr>
+<tr><td><b>Returns</b></td><td>Command number (&gt;0), or
+<a href="#Errors">error code</a> (&lt;0).</td></tr>
+</table></blockquote>
+
+<p>The input TagInfo list is not modified by this routine, so <b>WriteInfo</b>
+may be called repeatedly using the same TagInfo list. (This also applies to the
+internal TagInfo list used when the "info" argument is NULL.)</p>
+
+<p><b>Examples:</b></p>
+
+<blockquote>Write values from previous calls to <a href="#SetNewValue">SetNewValue</a>:
+<table class='box'><tr><td><pre>
+int cmdNum = et->WriteInfo("test.jpg", "-overwrite_original");
+</pre></td></tr></table></blockquote>
+
+<blockquote>Copy all metadata from another image (this also writes tags set by
+<a href="#SetNewValue">SetNewValue</a>, but any same-named tags copied with the
+<code>-tagsFromFile</code> take precedence):
+<table class='box'><tr><td><pre>
+int cmdNum = et->WriteInfo("dst.jpg", "-tagsfromfile\nsrc.jpg\n-all:all");
+</pre></td></tr></table></blockquote>
+
+<p><b>Notes:</b></p>
+
+<p>1. The exiftool <code>-sep ", "</code> option is used by this routine to
+split values at comma-space combinations when writing List-type tags.  The
+<code>-ex</code> option is also used internally to escape characters in the
+values from the TagInfo list if necessary to avoid syntax problems in the
+arguments passed to exiftool.</p>
+
+<p>2. Any "SourceFile" entries in the input TagInfo list are ignored. (These are
+generated by <a href="#GetInfo">GetInfo</a> at the start of each file.)</p>
+
+<p>3. If a tag <code>value</code> is NULL, the <code>num</code> value is written
+instead, and a "#" is appended to the tag <code>name</code>.  If both
+<code>value</code> and <code>num</code> are NULL, then the tag is deleted.  The
+value lengths (<code>valueLen</code> and <code>numLen</code>) must be set if the
+corresponding pointer is not NULL.</p>
+
+<p>4. Any defined <code>group</code> names are used to prefix the tag name in
+the command sent to exiftool.</p>
+
+<p>5. The TagInfo <code>desc</code>, <code>id</code> and <code>copyNum</code>
+elements are not used by <b>WriteInfo</b>.</p>
+
+<hr><h2><a name="Command">Command</a></h2>
+
+<p>This routine may be used to send an arbitrary command to exiftool.  If
+exiftool is busy, this routine queues the command and always returns
+immediately.  After sending a command, call <a href="#Complete">Complete</a>
+to receive the command output.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>int Command(const char *cmd=NULL);</code></td></tr>
+<tr><td><b>Inputs</b></td><td class=tight><table class=clear>
+    <tr><td class="t b l"><code>const char *cmd</code></td>
+        <td class="t b r">Command argument string.  Arguments are separated by
+        newlines, in a format identical to the exiftool <code>-@</code> argfile.
+        Set to NULL to continue writing previously queued commands and check to
+        see if the queue is empty.</td></tr>
+</table></td></tr>
+<tr><td><b>Returns</b></td><td>ID number for this command (&gt;0), an
+<a href="#Errors">error code</a> (&lt;0), or 0 if the input
+<code>cmd</code> is NULL and the command queue is empty.</td></tr>
+</table></blockquote>
+
+<p><b>Example:</b></p>
+
+<blockquote><table class='box'><tr><td><pre>
+int cmdNum = et->Command("-overwrite_original\n-artist=Phil Harvey\nimage.jpg");
+</pre></td></tr></table></blockquote>
+
+<p>This routine adds the necessary arguments to the exiftool command to ensure
+proper command/response synchronization, including an <code>-execute</code>
+option carrying the command ID number.  Before sending the command to exiftool,
+this routine first calls <a href="#IsRunning">IsRunning</a> to ensure that the
+process is running, and returns immediately with a value of -1 if it is not.</p>
+
+<p>Commands are queued if the exiftool process is busy, and sent as previous
+commands are completed.  The number of queued commands is limited only by the
+system memory.</p>
+
+<p><b>Known Problems:</b></p>
+
+<p>Under Cygwin in Windows, it seems that the write pipe may block if it becomes
+full (even though it is explicitly set to O_NONBLOCK).  If this happens, this
+call may hang.  To avoid this problem, avoid queuing up a large number of
+commands before completing them in Windows.</p>
+
+<hr><h2><a name="Complete">Complete</a></h2>
+
+<p>Receive the output of a command from the exiftool process.  Call this routine
+after issuing a command via either <a href="#Command">Command</a> or
+<a href="#ExtractInfo">ExtractInfo</a>.  If the returned command ID number is
+greater than zero, then the command output strings are available via
+<a href="#GetOutput">GetOutput</a> and <a href="#GetError">GetError</a>,
+and the output from <a href="#ExtractInfo">ExtractInfo</a> may be parsed
+by calling  <a href="#GetInfo">GetInfo</a> with a <code>cmdNum</code> of -1.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>int Complete(double timeout=NEVER);</code></td></tr>
+<tr><td><b>Inputs</b></td><td class=tight><table class=clear>
+    <tr><td class="t b l"><code>double timeout</code></td>
+        <td class="t b r">Maximum time in seconds to wait for the response. The
+        default (<code>NEVER</code>) will wait forever for the next command to
+        complete. Specify <code>NOW</code> to return immediately (with a return
+        value of 0 if the command hasn't completed).</td></tr>
+</table></td></tr>
+<tr><td><b>Returns</b></td><td>Command ID number for a successful response
+(&gt;0), an <a href="#Errors">error code</a> (&lt;0), or 0 if the timeout
+was reached.</td></tr>
+</table></blockquote>
+
+<p><b>Example:</b></p>
+
+<blockquote><table class='box'><tr><td><pre>
+int cmdNum = et->Complete(NOW);   <span class=com>// check for complete command without waiting</span>
+</pre></td></tr></table></blockquote>
+
+<p><b>Note:</b></p>
+
+<p>This routine returns a positive (&gt;0) command number as long as communication
+with the exiftool process was completed successfully, even if exiftool itself
+returned an error message.  To determine the success or failure of the exiftool
+command, <a href="#GetOutput">GetOutput</a>, <a href="#GetError">GetError</a>
+and/or <a href="#GetSummary">GetSummary</a> should be called after
+<a href="#Complete">Complete</a> has returned a positive number.</p>
+
+<hr><h2><a name="LastComplete">LastComplete</a></h2>
+
+<p>Return command number from last call to <a href="#Complete">Complete</a>. 
+This routine is useful to determine the result code from the last
+<a href="#Complete">Complete</a> call if it was invoked via
+<a href="#ImageInfo">ImageInfo</a> or <a href="#GetInfo">GetInfo</a>.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>int LastComplete();</code></td></tr>
+<tr><td><b>Inputs</b></td><td>(none)</td></tr>
+<tr><td><b>Returns</b></td><td>Command number (&gt;0) or <a href="#Errors">error code</a>
+(&lt;0) from last call to <a href="#Complete">Complete</a>, or 0 if
+<a href="#Complete">Complete</a> hasn't been called or hasn't finished yet.</td></tr>
+</table></blockquote>
+
+<hr><h2><a name="SetLastComplete">SetLastComplete</a></h2>
+
+<p>Set value to be returned by next call to <a href="#LastComplete">LastComplete</a>.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>void SetLastComplete(int lastComplete);</code></td></tr>
+<tr><td><b>Inputs</b></td><td>New value for the last complete command number.</td></tr>
+<tr><td><b>Returns</b></td><td>(none)</td></tr>
+</table></blockquote>
+
+<p>This routine may be useful in some situations to reset the last complete
+command number after processing a command to aid in synchronization of
+multithreaded applications.</p>
+
+<hr><h2><a name="GetOutput">GetOutput</a></h2>
+
+<p>Get stdout stream from the last complete command.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>char *GetOutput();</code></td></tr>
+<tr><td><b>Inputs</b></td><td>(none)</td></tr>
+<tr><td><b>Returns</b></td><td>Pointer to a null-terminated string of the stdout
+output from the last complete exiftool command, or NULL if the most recent
+call to <a href="#Complete">Complete</a> was not successful.</td></tr>
+</table></blockquote>
+
+<p>The returned string is part of an input buffer maintained by the ExifTool
+object, but the caller is free to change bytes within the length of this string
+(as is done by <a href="#GetInfo">GetInfo</a> when parsing the returned
+information).  The string is overwritten on the next call to
+<a href="#Complete">Complete</a>.</p>
+
+<hr><h2><a name="GetOutputLen">GetOutputLen</a></h2>
+
+<p>Get length of output data in bytes.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>int GetOutputLen();</code></td></tr>
+<tr><td><b>Inputs</b></td><td>(none)</td></tr>
+<tr><td><b>Returns</b></td><td>Number of bytes in output data (not including
+null terminator).</td></tr>
+</table></blockquote>
+
+<p>For normal string output this routine is not usually called since the string
+is null terminated.  However, binary data may be returned if
+<a href="#Command">Command</a> is called with a bare <code>-b</code> option, in
+which case this routine must be used to get the length of the binary data since
+it may contain embedded null bytes.</p>
+
+<hr><h2><a name="GetError">GetError</a></h2>
+
+<p>Get stderr stream from the last complete command.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>char *GetError();</code></td></tr>
+<tr><td><b>Inputs</b></td><td>(none)</td></tr>
+<tr><td><b>Returns</b></td><td>Pointer to a null-terminated string of the stderr
+output from the last complete exiftool command, or NULL if there was no stderr output
+or the most recent call to <a href="#Complete">Complete</a> was not successful.</td></tr>
+</table></blockquote>
+
+<p>The returned string is part of an input buffer maintained by the ExifTool
+object, but the caller is free to change bytes within the length of this
+string.  The string is overwritten on the next call to
+<a href="#Complete">Complete</a>.</p>
+
+<hr><h2><a name="GetSummary">GetSummary</a></h2>
+
+<p>Helper function to retrieve the specified count from the exiftool summary
+statistics.  The summary statistics are only available after a command has
+successfully completed.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>int GetSummary(const char *msg);</code></td></tr>
+<tr><td><b>Inputs</b></td><td class=tight><table class=clear>
+    <tr><td class="t b l"><code>const char *msg</code></td>
+        <td class="t b r">Summary message string.  The macro definitions below
+        are included in ExifTool.h for the common exiftool messages.</td></tr>
+</table></td></tr>
+<tr><td><b>Returns</b></td><td>Count from the specified summary line of the
+exiftool output, or -1 if the specified message wasn't found.</td></tr>
+</table></blockquote>
+
+<p>Definitions of common exiftool message strings (from ExifTool.h):</p>
+
+<blockquote><pre>#define SUMMARY_DIRECTORIES_SCANNED     "directories scanned"
+#define SUMMARY_DIRECTORIES_CREATED     "directories created"
+#define SUMMARY_FILES_FAILED_CONDITION  "files failed condition"
+#define SUMMARY_IMAGE_FILES_CREATED     "image files created"
+#define SUMMARY_IMAGE_FILES_UPDATED     "image files updated"
+#define SUMMARY_IMAGE_FILES_UNCHANGED   "image files unchanged"
+#define SUMMARY_IMAGE_FILES_MOVED       "image files moved"
+#define SUMMARY_IMAGE_FILES_COPIED      "image files copied"
+#define SUMMARY_FILE_UPDATE_ERRORS      "files weren't updated due to errors"
+#define SUMMARY_FILE_CREATE_ERRORS      "files weren't created due to errors"
+#define SUMMARY_IMAGE_FILES_READ        "image files read"
+#define SUMMARY_IMAGE_FILE_ERRORS       "files could not be read"
+#define SUMMARY_OUTPUT_FILES_CREATED    "output files created"
+#define SUMMARY_OUTPUT_FILES_APPENDED   "output files appended"
+#define SUMMARY_HARD_LINKS_CREATED      "hard links created"
+#define SUMMARY_HARD_LINK_ERRORS        "hard links could not be created"
+#define SUMMARY_SYMBOLIC_LINKS_CREATED  "symbolic links created"
+#define SUMMARY_SYMBOLIC_LINK_ERRORS    "symbolic links could not be created"</pre></blockquote>
+
+<p><b>Example:</b></p>
+
+<blockquote><table class='box'><tr><td><pre>
+int num_updated = et->GetSummary(SUMMARY_IMAGE_FILES_UPDATED);
+</pre></td></tr></table></blockquote>
+
+<p><b>Note:</b></p>
+
+<p>The exiftool summary message usually goes to stdout (accessed via
+<a href="#GetOutput">GetOutput</a>), but may go to stderr (accessed via
+<a href="#GetError">GetError</a>) if certain options are used (ie.
+<code>-csv</code>, <code>-h</code>, <code>-j</code>, <code>-p</code>,
+<code>-php</code> or <code>-X</code>).  This routine will scan both pipes for
+the specified message.</p>
+
+<hr><h2><a name="IsRunning">IsRunning</a></h2>
+
+<p>Check to see if the ExifTool process is still running. If this routine
+returns zero, then the exiftool process has died and the ExifTool object should
+be deleted and recreated.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>int IsRunning();</code></td></tr>
+<tr><td><b>Inputs</b></td><td>(none)</td></tr>
+<tr><td><b>Returns</b></td><td>Non-zero if the exiftool process is still running.</td></tr>
+</table></blockquote>
+
+<p>If the exiftool process dies, other routines may return an error code, or may
+time out.  This routine allows verification that the exiftool process is still
+running, and may be called at any time.</p>
+
+<hr><h2><a name="SetWaitTime">SetWaitTime</a></h2>
+
+<p>Specifies time to wait in microseconds each time through the processing loop
+if there were no commands in the queue.  Default is 1000 us.</p>
+
+<blockquote><table class='norm'>
+<tr><td><b>Prototype</b></td><td><code>void SetWaitTime(int waitTime);</code></td></tr>
+<tr><td><b>Inputs</b></td><td>Wait time in microseconds</td></tr>
+<tr><td><b>Returns</b></td><td>(none)</td></tr>
+</table></blockquote>
+
+<hr><h2><a name="Errors">Error Codes</a></h2>
+
+<p>Error codes returned by ExifTool methods:</p>
+
+<blockquote><table class='norm'>
+<tr><th>Error&nbsp;Code</th><th>Description</th></tr>
+<tr><td align='center'>-1</td><td>exiftool process is not running</td></tr>
+<tr><td align='center'>-2</td><td>error communicating with exiftool process</td></tr>
+<tr><td align='center'>-3</td><td>out of memory for buffer</td></tr>
+<tr><td align='center'>-4</td><td>timeout waiting for stderr output from exiftool process</td></tr>
+<tr><td align='center'>-5</td><td>file pointer is null in function argument</td></tr>
+</table></blockquote>
+
+<hr><h2><a name="History">Revision History</a></h2>
+
+<p><a name='v1.08'><b>May 24, 2019 - Version 1.08</b></a></p>
+<ul>
+<li>Avoid zombie processes after an ExifTool object is deleted</li>
+</ul>
+
+<p><a name='v1.07'><b>May 21, 2019 - Version 1.07</b></a></p>
+<ul>
+<li>Added definitions for the new "symbolic links" summary messages</li>
+</ul>
+
+<p><a name='v1.06'><b>Oct 5, 2018 - Version 1.06</b></a></p>
+<ul>
+<li>Added SetWaitTime() method</li>
+<li>Fixed problem where TagInfo "num" element was NULL for SourceFile item</li>
+<li>Expanded example1 to print all TagInfo elements, and example5 to use multiple ExifTool objects</li>
+</ul>
+
+<p><a name='v1.05'><b>July 24, 2018 - Version 1.05</b></a></p>
+<ul>
+<li>Fixed "will be initialized after" compiler warning with gcc 8.1.1</li>
+</ul>
+
+<p><a name='v1.04'><b>Sept. 22, 2016 - Version 1.04</b></a></p>
+<ul>
+<li>Standardized and documented error return values</li>
+</ul>
+
+<p><a name='v1.03'><b>June 10, 2016 - Version 1.03</b></a></p>
+<ul>
+<li>Added SetLastComplete() access member</li>
+<li>Added ability to extract binary data directly</li>
+<li>Allow the Complete() call from GetInfo() to be bypassed by setting cmdNum to -1</li>
+<li>Changed LastComplete() to return 0 if no commands have yet completed</li>
+<li>Fixed potential race condition when creating multiple ExifTool objects simultaneously</li>
+</ul>
+
+<p><a name='v1.02'><b>May 22, 2014 - Version 1.02</b></a></p>
+<ul>
+<li>Added definitions for the new "hard links" summary messages</li>
+<li>Use array form of delete for all string deletes</li>
+</ul>
+
+<p><a name='v1.01'><b>Dec. 16, 2013 - Version 1.01</b></a></p>
+<ul>
+<li>Added <a href="#GetSummary">GetSummary</a> helper method</li>
+</ul>
+
+<p><a name='v1.00'><b>Dec. 1, 2013 - Version 1.00</b></a></p>
+<ul>
+<li>Initial release</li>
+</ul>
+
+<hr>
+</body>
+</html>

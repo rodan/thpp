@@ -1,0 +1,54 @@
+C++ Interface for ExifTool (by Phil Harvey: philharvey66 at gmail.com)
+----------------------------------------------------------------------------
+
+This package contains the source code for a set of objects to allow C++
+applications to leverage the full power of the exiftool application through
+a simple interface.
+
+See these web pages for more information:
+
+  http://exiftool.org/cpp_exiftool/ - cpp_exiftool home page
+  http://exiftool.org/              - exiftool home page
+
+COMPILING
+
+Extract the files from cpp_exiftool.tar.gz, and type "make" in the package
+directory to build the example files.
+
+DEPENDENCIES
+
+Requires that the exiftool application already exists on the system.
+
+COPYRIGHT AND LICENSE
+
+Copyright 2013-2019, Phil Harvey
+
+This is software is free for non-commercial use.  Permission must be
+obtained for using this code in a commercial product, and a license fee may
+be required.
+
+DISTRIBUTION FILES
+
+Below is a list of the files/directories included in this package:
+
+  Makefile              - Makefile for example programs
+  README                - This file
+  example/              - Example programs:
+    example1              - Extract all metadata from a file
+    example2              - Write XMP:Title and XMP:Description to a file
+    example3              - Read/write metadata from/to files
+    example4              - Copy a ThumbnailImage from one file to another
+    example5              - Interleaved command send/receive test
+  html/                 - HTML documentation:
+    index.html            - C++ interface for ExifTool documentation
+    style.css             - Style sheet
+  inc/                  - Include files:
+    ExifTool.h            - C++ interface for ExifTool object
+    ExifToolPipe.h        - Object for reading piped exiftool output
+    TagInfo.h             - Structure for returned tag information
+  src/                  - Source files:
+    ExifTool.cpp          - C++ interface for ExifTool object
+    ExifToolPipe.cpp      - Object for reading piped exiftool output
+    TagInfo.cpp           - Structure for returned tag information
+
+----------------------------------------------------------------------------
