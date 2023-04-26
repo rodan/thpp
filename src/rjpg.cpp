@@ -168,7 +168,7 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
         } else if (strstr(i->name, "AtmosphericTransX") != NULL) {
             h->atm_trans_X = strtod(i->value, NULL);
         } else if (strstr(i->name, "AtmosphericTemperature") != NULL) {
-            h->air_temp = strtod(i->value, NULL);
+            h->atm_temp = strtod(i->value, NULL);
         } else if (strstr(i->name, "ReflectedApparentTemperature") != NULL) {
             h->refl_temp = strtod(i->value, NULL);
         } else if (strstr(i->name, "IRWindowTransmission") != NULL) {
@@ -457,7 +457,7 @@ uint8_t rjpg_rescale(th_db_t * d)
     if (p->flags & OPT_SET_NEW_AT) {
         r->ATemp = p->atm_temp;
     } else {
-        r->ATemp = h->air_temp;
+        r->ATemp = h->atm_temp;
     }
 
     if (p->flags & OPT_SET_NEW_RT) {
@@ -490,7 +490,6 @@ uint8_t rjpg_rescale(th_db_t * d)
         r->WR = h->wr;
     }
 
-    r->RTemp = h->refl_temp;
     r->PR1 = h->planckR1;
     r->PB = h->planckB;
     r->PF = h->planckF;

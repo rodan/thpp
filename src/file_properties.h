@@ -19,7 +19,7 @@ struct fp_visibility {
     bool planckF;
     bool planckO;
     bool atm_trans_X;
-    bool air_temp;
+    bool atm_temp;
     bool refl_temp;
     bool iwt;
     bool iwtemp;

@@ -17,7 +17,7 @@ struct rjpg_header {
     double planckF;
     double planckO;
     double atm_trans_X;
-    double air_temp;
+    double atm_temp;
     double refl_temp;
     uint16_t raw_th_img_width;               ///< number of horizontal pixels
     uint16_t raw_th_img_height;              ///< number of vertical pixels

@@ -16,6 +16,7 @@
 #define          OPT_SET_NEW_IWT  0x100
 #define       OPT_SET_NEW_IWTEMP  0x200
 #define           OPT_SET_NEW_WR  0x400
+#define           OPT_SET_INTERP  0x800
 
 #define                   FT_UNK  0
 

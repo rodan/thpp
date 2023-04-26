@@ -130,7 +130,7 @@ void tool_preferences(bool *p_open, th_db_t * db)
         ImGui::Checkbox("planck f", &v->planckF);
         ImGui::Checkbox("planck o", &v->planckO);
         ImGui::Checkbox("atmospheric TransX", &v->atm_trans_X);
-        ImGui::Checkbox("atmospheric temperature", &v->air_temp);
+        ImGui::Checkbox("atmospheric temperature", &v->atm_temp);
         ImGui::Checkbox("reflected apparent temperature", &v->refl_temp);
     }
 

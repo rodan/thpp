@@ -198,12 +198,12 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::Text("%lf", hf->planckO);
             }
 
-            if (v.air_temp) {
+            if (v.atm_temp) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("atmospheric temperature");
                 ImGui::TableSetColumnIndex(1);
-                ImGui::Text("%.02lf", hf->air_temp);
+                ImGui::Text("%.02lf", hf->atm_temp);
             }
 
             if (v.refl_temp) {

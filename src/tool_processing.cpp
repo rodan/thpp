@@ -191,9 +191,9 @@ void tool_processing(bool *p_open, th_db_t * db)
         ImGui::Text("  atmosphere");
         ImGui::Separator();
 
-        static float s_atm_temp = h->air_temp;
+        static float s_atm_temp = h->atm_temp;
         if (reset_changes) {
-            s_atm_temp = h->air_temp;
+            s_atm_temp = h->atm_temp;
         }
         value_changed = ImGui::DragFloat("atm temp [C]", &s_atm_temp, 1.0f, -20.0f, 300.0f, "%0.2f C");
         if (value_changed) {

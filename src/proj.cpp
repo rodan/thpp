@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -49,6 +50,12 @@ uint8_t parse_options(int argc, char *argv[], th_getopt_t * p)
         {"emissivity", required_argument, 0, 'e'},
         {"rh", required_argument, 0, 'r'},
         {"at", required_argument, 0, 't'},
+        {"rtemp", required_argument, 0, OPT_SET_NEW_RT},
+        {"atemp", required_argument, 0, OPT_SET_NEW_AT},
+        {"iwtemp", required_argument, 0, OPT_SET_NEW_IWTEMP},
+        {"interp", required_argument, 0, OPT_SET_INTERP},
+        {"iwt", required_argument, 0, OPT_SET_NEW_IWT},
+        {"wr", required_argument, 0, OPT_SET_NEW_WR},
         {"distcomp", no_argument, 0, 'k'},
         {"version", no_argument, 0, 'v'},
         {"help", no_argument, 0, 'h'},
@@ -79,30 +86,49 @@ uint8_t parse_options(int argc, char *argv[], th_getopt_t * p)
             break;
         case 'l':
             p->flags |= OPT_SET_NEW_MIN;
-            p->t_min = atof(optarg);
+            p->t_min = strtod(optarg, NULL);
             break;
         case 'a':
             p->flags |= OPT_SET_NEW_MAX;
-            p->t_max = atof(optarg);
+            p->t_max = strtod(optarg, NULL);
             break;
         case 'd':
             p->flags |= OPT_SET_NEW_DISTANCE;
-            p->distance = atof(optarg);
+            p->distance = strtod(optarg, NULL);
             break;
         case 'k':
             p->flags |= OPT_SET_COMP;
             break;
         case 'e':
             p->flags |= OPT_SET_NEW_EMISSIVITY;
-            p->emissivity = atof(optarg);
+            p->emissivity = strtod(optarg, NULL);
             break;
         case 't':
             p->flags |= OPT_SET_NEW_AT;
-            p->atm_temp = atof(optarg);
+            p->atm_temp = strtod(optarg, NULL);
             break;
         case 'r':
             p->flags |= OPT_SET_NEW_RH;
-            p->rh = atof(optarg);
+            p->rh = strtod(optarg, NULL);
+            break;
+        case OPT_SET_NEW_IWT:
+            p->flags |= OPT_SET_NEW_IWT;
+            p->iwt = strtod(optarg, NULL);
+            break;
+        case OPT_SET_NEW_IWTEMP:
+            p->flags |= OPT_SET_NEW_IWTEMP;
+            p->iwtemp = strtod(optarg, NULL);
+            break;
+        case OPT_SET_NEW_WR:
+            p->flags |= OPT_SET_NEW_WR;
+            p->wr = strtod(optarg, NULL);
+            break;
+        case OPT_SET_INTERP:
+            p->zoom_interpolation = atoi(optarg);
+            break;
+        case OPT_SET_NEW_RT:
+            p->flags |= OPT_SET_NEW_RT;
+            p->refl_temp = strtod(optarg, NULL);
             break;
         case 'v':
             show_version();
