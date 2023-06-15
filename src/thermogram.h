@@ -19,6 +19,12 @@
 #define            TH_FLIR_P20_NTSC  0x4
 #define            TH_FLIR_S65_NTSC  0x5
 
+#define   ID_FLIR_LITTLE_ENDIAN_MSG  "Little-endian"
+#define      ID_FLIR_BIG_ENDIAN_MSG  "Big-endian"
+#define       ID_FLIR_LITTLE_ENDIAN  0x1
+#define          ID_FLIR_BIG_ENDIAN  0x2
+#define          ID_FLIR_UNK_ENDIAN  0x0
+
 #define       ID_FLIR_THERMACAM_E25  "ThermaCAM  E25"
 #define       ID_FLIR_THERMACAM_E65  "ThermaCAM E65"
 #define     ID_FLIR_THERMACAM_EX320  "ThermaCAM EX320"

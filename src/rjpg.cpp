@@ -118,13 +118,14 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
     unsigned err = 0;
     int fd_rti;
     char fn_rti[] = "/tmp/thpp_rti_XXXXXX";
+    char byte_order[TAG_SZ_MAX];
 
     rjpg_header_t *h = th->head.rjpg;
 
     // create our ExifTool object
     ExifTool *et = new ExifTool();
     // read metadata from the image
-    TagInfo *info = et->ImageInfo(in_file,"-b\n-RawThermalImageWidth\n-RawThermalImageHeight\n-RawThermalImage\n-Emissivity\n-ObjectDistance\n-RelativeHumidity\n-AtmosphericTransAlpha1\n-AtmosphericTransAlpha2\n-AtmosphericTransBeta1\n-AtmosphericTransBeta2\n-PlanckR1\n-PlanckR2\n-PlanckB\n-PlanckF\n-PlanckO\n-AtmosphericTransX\n-AtmosphericTemperature\n-ReflectedApparentTemperature\n-IRWindowTransmission\n-IRWindowTemperature\n-Make\n-Model\n-CreateDate",2);
+    TagInfo *info = et->ImageInfo(in_file,"-b\n-RawThermalImageWidth\n-RawThermalImageHeight\n-RawThermalImage\n-Emissivity\n-ObjectDistance\n-RelativeHumidity\n-AtmosphericTransAlpha1\n-AtmosphericTransAlpha2\n-AtmosphericTransBeta1\n-AtmosphericTransBeta2\n-PlanckR1\n-PlanckR2\n-PlanckB\n-PlanckF\n-PlanckO\n-AtmosphericTransX\n-AtmosphericTemperature\n-ReflectedApparentTemperature\n-IRWindowTransmission\n-IRWindowTemperature\n-Make\n-Model\n-CreateDate\n-ExifByteOrder",2);
 
     if (!info) {
         if (et->LastComplete() <= 0) {
@@ -181,6 +182,8 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
             snprintf(h->camera_model, TAG_SZ_MAX, "%s", i->value);
         } else if (strstr(i->name, "CreateDate") != NULL) {
             snprintf(h->create_ts, TAG_SZ_MAX, "%s", i->value);
+        } else if (strstr(i->name, "ExifByteOrder") != NULL) {
+            snprintf(byte_order, TAG_SZ_MAX, "%s", i->value);
         } else if (strstr(i->name, "RawThermalImage") != NULL) {
             rti_len = i->valueLen;
             if (rti_content) {
@@ -254,6 +257,18 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
     err = rjpg_check_th_validity(th);
     if (err) {
         goto cleanup;
+    }
+
+    if (strlen(byte_order) > 2) {
+        if (memcmp
+            (byte_order, ID_FLIR_LITTLE_ENDIAN_MSG,
+             std::min(strlen(byte_order), strlen(ID_FLIR_LITTLE_ENDIAN_MSG))) == 0) {
+            h->byte_order = ID_FLIR_LITTLE_ENDIAN;
+        } else if (memcmp
+            (byte_order, ID_FLIR_BIG_ENDIAN_MSG,
+             std::min(strlen(byte_order), strlen(ID_FLIR_BIG_ENDIAN_MSG))) == 0) {
+            h->byte_order = ID_FLIR_BIG_ENDIAN;
+        }
     }
 
     if (strlen(h->camera_model) > 2) {
@@ -502,19 +517,38 @@ uint8_t rjpg_rescale(th_db_t * d)
     r->ATX = h->atm_trans_X;
 
     switch (src_th->subtype) {
-    case TH_FLIR_THERMACAM_E25:
-    case TH_FLIR_THERMACAM_E65:
-    case TH_FLIR_THERMACAM_EX320:
-    case TH_FLIR_P20_NTSC:
-    case TH_FLIR_S65_NTSC:
-        if (localhost_is_le()) {
-            framew_needs_flippage = 1;
-        }
-        break;
-    default:
-        if (!localhost_is_le()) {
-            framew_needs_flippage = 1;
-        }
+        case TH_FLIR_THERMACAM_E25:
+        case TH_FLIR_THERMACAM_E65:
+        case TH_FLIR_THERMACAM_EX320:
+        case TH_FLIR_P20_NTSC:
+        case TH_FLIR_S65_NTSC:
+            if (localhost_is_le()) {
+                framew_needs_flippage = 1;
+            }
+            break;
+        default:
+            if (!localhost_is_le()) {
+                framew_needs_flippage = 1;
+            }
+    }
+
+    switch (h->byte_order) {
+        case ID_FLIR_LITTLE_ENDIAN:
+            if (localhost_is_le() && (src_th->subtype == TH_FLIR_THERMACAM_E25)) {
+                framew_needs_flippage = 1;
+            } else {
+                framew_needs_flippage = 0;
+            }
+            break;
+        case ID_FLIR_BIG_ENDIAN:
+            if (localhost_is_le()) {
+                framew_needs_flippage = 0;
+            } else {
+                framew_needs_flippage = 1;
+            }
+            break;
+        default:
+            break;
     }
 
 #ifdef USE_GLENN_ALGO

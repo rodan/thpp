@@ -107,6 +107,7 @@ void tool_preferences(bool *p_open, th_db_t * db)
         ImGui::SameLine(); HelpMarker("control the visibility of items in the file properties table");
         ImGui::Checkbox("camera make", &v->camera_make);
         ImGui::Checkbox("camera model", &v->camera_model);
+        ImGui::Checkbox("exif byte order", &v->byte_order);
         ImGui::Checkbox("image resolution", &v->raw_th_img_res);
         ImGui::Checkbox("image timestamp", &v->ir_timestamp);
         ImGui::Checkbox("image file name", &v->ir_fname);

@@ -264,6 +264,7 @@ uint8_t thumbnail_prepare(fs::path file)
     node_t *node_s;
 
     if ((file.extension().string().compare(".dtv") == 0) ||
+        (file.extension().string().compare(".DTV") == 0) ||
         (file.extension().string().compare(".jpg") == 0)) {
         if (head == NULL) {
             node_ptr = ll_add(&head);
@@ -408,6 +409,7 @@ void file_library(bool *p_open, th_db_t * db)
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
             if (entry_is_dir) {
                 m_current_directory /= path.filename();
+                break;
             } else {
                 if (search && (search->flags & FL_FILE_READY)) {
                     cleanup(db);

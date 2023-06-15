@@ -94,6 +94,21 @@ void file_properties(bool *p_open, th_db_t * db)
                 ImGui::Text("%s", hf->camera_model);
             }
 
+            if (v.byte_order) {
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
+                ImGui::Text("byte order");
+                ImGui::TableSetColumnIndex(1);
+                if (hf->byte_order == ID_FLIR_LITTLE_ENDIAN) {
+                    ImGui::Text("little endian");
+                } else if (hf->byte_order == ID_FLIR_BIG_ENDIAN) {
+                    ImGui::Text("big endian");
+                } else {
+                    ImGui::Text("unknown");
+                }
+            }
+
+
             if (v.emissivity) {
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);

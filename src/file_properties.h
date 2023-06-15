@@ -35,6 +35,7 @@ struct fp_visibility {
     bool line_avg;
     bool camera_make;
     bool camera_model;
+    bool byte_order;
 };
 typedef struct fp_visibility fp_visibility_t;
 

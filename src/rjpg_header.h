@@ -30,6 +30,7 @@ struct rjpg_header {
     double wr;
     uint32_t raw_th_img_sz;
     uint8_t *raw_th_img;
+    uint8_t byte_order;
     char camera_make[TAG_SZ_MAX];
     char camera_model[TAG_SZ_MAX];
     char create_ts[TAG_SZ_MAX];

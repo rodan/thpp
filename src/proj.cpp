@@ -160,6 +160,7 @@ uint16_t get_file_type(const char *in_file, uint16_t *type, uint16_t *subtype)
     uint8_t *buf;
     uint8_t ret = FT_UNK;
     static const uint8_t sig_exif[4] = { 0x45, 0x78, 0x69, 0x66 };      // appears at file offset 0x18 or 0x06
+    static const uint8_t sig_dtv_v0[1] = { 0x00 };   // appears at offset 0x1
     static const uint8_t sig_dtv_v2[1] = { 0x02 };   // appears at offset 0x1
     static const uint8_t sig_dtv_v3[1] = { 0x03 };   // appears at offset 0x1
     static const uint8_t sig_flir[4] = {0x46, 0x4c, 0x49, 0x52}; // sometimes at offset 0x18
@@ -196,6 +197,14 @@ uint16_t get_file_type(const char *in_file, uint16_t *type, uint16_t *subtype)
         }
         if (subtype) {
             *subtype = TH_DTV_VER3;
+        }
+    } else if (memcmp(buf + 1, sig_dtv_v0, 1) == 0) {
+        ret = TH_IRTIS_DTV;
+        if (type) {
+            *type = TH_IRTIS_DTV;
+        }
+        if (subtype) {
+            *subtype = TH_DTV_VER2;
         }
     } else if ((memcmp(buf + 0x18, sig_exif, 4) == 0) || (memcmp(buf + 0x6, sig_exif, 4) == 0)) {
         // having an exif inside the jpeg file is a requirement

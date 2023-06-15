@@ -89,7 +89,7 @@ uint8_t dtv_open(tgram_t * thermo, char *dtv_file)
     frame_sz = thermo->head.dtv->nst * thermo->head.dtv->nstv * thermo->head.dtv->frn;
 
     if (thermo->subtype == TH_DTV_VER2) {
-        if (st.st_size != frame_sz + DTV_HEADER_SZ) {
+        if (st.st_size < frame_sz + DTV_HEADER_SZ) {
             fprintf(stderr, "error: unexpected image size %d*%d*%d+%d != %ld\n", thermo->head.dtv->nst,
                 thermo->head.dtv->nstv, thermo->head.dtv->frn, DTV_HEADER_SZ, st.st_size);
             ret = EXIT_FAILURE;
