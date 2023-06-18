@@ -7,8 +7,8 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <math.h>
-#include <arpa/inet.h>
 #include <locale.h>
+#include <byteswap.h>
 #include "ExifTool.h"
 #include "tinytiffreader.h"
 #include "lodepng.h"
@@ -408,7 +408,7 @@ void rjpg_temp2csv(th_db_t * d)
     }
 }
 
-uint8_t rjpg_rescale(th_db_t * d)
+uint8_t rjpg_rescale(th_db_t * d, uint8_t *overwrite_flip_byte_order)
 {
     ssize_t i;
     uint8_t framew_needs_flippage = 0;
@@ -551,6 +551,14 @@ uint8_t rjpg_rescale(th_db_t * d)
             break;
     }
 
+    if (*overwrite_flip_byte_order) {
+        if (framew_needs_flippage) {
+            framew_needs_flippage = 0;
+        } else {
+            framew_needs_flippage = 1;
+        }
+    }
+
 #ifdef USE_GLENN_ALGO
     // algorithm expects all temperature variable input in degrees C
 
@@ -579,12 +587,18 @@ uint8_t rjpg_rescale(th_db_t * d)
 
     for (i = 0; i < h->raw_th_img_sz; i++) {
         if (framew_needs_flippage) {
-            raw = htons(src_th->framew[i]);
+            raw = bswap_16(src_th->framew[i]);
         } else {
             raw = src_th->framew[i];
         }
 
         t_obj = rjpg_calc_glenn(r, raw);
+        if (isnan(t_obj)) {
+            // retry with the byte order flipped
+            *overwrite_flip_byte_order = 1; 
+            ret = RJPG_RET_FLIP_BYTE_ORDER;
+            goto cleanup;
+        }
         d->temp_arr[i] = t_obj;
         if (h->t_min > t_obj) {
             h->t_min = t_obj;
@@ -619,7 +633,7 @@ uint8_t rjpg_rescale(th_db_t * d)
 
         for (i = 0; i < h->raw_th_img_sz; i++) {
             if (framew_needs_flippage) {
-                raw = htons(src_th->framew[i]);
+                raw = bswap_16(src_th->framew[i]);
             } else {
                 raw = src_th->framew[i];
             }
@@ -643,7 +657,7 @@ uint8_t rjpg_rescale(th_db_t * d)
         for (i = 0; i < h->raw_th_img_sz; i++) {
             if (framew_needs_flippage) {
                 // data in the exif-png gets here in big endian words
-                raw = htons(src_th->framew[i]);
+                raw = bswap_16(src_th->framew[i]);
             } else {
                 raw = src_th->framew[i];
             }

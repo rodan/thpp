@@ -129,6 +129,7 @@ int main_cli(th_db_t * db, uint8_t flags)
     uint16_t th_height;
     uint16_t file_type = FT_UNK;
     uint16_t file_subtype = FT_UNK;
+    uint8_t flip_byte_order = 0;
 
     if (flags & SETUP_SIGHANDLER) {
         setup_sighandler();
@@ -188,7 +189,14 @@ int main_cli(th_db_t * db, uint8_t flags)
         // a rescale needs to happen since the radiometric data has to be converted to temperatures
         // via a very convoluted path. 
         // out_th will contain actual temperatures in ->frame instead of the radiometric raw data as in in_th->frame
-        rjpg_rescale(db);
+        if (rjpg_rescale(db, &flip_byte_order) == RJPG_RET_FLIP_BYTE_ORDER) {
+            fprintf(stderr,"warning: invalid values detected in %s, retrying with bytes flipped\n", db->p.in_file);
+            // retry with the byte order flipped
+            if (rjpg_rescale(db, &flip_byte_order) != EXIT_SUCCESS) {
+                fprintf(stderr, "warning: image contains invalid data\n");
+                return EXIT_FAILURE;
+            }
+        }
 
         if (db->rgba[0].data) {
             free(db->rgba[0].data);
