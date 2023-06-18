@@ -2,40 +2,44 @@
 PROJ = thpp
 
 LODEPNG_DIR = ../lib/lodepng
-LODEPNG_LIB = ${LODEPNG_DIR}/lodepng.o
-LODEPNG_SRC_C = ${LODEPNG_DIR}/lodepng.cpp
+LODEPNG_SRC = ${LODEPNG_DIR}/lodepng.cpp
+LODEPNG_OBJ = $(patsubst ${LODEPNG_DIR}/%.cpp,build/lib/lodepng/%.o,${LODEPNG_SRC})
 
 TINYTIFF_DIR = ../lib/TinyTIFF/src
-TINYTIFF_LIB = ${TINYTIFF_DIR}/tinytiffreader.o
-TINYTIFF_SRC_C = ${TINYTIFF_DIR}/tinytiffreader.c
+TINYTIFF_SRC = ${TINYTIFF_DIR}/tinytiffreader.c
+TINYTIFF_OBJ = $(patsubst ${TINYTIFF_DIR}/%.c,build/lib/TinyTIFF/%.o,${TINYTIFF_SRC})
 
 TLPI_DIR  = ../lib/tlpi-lib
-TLPI_LIB  = ${TLPI_DIR}/libtlpi.a
+TLPI_SRC  = ${TLPI_DIR}/error_functions.cpp ${TLPI_DIR}/get_num.cpp
+TLPI_OBJ  = $(patsubst ${TLPI_DIR}/%.cpp,build/lib/tlpi/%.o,${TLPI_SRC})
 
 EXIFTOOL_DIR = ../lib/cpp_exiftool
 EXIFTOOL_SRC = ${EXIFTOOL_DIR}/src/ExifTool.cpp ${EXIFTOOL_DIR}/src/ExifToolPipe.cpp ${EXIFTOOL_DIR}/src/TagInfo.cpp
-EXIFTOOL_OBJ = $(addsuffix .o, $(basename $(EXIFTOOL_SRC)))
+#EXIFTOOL_OBJ = $(addsuffix .o, $(basename $(EXIFTOOL_SRC)))
+EXIFTOOL_OBJ = $(patsubst ${EXIFTOOL_DIR}/src/%.cpp,build/lib/cpp_exiftool/%.o,${EXIFTOOL_SRC})
 
 IMGUI_DIR = ../lib/imgui/
 IMGUI_SRC = $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 IMGUI_SRC += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
-#IMGUI_OBJ = $(addsuffix .o, $(basename $(notdir $(IMGUI_SRC))))
-IMGUI_OBJ = $(addsuffix .o, $(basename $(IMGUI_SRC)))
+#IMGUI_OBJ = $(addsuffix .o, $(basename $(IMGUI_SRC)))
+IMGUI_OBJ = $(patsubst ${IMGUI_DIR}/%.cpp,build/lib/imgui/%.o,${IMGUI_SRC})
 
 IMGUI_BK_DIR = ../lib/imgui/backends/
 
 IMPLOT_DIR = ../lib/implot/
 IMPLOT_SRC = $(IMPLOT_DIR)/implot.cpp $(IMPLOT_DIR)/implot_demo.cpp $(IMPLOT_DIR)/implot_items.cpp
-IMPLOT_OBJ = $(addsuffix .o, $(basename $(IMPLOT_SRC)))
+#IMPLOT_OBJ = $(addsuffix .o, $(basename $(IMPLOT_SRC)))
+IMPLOT_OBJ = $(patsubst ${IMPLOT_DIR}/%.cpp,build/lib/implot/%.o,${IMPLOT_SRC})
 
 INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TINYTIFF_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I $(IMPLOT_DIR) -I $(EXIFTOOL_DIR)/inc/ 
 LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp dtv.cpp rjpg.cpp graphics.cpp main_menu.cpp viewport.cpp tool_processing.cpp tool_histogram.cpp tool_profile.cpp tool_scale.cpp tool_preferences.cpp help_about.cpp file_library.cpp file_properties.cpp # $(wildcard *.cpp)
 LOCAL_SRC_C := # $(wildcard *.c)
-SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC_C) $(TINYTIFF_SRC_C)
+SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC) $(TINYTIFF_SRC) $(TLPI_SRC)
 #EXOBJECT   = $(PROJ).o
 EXOUTPUT   = $(PROJ)
 
-LOCAL_OBJECTS     = $(LOCAL_SRC_CPP:%.cpp=%.o) $(LOCAL_SRC_C:%.c=%.o)
+#LOCAL_OBJECTS     = $(LOCAL_SRC_CPP:%.cpp=%.o) $(LOCAL_SRC_C:%.c=%.o)
+LOCAL_OBJECTS     = $(patsubst %.cpp,build/%.o,${LOCAL_SRC_CPP})
 
 # Append specific CFLAGS/LDFLAGS
 CFLAGS_REL	 += -O3
@@ -75,14 +79,50 @@ COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN)
 
 all : lib version.h $(EXOUTPUT)
 
-lib : $(LODEPNG_LIB) $(TINYTIFF_LIB)
-
-$(TLPI_LIB): force_look
-	@echo "looking into subdir $(TLPI_DIR)"
-	@$(MAKE) -C $(TLPI_DIR) -j1 $(MFLAGS)
+lib : $(LODEPNG_OBJ) $(TINYTIFF_OBJ)
 
 version.h: $(SRC)
 	@./tools/setver.sh
+
+build/lib/tlpi/%.o: ${TLPI_DIR}/%.cpp
+	@mkdir -p build/lib/tlpi
+	@echo -e " * $(@F)"
+	@$(CXX) $(INCLUDES) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+
+build/lib/imgui/%.o: ${IMGUI_DIR}/%.cpp
+	@mkdir -p build/lib/imgui
+	@echo -e " * $(@F)"
+	@$(CXX) $(INCLUDES) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+
+build/lib/imgui/backends/%.o: ${IMGUI_DIR}/backends/%.cpp
+	@mkdir -p build/lib/imgui/backends
+	@echo -e " * $(@F)"
+	@$(CXX) $(INCLUDES) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+
+build/lib/implot/%.o: ${IMPLOT_DIR}/%.cpp
+	@mkdir -p build/lib/implot
+	@echo -e " * $(@F)"
+	@$(CXX) $(INCLUDES) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+
+build/lib/lodepng/%.o: ${LODEPNG_DIR}/%.cpp
+	@mkdir -p build/lib/lodepng
+	@echo -e " * $(@F)"
+	@$(CXX) $(INCLUDES) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+
+build/lib/TinyTIFF/%.o: ${TINYTIFF_DIR}/%.c
+	@mkdir -p build/lib/TinyTIFF
+	@echo -e " * $(@F)"
+	@$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
+
+build/lib/cpp_exiftool/%.o: ${EXIFTOOL_DIR}/src/%.cpp
+	@mkdir -p build/lib/cpp_exiftool
+	@echo -e " * $(@F)"
+	@$(CXX) $(INCLUDES) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+
+build/%.o: %.cpp
+	@mkdir -p build
+	@echo -e " * $(@F)"
+	@$(CXX) $(INCLUDES) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
 
 %.o: %.cpp
 	@echo -e " * $(@F)"
@@ -92,21 +132,20 @@ version.h: $(SRC)
 	@echo -e " * $(@F)"
 	@$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
 
-$(EXOUTPUT): $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TINYTIFF_LIB) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ)
+$(EXOUTPUT): $(LOCAL_OBJECTS) $(TLPI_OBJ) $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ)
 	@echo -e "\n>> Building $@ as target $(TARGET)"
-	$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(LODEPNG_LIB) $(TINYTIFF_LIB) $(TLPI_LIB) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ) -o $@ && size $@
-
-allgen : ${GEN_EXE}
+	$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(TLPI_OBJ) $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_LIB) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ) -o $@ && size $@
 
 clean : 
-	@${RM} ${EXE} *.o ${PROJ} tags ${TLPI_LIB} *.png *.s
+	@${RM} build/*.o build/*.s ${PROJ} tags *.png
 	@${RM} -rf cov-int
+
+clean-lib:
+	@${RM} -rf build/lib
 
 tags: $(SRCS)
 	@echo "Generating tags .."
 	@exuberant-ctags -R
-
-${EXE} : ${TLPI_LIB}		# True as a rough approximation
 
 cppcheck: $(PROJ)
 	@cppcheck --quiet --force --enable=warning --enable=performance --enable=information --enable=performance --enable=portability -I ./ ./
@@ -114,7 +153,7 @@ cppcheck: $(PROJ)
 scan-build: clean
 	@scan-build make
 
-coverity: clean
+coverity: clean clean-lib
 	@cov-build --dir cov-int make
 	@tar czvf /tmp/$(PROJ).tgz cov-int
 	@curl --form token=$(COVERITY_SCAN_TOKEN) \

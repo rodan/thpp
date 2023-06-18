@@ -91,8 +91,14 @@ int main(int argc, char **argv)
     pal_init();
 
     if (db->p.in_file != NULL) {
-        if (main_cli(db, SETUP_SIGHANDLER | GENERATE_OUT_FILE) == EXIT_FAILURE) {
-            return EXIT_FAILURE;
+        if (db->p.out_file != NULL) {
+            if (main_cli(db, GENERATE_OUT_FILE) == EXIT_FAILURE) {
+                return EXIT_FAILURE;
+            }
+        } else {
+            if (main_cli(db, 0) == EXIT_FAILURE) {
+                return EXIT_FAILURE;
+            }
         }
     }
 

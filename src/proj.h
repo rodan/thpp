@@ -125,13 +125,11 @@ typedef struct th_db th_db_t;
 #define       ZOOM_DECREMENT  0x1
 #define       ZOOM_INCREMENT  0x2
 
-
 #define           STYLE_DARK  0
 #define          STYLE_LIGHT  1
 #define        STYLE_CLASSIC  2
 #define            DEF_STYLE  2
 #define   DEF_THUMBNAIL_SIZE  128
-#define    DEF_THUMBNAIL_GEN  4     ///< number of files to analyze during each generated frame
 #define          DEF_PALETTE  6
 #define             DEF_ZOOM  1
 #define      DEF_ZOOM_INTERP  ZOOM_INTERP_NEAREST
@@ -148,7 +146,6 @@ typedef style style_t;
 struct global_preferences {
     uint8_t palette_default;
     uint16_t thumbnail_size;
-    uint16_t thumbnail_gen_per_frame;
     uint8_t zoom_level;
     uint8_t zoom_interpolation;
     style_t style;

@@ -304,7 +304,6 @@ void file_library(bool *p_open, th_db_t * db)
     node_t *search = NULL;
     uint32_t u;
     uint8_t entry_is_dir = 0;
-    //uint16_t file_analyze = pref->thumbnail_gen_per_frame;
     double runtime;
     node_t *node;
 
@@ -482,7 +481,7 @@ void file_library(bool *p_open, th_db_t * db)
 #endif
 
     runtime = omp_get_wtime() - runtime;
-    if (runtime > 0.001) {
+    if (runtime > 0.01) {
         printf("album ready in %lfs\n", runtime);
     }
 

@@ -421,9 +421,9 @@ void gp_init(th_getopt_t *p)
 {
     global_preferences_t *pref = gp_get_ptr();
 
+    memset(pref, 0, sizeof(global_preferences_t));
     style_set(STYLE_DARK);
     pref->thumbnail_size = DEF_THUMBNAIL_SIZE;
-    pref->thumbnail_gen_per_frame = DEF_THUMBNAIL_GEN;
     pref->palette_default = p->pal;
     pref->zoom_level = p->zoom_level;
     pref->zoom_interpolation = p->zoom_interpolation;
