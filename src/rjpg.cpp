@@ -595,7 +595,7 @@ uint8_t rjpg_rescale(th_db_t * d, uint8_t *overwrite_flip_byte_order)
         t_obj = rjpg_calc_glenn(r, raw);
         if (isnan(t_obj)) {
             // retry with the byte order flipped
-            *overwrite_flip_byte_order = 1; 
+            *overwrite_flip_byte_order = 1;
             ret = RJPG_RET_FLIP_BYTE_ORDER;
             goto cleanup;
         }
@@ -639,6 +639,13 @@ uint8_t rjpg_rescale(th_db_t * d, uint8_t *overwrite_flip_byte_order)
             }
 
             t_obj = rjpg_calc_distcomp(r, raw);
+            if (isnan(t_obj)) {
+                // retry with the byte order flipped
+                *overwrite_flip_byte_order = 1;
+                ret = RJPG_RET_FLIP_BYTE_ORDER;
+                goto cleanup;
+            }
+
             d->temp_arr[i] = t_obj;
             if (h->t_min > t_obj) {
                 h->t_min = t_obj;
@@ -662,6 +669,13 @@ uint8_t rjpg_rescale(th_db_t * d, uint8_t *overwrite_flip_byte_order)
                 raw = src_th->framew[i];
             }
             t_obj = rjpg_calc_nodistcomp(r, raw);
+            if (isnan(t_obj)) {
+                // retry with the byte order flipped
+                *overwrite_flip_byte_order = 1;
+                ret = RJPG_RET_FLIP_BYTE_ORDER;
+                goto cleanup;
+            }
+
             d->temp_arr[i] = t_obj;
             if (h->t_min > t_obj) {
                 h->t_min = t_obj;
