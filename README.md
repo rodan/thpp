@@ -146,6 +146,13 @@ currently supported functions:
  * customizable file properties table
  * initial support for line profile
 
+
+keybinds for the viewport:
+
+ * mouse scrollwheel  - vertical scroll of a large image
+ * SHIFT + mouse scrollwheel  - horizontal scroll of a large image
+ * CTRL + mouse scrollwheel  - zoom image
+
 ### Build requirements
 
 the code depends on the headers and libraries provided by the following packages:

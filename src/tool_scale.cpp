@@ -37,7 +37,6 @@ void tool_scale(bool *p_open, th_db_t * db)
         db->fe.si_width = SCALE_WIDTH;
         db->fe.si_height = SCALE_HEIGHT;
         generate_scale(&db->scale);
-        //load_texture_from_mem(db->scale.overlay, &db->fe.si_texture, db->fe.si_width, db->fe.si_height);
         load_texture_from_mem(db->scale.combo, &db->fe.si_texture, db->fe.si_width, db->fe.si_height);
     } else {
         ImGui::Image((void *)(intptr_t) db->fe.si_texture, ImVec2(db->fe.si_width, db->fe.si_height));

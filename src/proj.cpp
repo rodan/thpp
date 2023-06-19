@@ -432,19 +432,21 @@ void gp_init(th_getopt_t *p)
 void style_set(uint8_t theme)
 {
     global_preferences_t *pref = gp_get_ptr();
+    // colors are 0xAABBGGRR
 
     switch (theme) {
+        case STYLE_CLASSIC:
         case STYLE_DARK:
             pref->style.theme = theme;
-            pref->style.ovl_text_color = 0xccccccff;
-            pref->style.ovl_highlight_color = 0xddddddff;
+            pref->style.ovl_text_color = 0xffcccccc;
+            pref->style.ovl_highlight_color = 0xffdddddd;
             pref->style.plot_line_color = 0xffff00ff;
             break;
         case STYLE_LIGHT:
             pref->style.theme = theme;
-            pref->style.ovl_text_color = 0x333333ff;
-            pref->style.ovl_highlight_color = 0x222222ff;
-            pref->style.plot_line_color = 0x111100ff;
+            pref->style.ovl_text_color = 0xff111111;
+            pref->style.ovl_highlight_color = 0xff222222;
+            pref->style.plot_line_color = 0xff111111;
             break;
     } 
 }

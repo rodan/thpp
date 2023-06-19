@@ -32,15 +32,21 @@ void tool_preferences(bool *p_open, th_db_t * db)
 
     static int style_idx = DEF_STYLE;
     if (ImGui::Combo("theme", &style_idx, "Dark\0Light\0Classic\0")) {
+        ImVec4* colors = ImGui::GetStyle().Colors;
+
         switch (style_idx) {
         case STYLE_DARK:
             ImGui::StyleColorsDark();
+            style_set(STYLE_DARK);
             break;
         case STYLE_LIGHT:
             ImGui::StyleColorsLight();
+            colors[ImGuiCol_WindowBg] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+            style_set(STYLE_LIGHT);
             break;
         case STYLE_CLASSIC:
             ImGui::StyleColorsClassic();
+            style_set(STYLE_CLASSIC);
             break;
         }
     }

@@ -119,13 +119,13 @@ void viewport_render(th_db_t * db)
         }
     }
 
-    if (pointer_inside_image && (io.MouseWheel < 0)) {
+    if (pointer_inside_image && (io.MouseWheel < 0) && io.KeyCtrl) {
         if (set_zoom(db, ZOOM_DECREMENT)) {
             viewport_refresh_vp(db);
         }
     }
 
-    if (pointer_inside_image && (io.MouseWheel > 0)) {
+    if (pointer_inside_image && (io.MouseWheel > 0) && io.KeyCtrl) {
         if (set_zoom(db, ZOOM_INCREMENT)) {
             viewport_refresh_vp(db);
         }
@@ -140,6 +140,8 @@ void viewport_render(th_db_t * db)
 
     if (pointer_inside_image) {
         ImGui::Text("spot %.2f°C", spot_temp);
+    } else {
+        ImGui::Text(" ");
     }
     ImGui::End();
 
