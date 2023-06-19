@@ -82,12 +82,14 @@ double GetEventWaitingTime()
 int main(int argc, char **argv)
 {
     char wtitle[40];
-    th_db_t *db = db_get_ptr(); 
+    th_db_t *db = db_get_ptr();
+    global_preferences_t *pref;
 
     memset(db, 0, sizeof(th_db_t));
 
     parse_options(argc, argv, &(db->p));
     gp_init(&db->p);
+    pref = gp_get_ptr();
     pal_init();
 
     if (db->p.in_file != NULL) {
@@ -155,7 +157,7 @@ int main(int argc, char **argv)
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable Multi-Viewport / Platform Windows
     //io.ConfigViewportsNoAutoMerge = true;
     //io.ConfigViewportsNoTaskBarIcon = true;
-    io.FontGlobalScale = 2.0;
+    io.FontGlobalScale = DEF_FONT_SCALE;
 
     // Setup Dear ImGui style
     //ImGui::StyleColorsDark();
@@ -170,7 +172,7 @@ int main(int argc, char **argv)
     }
     style.FrameBorderSize = 1.0f;
     style_init();
-    style_set(STYLE_DARK);
+    style_set(STYLE_DARK, &pref->style);
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);

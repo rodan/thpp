@@ -95,23 +95,17 @@ void draw_fillrect(canvas_t * c, const uint16_t x, const uint16_t y,
 }
 
 
-void draw_major_tick(canvas_t * c, const uint16_t y)
+void draw_major_tick(canvas_t * c, const uint16_t y, const uint32_t color)
 {
-    style_t *style = style_get_ptr();
-    if (style) {
-        draw_hline(c, 16, y + 2, 100, style->ovl_highlight_color);
-        draw_hline(c, 16, y - 2, 100, style->ovl_highlight_color);
-        draw_vline(c, 116, y - 2, 4, style->ovl_highlight_color);
-        draw_vline(c, 16, y - 2, 4, style->ovl_highlight_color);
-    }
+    draw_hline(c, 16, y + 2, 100, color);
+    draw_hline(c, 16, y - 2, 100, color);
+    draw_vline(c, 116, y - 2, 4, color);
+    draw_vline(c, 16, y - 2, 4, color);
 }
 
-void draw_minor_tick(canvas_t * c, const uint16_t y)
+void draw_minor_tick(canvas_t * c, const uint16_t y, const uint32_t color)
 {
-    style_t *style = style_get_ptr();
-    if (style) {
-        draw_hline(c, 16, y, 40, style->ovl_highlight_color);
-    }
+    draw_hline(c, 16, y, 40, color);
 }
 
 // Draw a character

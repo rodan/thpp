@@ -34,8 +34,11 @@
 #define             SCALE_HEIGHT  1024
 
 // main_cli() flags
-#define    SETUP_SIGHANDLER  0x1
-#define   GENERATE_OUT_FILE  0x2
+#define         SETUP_SIGHANDLER  0x1
+#define        GENERATE_OUT_FILE  0x2
+
+// frontend flags
+#define TOOL_EXPORT_GOT_BASENAME  0x1
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,6 +87,7 @@ typedef scale scale_t;
 struct frontend {
     uint8_t actual_zoom;
     uint8_t return_state;
+    uint16_t flags;
     uint16_t vp_width;
     uint16_t vp_height;
     uint32_t vp_texture;     ///< texture of the thermal image
@@ -129,6 +133,7 @@ typedef struct th_db th_db_t;
 #define          STYLE_LIGHT  1
 #define        STYLE_CLASSIC  2
 #define            DEF_STYLE  2
+#define       DEF_FONT_SCALE  1
 #define   DEF_THUMBNAIL_SIZE  128
 #define          DEF_PALETTE  6
 #define             DEF_ZOOM  1
@@ -159,7 +164,7 @@ void show_version(void);
 uint8_t parse_options(int argc, char *argv[], th_getopt_t * p);
 int proj_main(th_db_t *db);
 uint8_t localhost_is_le(void);
-void generate_scale(scale_t *scale);
+void generate_scale(th_db_t *db, style_t *style);
 uint8_t get_min_max(tgram_t *th, double *t_min, double *t_max);
 uint8_t get_avg(tgram_t *th, double *t_avg);
 
@@ -167,7 +172,7 @@ style_t *style_get_ptr(void);
 global_preferences_t *gp_get_ptr(void);
 th_db_t *db_get_ptr(void);
 
-void style_set(uint8_t theme);
+void style_set(const uint8_t theme, style_t *dst);
 void style_init(void);
 
 void gp_init(th_getopt_t *p);

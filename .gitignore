@@ -9,9 +9,13 @@
 *.~ddp
 *.~h
 *.~dfm
+.*
 lodepng/benchmark
 lodepng/pngdetail
 lodepng/showpng
 lodepng/unittest
 bin
+samples
 po/*.po
+thpp
+tags

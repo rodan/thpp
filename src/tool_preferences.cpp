@@ -37,20 +37,26 @@ void tool_preferences(bool *p_open, th_db_t * db)
         switch (style_idx) {
         case STYLE_DARK:
             ImGui::StyleColorsDark();
-            style_set(STYLE_DARK);
+            style_set(STYLE_DARK, &pref->style);
             break;
         case STYLE_LIGHT:
             ImGui::StyleColorsLight();
             colors[ImGuiCol_WindowBg] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-            style_set(STYLE_LIGHT);
+            style_set(STYLE_LIGHT, &pref->style);
             break;
         case STYLE_CLASSIC:
             ImGui::StyleColorsClassic();
-            style_set(STYLE_CLASSIC);
+            style_set(STYLE_CLASSIC, &pref->style);
             break;
         }
     }
 
+    static int font_scale = DEF_FONT_SCALE;
+    value_changed = ImGui::DragInt("font scale", &font_scale, 1, 1, 2, "%d", ImGuiSliderFlags_AlwaysClamp);
+    if (value_changed) {
+        ImGuiIO & io = ImGui::GetIO();
+        io.FontGlobalScale = font_scale;
+    }
 
     ImGui::Separator();
     ImGui::Text("thumbnail image");

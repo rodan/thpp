@@ -296,7 +296,7 @@ uint8_t get_avg(tgram_t *th, double *t_avg)
     return EXIT_SUCCESS;
 }
 
-void draw_scale_overlay(scale_t *scale, const double major, const double minor, const uint8_t precission)
+void draw_scale_overlay(scale_t *scale, style_t *style, const double major, const double minor, const uint8_t precission)
 {
     double delta = scale->t_max - scale->t_min;
     double q = scale->height / delta; ///<   pixel = q * temperature => q = pixel / temperature
@@ -304,7 +304,6 @@ void draw_scale_overlay(scale_t *scale, const double major, const double minor, 
     char text[12];
     double t = 950;
     canvas_t c;
-    style_t *style = style_get_ptr();
 
     // draw grid onto the overlay
     memset(&c, 0, sizeof(canvas_t));
@@ -330,7 +329,7 @@ void draw_scale_overlay(scale_t *scale, const double major, const double minor, 
                 draw_text(&c, 80, t - 22, &text[0], style->ovl_text_color, 2);
                 break;
         } 
-        draw_major_tick(&c, (uint16_t) t);
+        draw_major_tick(&c, (uint16_t) t, style->ovl_highlight_color);
     }
 
     snprintf(text, 11, "dC");
@@ -339,14 +338,28 @@ void draw_scale_overlay(scale_t *scale, const double major, const double minor, 
     // minor tick marks
     for (i = (int16_t) scale->t_max / minor; i > (int16_t) scale->t_min / minor; i--) {
         t = q * (scale->t_max - (i * minor)) + 0.5;
-        draw_minor_tick(&c, (int16_t) t);
+        draw_minor_tick(&c, (int16_t) t, style->ovl_highlight_color);
     }
 }
 
-void generate_scale(scale_t *scale)
+void generate_scale(th_db_t * db, style_t *style)
 {
     uint32_t j;
-    double delta = scale->t_max - scale->t_min;
+    double delta;
+    scale_t *scale = &db->scale;
+
+    db->scale.width = SCALE_WIDTH;
+    db->scale.height = SCALE_HEIGHT;
+    db->scale.pal_id = db->p.pal;
+
+    if (db->p.flags & (OPT_SET_NEW_MIN | OPT_SET_NEW_MAX)) {
+        db->scale.t_min = db->p.t_min;
+        db->scale.t_max = db->p.t_max;
+    } else {
+        get_min_max(db->out_th, &db->scale.t_min, &db->scale.t_max);
+    }
+
+    delta = scale->t_max - scale->t_min;
 
     if (scale->data) {
         free(scale->data);
@@ -377,23 +390,23 @@ void generate_scale(scale_t *scale)
     pal_transfer(scale->data, scale->pal_id, scale->width, scale->height);
 
     if (delta < 1.0) {
-        draw_scale_overlay(scale, 0.1, 0.05, 1);
+        draw_scale_overlay(scale, style, 0.1, 0.05, 1);
     } else if (delta < 5.0) {
-        draw_scale_overlay(scale, 0.5, 0.5, 1); // 4-10 10
+        draw_scale_overlay(scale, style, 0.5, 0.5, 1); // 4-10 10
     } else if (delta < 10.0) {
-        draw_scale_overlay(scale, 1.0, 0.5, 0); // 5-10 20
+        draw_scale_overlay(scale, style, 1.0, 0.5, 0); // 5-10 20
     } else if (delta < 20.0) {
-        draw_scale_overlay(scale, 2.0, 1.0, 0); // 5-10 20
+        draw_scale_overlay(scale, style, 2.0, 1.0, 0); // 5-10 20
     } else if (delta < 35.0) {
-        draw_scale_overlay(scale, 5.0, 1.0, 0); // 7-10 35
+        draw_scale_overlay(scale, style, 5.0, 1.0, 0); // 7-10 35
     } else if (delta < 50.0) {
-        draw_scale_overlay(scale, 5.0, 5.0, 0); // 3.5-10 10
+        draw_scale_overlay(scale, style, 5.0, 5.0, 0); // 3.5-10 10
     } else if (delta < 100) {
-        draw_scale_overlay(scale, 10.0, 5.0, 0); // 5-10 20
+        draw_scale_overlay(scale, style, 10.0, 5.0, 0); // 5-10 20
     } else if (delta < 200) {
-        draw_scale_overlay(scale, 20.0, 10.0, 0); // 5-10 20
+        draw_scale_overlay(scale, style, 20.0, 10.0, 0); // 5-10 20
     } else {
-        draw_scale_overlay(scale, 50.0, 10.0, 0);
+        draw_scale_overlay(scale, style, 50.0, 10.0, 0);
     }
 
     // combine the scale and the overlay
@@ -411,6 +424,8 @@ void generate_scale(scale_t *scale)
         }
     }
 
+    db->fe.si_width = SCALE_WIDTH;
+    db->fe.si_height = SCALE_HEIGHT;
 }
 
 void style_init(void)
@@ -422,31 +437,31 @@ void gp_init(th_getopt_t *p)
     global_preferences_t *pref = gp_get_ptr();
 
     memset(pref, 0, sizeof(global_preferences_t));
-    style_set(STYLE_DARK);
+    style_set(STYLE_DARK, &pref->style);
     pref->thumbnail_size = DEF_THUMBNAIL_SIZE;
     pref->palette_default = p->pal;
     pref->zoom_level = p->zoom_level;
     pref->zoom_interpolation = p->zoom_interpolation;
 }
 
-void style_set(uint8_t theme)
+void style_set(const uint8_t theme, style_t *dst)
 {
-    global_preferences_t *pref = gp_get_ptr();
+    //global_preferences_t *pref = gp_get_ptr();
     // colors are 0xAABBGGRR
 
     switch (theme) {
         case STYLE_CLASSIC:
         case STYLE_DARK:
-            pref->style.theme = theme;
-            pref->style.ovl_text_color = 0xffcccccc;
-            pref->style.ovl_highlight_color = 0xffdddddd;
-            pref->style.plot_line_color = 0xffff00ff;
+            dst->theme = theme;
+            dst->ovl_text_color = 0xffcccccc;
+            dst->ovl_highlight_color = 0xffdddddd;
+            dst->plot_line_color = 0xffff00ff;
             break;
         case STYLE_LIGHT:
-            pref->style.theme = theme;
-            pref->style.ovl_text_color = 0xff111111;
-            pref->style.ovl_highlight_color = 0xff222222;
-            pref->style.plot_line_color = 0xff111111;
+            dst->theme = theme;
+            dst->ovl_text_color = 0xff111111;
+            dst->ovl_highlight_color = 0xff222222;
+            dst->plot_line_color = 0xff111111;
             break;
     } 
 }

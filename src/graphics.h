@@ -21,8 +21,8 @@ void draw_hline(canvas_t * c, const uint16_t x, const uint16_t y, const uint16_t
 void draw_fillrect(canvas_t * c, const uint16_t x, const uint16_t y, 
                     const uint16_t w, const uint16_t h,
                     const uint32_t color);
-void draw_major_tick(canvas_t * c, const uint16_t y);
-void draw_minor_tick(canvas_t * c, const uint16_t y);
+void draw_major_tick(canvas_t * c, const uint16_t y, const uint32_t color);
+void draw_minor_tick(canvas_t * c, const uint16_t y, const uint32_t color);
 uint32_t highlight_color(const uint32_t color, const uint32_t color_highlight);
 void draw_char(canvas_t * c, const uint16_t x, const uint16_t y, 
                 const unsigned char ch, const uint32_t color, 

@@ -14,6 +14,7 @@
 #include "tool_profile.h"
 #include "tool_histogram.h"
 #include "tool_processing.h"
+#include "tool_export.h"
 #include "tool_preferences.h"
 #include "help_about.h"
 
@@ -28,6 +29,7 @@ struct window_open {
     bool btool_histogram;
     bool btool_profile;
     bool btool_scale;
+    bool btool_export;
     bool btool_preferences;
 };
 
@@ -99,6 +101,7 @@ uint8_t main_menu(th_db_t * db)
             ImGui::MenuItem("histogram", NULL, &wo.btool_histogram, 1);
             ImGui::MenuItem("profile", NULL, &wo.btool_profile, 1);
             ImGui::MenuItem("scale", NULL, &wo.btool_scale, 1);
+            ImGui::MenuItem("export", NULL, &wo.btool_export, 1);
             ImGui::Separator();
             ImGui::MenuItem("preferences", NULL, &wo.btool_preferences, 1);
             ImGui::EndMenu();
@@ -140,6 +143,10 @@ uint8_t main_menu(th_db_t * db)
 
     if (wo.btool_scale) {
         tool_scale(&wo.btool_scale, db);
+    }
+
+    if (wo.btool_export) {
+        tool_export(&wo.btool_export, db);
     }
 
     if (wo.btool_preferences) {
