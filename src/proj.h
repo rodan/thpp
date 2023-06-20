@@ -33,12 +33,24 @@
 #define              SCALE_WIDTH  128
 #define             SCALE_HEIGHT  1024
 
+// rgba index types
+#define                  RGBA_ORIG  0x0
+#define           RGBA_ORIG_ZOOMED  0x1
+#define             RGBA_HIGHLIGHT  0x2
+#define      RGBA_HIGHLIGHT_ZOOMED  0x3
+#define                  STAGE_CNT  4
+
 // main_cli() flags
-#define         SETUP_SIGHANDLER  0x1
-#define        GENERATE_OUT_FILE  0x2
+#define           SETUP_SIGHANDLER  0x1
+#define          GENERATE_OUT_FILE  0x2
 
 // frontend flags
-#define TOOL_EXPORT_GOT_BASENAME  0x1
+#define   TOOL_EXPORT_GOT_BASENAME  0x1
+#define         HIGHLIGHT_LAYER_EN  0x20
+#define HIGHLIGHT_LAYER_PREVIEW_EN  0x40
+
+// db flags
+#define  HIGHLIGHT_LAYER_GENERATED  0x1
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,7 +99,7 @@ typedef scale scale_t;
 struct frontend {
     uint8_t actual_zoom;
     uint8_t return_state;
-    uint16_t flags;
+    uint32_t flags;
     uint16_t vp_width;
     uint16_t vp_height;
     uint32_t vp_texture;     ///< texture of the thermal image
@@ -107,18 +119,18 @@ struct profile {
 };
 typedef profile profile_t;
 
-#define STAGE_CNT 2
 
 struct th_db {
     th_getopt_t p;      ///< parameters gotten via getopt() from the user
     struct stat sb;     ///< input file status struct
     tgram_t *in_th;     ///< input thermogram
     tgram_t *out_th;    ///< processed thermogram
-    th_rgba_t rgba[STAGE_CNT];   ///< processed image - 0 is the original, at 1x zoom
-    th_rgba_t *rgba_vp; ///< pointer to the rgba sctruct that will be used as a texture in the GUI
+    th_rgba_t rgba[STAGE_CNT];   ///< processed image - 0 is the original, at 1x zoom, 1 is original at > 1x zoom, 2 is highlight, 3 is highlight > 1x zoom
+    th_rgba_t *rgba_vp; ///< pointer to the rgba struct that will be used as a texture in the GUI
     scale_t scale;      ///< scale for the processed thermogram
     frontend_t fe;      ///< textures of the images used by the GUI
     profile_t pr;       ///< profile line
+    uint32_t flags;     ///< thermogram-related flags
     double *temp_arr;   ///< array containing actual temperatures for the processed image
 };
 typedef struct th_db th_db_t;
@@ -177,7 +189,9 @@ void style_init(void);
 
 void gp_init(th_getopt_t *p);
 
+void select_vp(th_db_t *db);
 uint8_t set_zoom(th_db_t * db, const uint8_t flags);
+uint8_t generate_highlight(th_db_t *db);
 
 #ifdef __cplusplus
 }

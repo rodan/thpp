@@ -14,6 +14,8 @@
 #include "palette.h"
 #include "version.h"
 #include "graphics.h"
+#include "dtv.h"
+#include "rjpg.h"
 
 #define BUF_SIZE  32
 
@@ -481,6 +483,71 @@ th_db_t *db_get_ptr(void)
     return &db;
 }
 
+uint8_t generate_highlight(th_db_t *db)
+{
+    global_preferences_t *pref = gp_get_ptr();
+    uint8_t ret = EXIT_FAILURE;
+
+    if ((db->in_th == NULL) || (db->out_th == NULL)) {
+        return EXIT_FAILURE;
+    }
+
+    if (db->rgba[RGBA_HIGHLIGHT].data) {
+        free(db->rgba[RGBA_HIGHLIGHT].data);
+    }
+    db->rgba[RGBA_HIGHLIGHT].data = (uint8_t *) calloc(db->rgba[RGBA_ORIG].width * db->rgba[RGBA_ORIG].height * 4, 1);
+    if (db->rgba[RGBA_HIGHLIGHT].data == NULL) {
+        errExit("allocating buffer");
+    }
+    db->rgba[RGBA_HIGHLIGHT].width = db->rgba[RGBA_ORIG].width;
+    db->rgba[RGBA_HIGHLIGHT].height = db->rgba[RGBA_ORIG].height;
+
+    if (db->in_th->type == TH_IRTIS_DTV) {
+        ret = dtv_transfer(db->out_th, db->rgba[RGBA_HIGHLIGHT].data, PAL_GREY);
+    } else if (db->in_th->type == TH_FLIR_RJPG) {
+        ret = rjpg_transfer(db->out_th, db->rgba[RGBA_HIGHLIGHT].data, PAL_GREY);
+    }
+
+    if (ret != EXIT_SUCCESS) {
+        return ret;
+    }
+
+    db->flags |= HIGHLIGHT_LAYER_GENERATED;
+
+    if (pref->zoom_level > 1) {
+        ret = image_zoom(&db->rgba[RGBA_HIGHLIGHT_ZOOMED], &db->rgba[RGBA_HIGHLIGHT], db->p.zoom_level, db->p.zoom_interpolation);
+        if (ret != EXIT_SUCCESS) {
+            return ret;
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+void select_vp(th_db_t *db)
+{
+    global_preferences_t *pref = gp_get_ptr();
+
+    if (pref->zoom_level == 1) {
+        if ((db->flags & HIGHLIGHT_LAYER_GENERATED) && 
+            (db->fe.flags & HIGHLIGHT_LAYER_EN) && 
+            (db->fe.flags & HIGHLIGHT_LAYER_PREVIEW_EN)) {
+
+            db->rgba_vp = &db->rgba[RGBA_HIGHLIGHT];
+        } else {
+            db->rgba_vp = &db->rgba[RGBA_ORIG];
+        }
+    } else {
+        if ((db->flags & HIGHLIGHT_LAYER_GENERATED) && 
+            (db->fe.flags & HIGHLIGHT_LAYER_EN) && 
+            (db->fe.flags & HIGHLIGHT_LAYER_PREVIEW_EN)) {
+            db->rgba_vp = &db->rgba[RGBA_HIGHLIGHT_ZOOMED];
+        } else {
+            db->rgba_vp = &db->rgba[RGBA_ORIG_ZOOMED];
+        }
+    }
+}
+
 // returns 1 if image needs to be refreshed
 uint8_t set_zoom(th_db_t * db, const uint8_t flags)
 {
@@ -505,17 +572,18 @@ uint8_t set_zoom(th_db_t * db, const uint8_t flags)
                     }
                 }
 
-                if (pref->zoom_level == 1){
-                    db->rgba_vp = &db->rgba[0];
-                } else {
-                    db->rgba_vp = &db->rgba[1];
-                    image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
+                if (pref->zoom_level > 1){
+                    if (pref->zoom_level != initial_zoom) {
+                        image_zoom(&db->rgba[RGBA_ORIG_ZOOMED], &db->rgba[RGBA_ORIG], pref->zoom_level, pref->zoom_interpolation);
+                        if (db->flags & HIGHLIGHT_LAYER_GENERATED) {
+                            image_zoom(&db->rgba[RGBA_HIGHLIGHT_ZOOMED], &db->rgba[RGBA_HIGHLIGHT], pref->zoom_level, pref->zoom_interpolation);
+                        }
+                    }
                 }
             }
             break;
         case ZOOM_INCREMENT:
             if (pref->zoom_level < 16) {
-                db->rgba_vp = &db->rgba[1];
                 pref->zoom_level++;
                 db->p.zoom_level = pref->zoom_level;
 
@@ -524,13 +592,18 @@ uint8_t set_zoom(th_db_t * db, const uint8_t flags)
                     db->p.zoom_level = 4;
                 }
                 if (pref->zoom_level != initial_zoom) {
-                    image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
+                    image_zoom(&db->rgba[RGBA_ORIG_ZOOMED], &db->rgba[RGBA_ORIG], pref->zoom_level, pref->zoom_interpolation);
+                    if (db->flags & HIGHLIGHT_LAYER_GENERATED) {
+                        image_zoom(&db->rgba[RGBA_HIGHLIGHT_ZOOMED], &db->rgba[RGBA_HIGHLIGHT], pref->zoom_level, pref->zoom_interpolation);
+                    }
                 }
             }
             break;
         default:
             break;
     }
+
+    select_vp(db);
 
     if (pref->zoom_level != initial_zoom) {
         return 1;

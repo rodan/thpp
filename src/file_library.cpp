@@ -424,6 +424,9 @@ void file_library(bool *p_open, th_db_t * db)
                         db->fe.return_state = RET_RST;
                         //db->p.zoom_level = 1;
                         main_cli(db, 0);
+                        if (db->fe.flags & HIGHLIGHT_LAYER_EN) {
+                            generate_highlight(db);
+                        }
                         viewport_refresh_vp(db);
                     } else {
                         errMsg("calloc error");

@@ -408,6 +408,10 @@ void rjpg_temp2csv(th_db_t * d)
     }
 }
 
+/// \brief populate d->out_th based on d->src_th
+/// \param d thermogram database struct
+/// \param overwrite_flip_byte_order recursive variable that overwrites the hard-coded byte order detection algorithm
+/// \return EXIT_SUCCESS, EXIT_FAILURE or RJPG_RET_FLIP_BYTE_ORDER
 uint8_t rjpg_rescale(th_db_t * d, uint8_t *overwrite_flip_byte_order)
 {
     ssize_t i;

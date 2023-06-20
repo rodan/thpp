@@ -18,6 +18,8 @@ uint8_t viewport_refresh_vp(th_db_t * db)
     //load_texture_from_file(db->p.out_file, &db->fe.vp_texture, &vp_width, &vp_height);
     db->fe.actual_zoom = pref->zoom_level;
 
+    select_vp(db);
+
     if (db->rgba_vp == NULL) {
         return EXIT_FAILURE;
     }

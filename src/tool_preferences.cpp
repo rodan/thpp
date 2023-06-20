@@ -29,6 +29,7 @@ void tool_preferences(bool *p_open, th_db_t * db)
 
     ImGui::Separator();
     ImGui::Text("interface");
+    ImGui::Indent();
 
     static int style_idx = DEF_STYLE;
     if (ImGui::Combo("theme", &style_idx, "Dark\0Light\0Classic\0")) {
@@ -58,8 +59,10 @@ void tool_preferences(bool *p_open, th_db_t * db)
         io.FontGlobalScale = font_scale;
     }
 
+    ImGui::Unindent();
     ImGui::Separator();
     ImGui::Text("thumbnail image");
+    ImGui::Indent();
 
     static int s_thumbnail_size = DEF_THUMBNAIL_SIZE;
     value_changed = ImGui::DragInt("size", &s_thumbnail_size, 1, 64, 512, "%d", ImGuiSliderFlags_AlwaysClamp);
@@ -75,8 +78,10 @@ void tool_preferences(bool *p_open, th_db_t * db)
         db->p.pal = s_pal;
     }
 
+    ImGui::Unindent();
     ImGui::Separator();
     ImGui::Text("viewport image");
+    ImGui::Indent();
 
     // zoom interpolation technique
     int s_zoom_int = pref->zoom_interpolation;
@@ -114,6 +119,7 @@ void tool_preferences(bool *p_open, th_db_t * db)
         }
     }
 
+    ImGui::Unindent();
     ImGui::Separator();
     if (ImGui::TreeNode("file properties")) {
         ImGui::SameLine(); HelpMarker("control the visibility of items in the file properties table");

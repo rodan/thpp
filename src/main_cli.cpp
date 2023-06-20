@@ -89,6 +89,8 @@ void cleanup(th_db_t *db)
         free_textures(1, &db->fe.vp_texture);
     }
 
+    db->flags = 0;
+
     //memset(db, 0, sizeof(th_db_t));
 }
 
@@ -158,21 +160,21 @@ int main_cli(th_db_t * db, uint8_t flags)
         //       db->in_th->head.dtv->tsc[0], db->in_th->head.dtv->tsc[1] + 256 * db->in_th->head.dtv->tsc[0]);
 
         // original image
-        if (db->rgba[0].data) {
-            free(db->rgba[0].data);
+        if (db->rgba[RGBA_ORIG].data) {
+            free(db->rgba[RGBA_ORIG].data);
         }
-        db->rgba[0].data = (uint8_t *) calloc(th_width * th_height * 4, 1);
-        if (db->rgba[0].data == NULL) {
+        db->rgba[RGBA_ORIG].data = (uint8_t *) calloc(th_width * th_height * 4, 1);
+        if (db->rgba[RGBA_ORIG].data == NULL) {
             errExit("allocating buffer");
         }
-        db->rgba[0].width = th_width;
-        db->rgba[0].height = th_height;
+        db->rgba[RGBA_ORIG].width = th_width;
+        db->rgba[RGBA_ORIG].height = th_height;
 
         dtv_new(&(db->out_th));
         db->out_th->subtype = file_subtype;
 
         dtv_rescale(db);
-        dtv_transfer(db->out_th, db->rgba[0].data, db->p.pal);
+        dtv_transfer(db->out_th, db->rgba[RGBA_ORIG].data, db->p.pal);
 
     } else if (file_type == TH_FLIR_RJPG) {
 
@@ -198,18 +200,18 @@ int main_cli(th_db_t * db, uint8_t flags)
             }
         }
 
-        if (db->rgba[0].data) {
-            free(db->rgba[0].data);
+        if (db->rgba[RGBA_ORIG].data) {
+            free(db->rgba[RGBA_ORIG].data);
         }
-        db->rgba[0].data = (uint8_t *) calloc(th_width * th_height * 4, 1);
-        if (db->rgba[0].data == NULL) {
+        db->rgba[RGBA_ORIG].data = (uint8_t *) calloc(th_width * th_height * 4, 1);
+        if (db->rgba[RGBA_ORIG].data == NULL) {
             errExit("allocating buffer");
         }
-        db->rgba[0].width = th_width;
-        db->rgba[0].height = th_height;
+        db->rgba[RGBA_ORIG].width = th_width;
+        db->rgba[RGBA_ORIG].height = th_height;
 
         // create the output png file
-        rjpg_transfer(db->out_th, db->rgba[0].data, db->p.pal);
+        rjpg_transfer(db->out_th, db->rgba[RGBA_ORIG].data, db->p.pal);
 
     } else {
         fprintf(stderr, "warning: unknown input file type\n");
@@ -217,10 +219,10 @@ int main_cli(th_db_t * db, uint8_t flags)
     }
 
     if (db->p.zoom_level > 1) {
-        image_zoom(&db->rgba[1], &db->rgba[0], db->p.zoom_level, db->p.zoom_interpolation);
-        db->rgba_vp = &db->rgba[1];
+        image_zoom(&db->rgba[RGBA_ORIG_ZOOMED], &db->rgba[RGBA_ORIG], db->p.zoom_level, db->p.zoom_interpolation);
+        db->rgba_vp = &db->rgba[RGBA_ORIG_ZOOMED];
     } else {
-        db->rgba_vp = &db->rgba[0];
+        db->rgba_vp = &db->rgba[RGBA_ORIG];
     }
 
     if ((flags & GENERATE_OUT_FILE) && (db->p.out_file != NULL)) {
