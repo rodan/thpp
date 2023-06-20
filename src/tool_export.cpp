@@ -23,7 +23,15 @@ void tool_export(bool *p_open, th_db_t *db)
     unsigned err = 0;
     uint16_t buf_prefix_len;
     static bool table_en = false;
+    uint8_t value_changed;
+    uint8_t auto_refresh = 0;
+    double t_min, t_max;
+    double spot_temp = 0;
     global_preferences_t *pref = gp_get_ptr();
+    static int prox_temp = 4;
+    static int prox_pix = 24;
+    static uint16_t prev_x = 0;
+    static uint16_t prev_y = 0;
 
     if (!ImGui::Begin("export", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
@@ -70,6 +78,67 @@ void tool_export(bool *p_open, th_db_t *db)
     }
 
     if (ImGui::CheckboxFlags("preview", &db->fe.flags, HIGHLIGHT_LAYER_PREVIEW_EN)) {
+        viewport_refresh_vp(db);
+    }
+
+    if ((db->pr.flags & PROFILE_REQ_VIEWPORT_RDY) && (db->pr.type & PROFILE_TYPE_POINT) && (db->temp_arr != NULL)) {
+        spot_temp = db->temp_arr[db->pr.y1 * db->rgba[RGBA_ORIG].width + db->pr.x1];
+        t_min = spot_temp - prox_temp;
+        t_max = spot_temp + prox_temp;
+    } else {
+        get_min_max(db->out_th, &t_min, &t_max);
+    }
+
+    static float s_begin_temp = t_min;
+    static float s_end_temp = t_max;
+    //if (reset_changes) {
+        s_begin_temp = t_min;
+        s_end_temp = t_max;
+    //}
+    value_changed = ImGui::DragFloatRange2("temp slice [C]", &s_begin_temp, &s_end_temp, 0.5f, -20.0f, 300.0f, "min: %.1fC",
+                           "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
+
+    if (value_changed) {
+        auto_refresh = 1;
+    }
+
+    if (db->pr.flags & PROFILE_REQ_VIEWPORT_RDY) {
+        db->pr.t_min = t_min;
+        db->pr.t_max = t_max;
+        db->pr.prox_pix = prox_pix;
+
+        ImGui::Text("position: (%d,%d)", db->pr.x1, db->pr.y1);
+
+        value_changed = ImGui::DragInt("proximity [pixels]", &prox_pix, 1, 1, 200, "%d", ImGuiSliderFlags_AlwaysClamp);
+        if (value_changed) {
+            auto_refresh = 1;
+        }
+
+        value_changed = ImGui::DragInt("proximity [C]", &prox_temp, 1, 1, 200, "%d", ImGuiSliderFlags_AlwaysClamp);
+        if (value_changed) {
+            auto_refresh = 1;
+        }
+
+        if ((prev_x != db->pr.x1) || (prev_y != db->pr.y1)) {
+            auto_refresh = 1;
+            prev_x = db->pr.x1;
+            prev_y = db->pr.y1;
+        }
+
+    } else {
+        ImGui::Text("position: undefined ");
+    }
+    if (ImGui::Button("pick position")) {
+        db->pr.type = PROFILE_TYPE_POINT;
+        db->pr.flags |= PROFILE_REQ_VIEWPORT_INT;
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("refresh") || auto_refresh) {
+        memset(db->rgba[RGBA_HIGHLIGHT].overlay, 0, db->rgba[RGBA_HIGHLIGHT].width * db->rgba[RGBA_HIGHLIGHT].height * 4);
+        refresh_highlight_overlay(db, 0, db->p.pal);
+        combine_highlight(db);
+        set_zoom(db, ZOOM_FORCE_REFRESH);
         viewport_refresh_vp(db);
     }
 

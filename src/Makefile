@@ -137,7 +137,7 @@ $(EXOUTPUT): $(LOCAL_OBJECTS) $(TLPI_OBJ) $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_
 	$(CXX) $(LDFLAGS) $(LOCAL_OBJECTS) $(TLPI_OBJ) $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_LIB) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ) -o $@ && size $@
 
 clean : 
-	@${RM} build/*.o build/*.s ${PROJ} tags *.png
+	@${RM} build/*.o build/*.s ${PROJ}
 	@${RM} -rf cov-int
 
 clean-lib:

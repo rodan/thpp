@@ -483,6 +483,76 @@ th_db_t *db_get_ptr(void)
     return &db;
 }
 
+uint8_t combine_highlight(th_db_t *db)
+{
+    uint32_t i;
+    uint32_t *overlay = (uint32_t *) db->rgba[RGBA_HIGHLIGHT].overlay;
+    uint32_t *base = (uint32_t *) db->rgba[RGBA_HIGHLIGHT].base;
+    uint32_t *data = (uint32_t *) db->rgba[RGBA_HIGHLIGHT].data;
+
+    for (i=0; i<db->rgba[RGBA_HIGHLIGHT].width * db->rgba[RGBA_HIGHLIGHT].height; i++) {
+        if (* (overlay + i)) {
+            *(data + i) = *( overlay + i);
+        } else {
+            *(data + i) = *( base + i);
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_t pal_id)
+{
+    uint8_t ret = EXIT_SUCCESS;
+    uint16_t i, j;
+    uint16_t width, height;
+    uint8_t *pal_rgb;
+    double cur_temp;
+    uint32_t loc;
+    int32_t dist;
+    int32_t dist_lim = db->pr.prox_pix * db->pr.prox_pix;
+    double accu = 0;
+    uint32_t pixel_cnt = 0;
+
+    width = db->rgba[RGBA_HIGHLIGHT].width;
+    height = db->rgba[RGBA_HIGHLIGHT].height;
+
+    if ((db->in_th->type == TH_FLIR_RJPG) || 
+         ( (db->in_th->type == TH_IRTIS_DTV) && (db->in_th->subtype == TH_DTV_VER3))) {
+        pal_rgb = pal_init_lut(pal_id, PAL_16BPP);
+    } else {
+        pal_rgb = pal_init_lut(pal_id, PAL_8BPP);
+    }
+
+    if (pal_rgb == NULL) {
+        fprintf(stderr, "palette generation error\n");
+        exit(EXIT_FAILURE);
+    }
+
+    for (i=0; i<width; i++ ) {
+        for (j=0; j<height; j++) {
+            loc = width*j + i;
+            dist = (db->pr.x1 - i) * (db->pr.x1 - i) + (db->pr.y1 - j) * (db->pr.y1 - j);
+            cur_temp = db->temp_arr[loc];
+            if ((cur_temp > db->pr.t_min) && (cur_temp < db->pr.t_max) && (dist < dist_lim) ) {
+                if ((db->in_th->type == TH_FLIR_RJPG) || 
+                     ( (db->in_th->type == TH_IRTIS_DTV) && (db->in_th->subtype == TH_DTV_VER3))) {
+                    memcpy(db->rgba[RGBA_HIGHLIGHT].overlay + (loc * 4), &(pal_rgb[db->out_th->framew[loc] * 3]), 3);
+                } else {
+                    memcpy(db->rgba[RGBA_HIGHLIGHT].overlay + (loc * 4), &(pal_rgb[db->out_th->frame[loc] * 3]), 3);
+                }
+                db->rgba[RGBA_HIGHLIGHT].overlay[loc * 4 + 3] = 255; // alpha channel
+                pixel_cnt++;
+                accu += cur_temp;
+            }
+        }
+    }
+
+    db->pr.res_t_mean = accu / (double) pixel_cnt;
+
+    return ret;
+}
+
 uint8_t generate_highlight(th_db_t *db)
 {
     global_preferences_t *pref = gp_get_ptr();
@@ -499,14 +569,31 @@ uint8_t generate_highlight(th_db_t *db)
     if (db->rgba[RGBA_HIGHLIGHT].data == NULL) {
         errExit("allocating buffer");
     }
+    if (db->rgba[RGBA_HIGHLIGHT].overlay) {
+        free(db->rgba[RGBA_HIGHLIGHT].overlay);
+    }
+    db->rgba[RGBA_HIGHLIGHT].overlay = (uint8_t *) calloc(db->rgba[RGBA_ORIG].width * db->rgba[RGBA_ORIG].height * 4, 1);
+    if (db->rgba[RGBA_HIGHLIGHT].overlay == NULL) {
+        errExit("allocating buffer");
+    }
+    if (db->rgba[RGBA_HIGHLIGHT].base) {
+        free(db->rgba[RGBA_HIGHLIGHT].base);
+    }
+    db->rgba[RGBA_HIGHLIGHT].base = (uint8_t *) calloc(db->rgba[RGBA_ORIG].width * db->rgba[RGBA_ORIG].height * 4, 1);
+    if (db->rgba[RGBA_HIGHLIGHT].base == NULL) {
+        errExit("allocating buffer");
+    }
+
     db->rgba[RGBA_HIGHLIGHT].width = db->rgba[RGBA_ORIG].width;
     db->rgba[RGBA_HIGHLIGHT].height = db->rgba[RGBA_ORIG].height;
 
     if (db->in_th->type == TH_IRTIS_DTV) {
-        ret = dtv_transfer(db->out_th, db->rgba[RGBA_HIGHLIGHT].data, PAL_GREY);
+        ret = dtv_transfer(db->out_th, db->rgba[RGBA_HIGHLIGHT].base, PAL_GREY);
     } else if (db->in_th->type == TH_FLIR_RJPG) {
-        ret = rjpg_transfer(db->out_th, db->rgba[RGBA_HIGHLIGHT].data, PAL_GREY);
+        ret = rjpg_transfer(db->out_th, db->rgba[RGBA_HIGHLIGHT].base, PAL_GREY);
     }
+
+    combine_highlight(db);
 
     if (ret != EXIT_SUCCESS) {
         return ret;
@@ -599,6 +686,13 @@ uint8_t set_zoom(th_db_t * db, const uint8_t flags)
                 }
             }
             break;
+        case ZOOM_FORCE_REFRESH:
+            if (pref->zoom_level > 1){
+                image_zoom(&db->rgba[RGBA_ORIG_ZOOMED], &db->rgba[RGBA_ORIG], pref->zoom_level, pref->zoom_interpolation);
+                if (db->flags & HIGHLIGHT_LAYER_GENERATED) {
+                    image_zoom(&db->rgba[RGBA_HIGHLIGHT_ZOOMED], &db->rgba[RGBA_HIGHLIGHT], pref->zoom_level, pref->zoom_interpolation);
+                }
+            }
         default:
             break;
     }

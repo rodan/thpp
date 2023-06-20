@@ -33,6 +33,14 @@
 #define              SCALE_WIDTH  128
 #define             SCALE_HEIGHT  1024
 
+// profile_t defines
+#define                PROFILE_CNT  4
+#define         PROFILE_TYPE_POINT  0x1
+#define          PROFILE_TYPE_LINE  0x2
+
+#define   PROFILE_REQ_VIEWPORT_INT  0x1
+#define   PROFILE_REQ_VIEWPORT_RDY  0x2
+
 // rgba index types
 #define                  RGBA_ORIG  0x0
 #define           RGBA_ORIG_ZOOMED  0x1
@@ -81,6 +89,7 @@ struct th_rgba {
     uint16_t height;
     uint8_t *data;
     uint8_t *overlay;
+    uint8_t *base;
 };
 typedef th_rgba th_rgba_t;
 
@@ -112,10 +121,17 @@ typedef struct frontend frontend_t;
 struct profile {
     uint8_t do_refresh;
     uint8_t active;
+    uint8_t type;
+    uint32_t flags;
     uint16_t x1;
     uint16_t y1;
     uint16_t x2;
     uint16_t y2;
+    double t_min;
+    double t_max;
+    double prox_temp;
+    uint16_t prox_pix;
+    double res_t_mean;
 };
 typedef profile profile_t;
 
@@ -129,7 +145,7 @@ struct th_db {
     th_rgba_t *rgba_vp; ///< pointer to the rgba struct that will be used as a texture in the GUI
     scale_t scale;      ///< scale for the processed thermogram
     frontend_t fe;      ///< textures of the images used by the GUI
-    profile_t pr;       ///< profile line
+    profile_t pr;       ///< profile point, line, etc
     uint32_t flags;     ///< thermogram-related flags
     double *temp_arr;   ///< array containing actual temperatures for the processed image
 };
@@ -140,6 +156,7 @@ typedef struct th_db th_db_t;
 
 #define       ZOOM_DECREMENT  0x1
 #define       ZOOM_INCREMENT  0x2
+#define   ZOOM_FORCE_REFRESH  0x3
 
 #define           STYLE_DARK  0
 #define          STYLE_LIGHT  1
@@ -192,6 +209,8 @@ void gp_init(th_getopt_t *p);
 void select_vp(th_db_t *db);
 uint8_t set_zoom(th_db_t * db, const uint8_t flags);
 uint8_t generate_highlight(th_db_t *db);
+uint8_t combine_highlight(th_db_t *db);
+uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_t pal_id);
 
 #ifdef __cplusplus
 }

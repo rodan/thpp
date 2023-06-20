@@ -56,13 +56,14 @@ void cleanup(th_db_t *db)
             free(db->rgba[c].data);
             db->rgba[c].data = NULL;
         }
-#if 0
         if (db->rgba[c].overlay != NULL) {
             free(db->rgba[c].overlay);
             db->rgba[c].overlay = NULL;
         }
-#endif
-
+        if (db->rgba[c].base != NULL) {
+            free(db->rgba[c].base);
+            db->rgba[c].base = NULL;
+        }
     }
 
     if (db->temp_arr != NULL) {
@@ -90,6 +91,8 @@ void cleanup(th_db_t *db)
     }
 
     db->flags = 0;
+
+    memset(&db->pr, 0, sizeof(profile_t));
 
     //memset(db, 0, sizeof(th_db_t));
 }

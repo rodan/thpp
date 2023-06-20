@@ -109,15 +109,27 @@ void viewport_render(th_db_t * db)
     }
 
     if (pointer_inside_image && ImGui::IsMouseDown(0) && pointer_over_viewport) {
-        if ((prev_img_pos_x == img_pos_x) && (prev_img_pos_y == img_pos_y)) {
-            // do not activate the line plot after a doubleclick on the viewport
-            db->pr.active = 0;
-        } else {
-            db->pr.x1 = prev_img_pos_x;
-            db->pr.y1 = prev_img_pos_y;
-            db->pr.x2 = img_pos_x;
-            db->pr.y2 = img_pos_y;
-            db->pr.active = 1;
+        switch (db->pr.type) {
+            case PROFILE_TYPE_POINT:
+                if (db->pr.flags & PROFILE_REQ_VIEWPORT_INT) {
+                    db->pr.x1 = img_pos_x;
+                    db->pr.y1 = img_pos_y;
+                    db->pr.flags = PROFILE_REQ_VIEWPORT_RDY;
+                    db->pr.flags &= ~PROFILE_REQ_VIEWPORT_INT;
+                }
+                break;
+            case PROFILE_TYPE_LINE:
+                if ((prev_img_pos_x == img_pos_x) && (prev_img_pos_y == img_pos_y)) {
+                    // do not activate the line plot after a doubleclick on the viewport
+                    db->pr.active = 0;
+                } else {
+                    db->pr.x1 = prev_img_pos_x;
+                    db->pr.y1 = prev_img_pos_y;
+                    db->pr.x2 = img_pos_x;
+                    db->pr.y2 = img_pos_y;
+                    db->pr.active = 1;
+                }
+            break;
         }
     }
 
