@@ -1,9 +1,3 @@
- [ ] redo build script to allow compilation of both console-only version and gui version
  [ ] add overlay image containing spot targets and measurement lines
- [ ] selectable theme (for switching between dark mode for visualisation and white mode for printing) in preference dialog
- [ ] change temperature unit in preference dialog
- [ ] custom font for the temperature scale - needs to contain the degree char
- [ ] capture to file functionality for creating reports
- [ ] read initial parent window size from imgui.ini
- [ ] a more portable way of defining temporary paths for mkstemp
+ [ ] export functionality for creating reports
  [ ] actually test application on a big endian system
