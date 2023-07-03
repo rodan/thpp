@@ -37,6 +37,7 @@
 #define                PROFILE_CNT  4
 #define         PROFILE_TYPE_POINT  0x1
 #define          PROFILE_TYPE_LINE  0x2
+#define   PROFILE_TYPE_LEVEL_SLICE  0x3
 
 #define   PROFILE_REQ_VIEWPORT_INT  0x1
 #define   PROFILE_REQ_VIEWPORT_RDY  0x2
