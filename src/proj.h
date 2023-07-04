@@ -133,6 +133,7 @@ struct profile {
     double prox_temp;
     uint16_t prox_pix;
     double res_t_mean;
+    uint32_t highlight_color;
 };
 typedef profile profile_t;
 

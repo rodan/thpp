@@ -523,7 +523,7 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_
     double slope, offset;
     double len, qx;
     uint16_t points_remaining;
-    int16_t lw;
+    int16_t lwx, lwy;
 
     width = db->rgba[RGBA_HIGHLIGHT].width;
     height = db->rgba[RGBA_HIGHLIGHT].height;
@@ -583,7 +583,7 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_
             y2 = db->pr.y2;
 
             len = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-            if (len == 0) {
+            if (len < 1) {
                 return ret;
             }
 
@@ -595,19 +595,29 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_
             xtemp = x1;
             while (points_remaining) {
 
-                for (lw = -LINE_WIDTH; lw<LINE_WIDTH; lw++) {
-                    ytemp = slope * (xtemp + lw) + offset;
-                    ymark = ytemp;
-                    xmark = xtemp;
-                    loc = width * ymark + xmark;
+                ytemp = slope * xtemp + offset;
 
-                    if ((db->in_th->type == TH_FLIR_RJPG) || 
-                         ( (db->in_th->type == TH_IRTIS_DTV) && (db->in_th->subtype == TH_DTV_VER3))) {
-                        memcpy(db->rgba[RGBA_HIGHLIGHT].overlay + (loc * 4), &(pal_rgb[db->out_th->framew[loc] * 3]), 3);
-                    } else {
-                        memcpy(db->rgba[RGBA_HIGHLIGHT].overlay + (loc * 4), &(pal_rgb[db->out_th->frame[loc] * 3]), 3);
+                for (lwx = -LINE_WIDTH; lwx<LINE_WIDTH; lwx++) {
+                    for (lwy = -LINE_WIDTH; lwy<LINE_WIDTH; lwy++) {
+                        ymark = ytemp + lwy;
+                        xmark = xtemp + lwx;
+                        loc = width * ymark + xmark;
+
+                        if (loc > (uint32_t) width * height - 1) {
+                            continue;
+                        }
+                        if (db->pr.highlight_color) {
+                            memcpy(db->rgba[RGBA_HIGHLIGHT].overlay + (loc * 4), &db->pr.highlight_color, 4);
+                        } else {
+                            if ((db->in_th->type == TH_FLIR_RJPG) || 
+                                 ( (db->in_th->type == TH_IRTIS_DTV) && (db->in_th->subtype == TH_DTV_VER3))) {
+                                memcpy(db->rgba[RGBA_HIGHLIGHT].overlay + (loc * 4), &(pal_rgb[db->out_th->framew[loc] * 3]), 3);
+                            } else {
+                                memcpy(db->rgba[RGBA_HIGHLIGHT].overlay + (loc * 4), &(pal_rgb[db->out_th->frame[loc] * 3]), 3);
+                            }
+                            db->rgba[RGBA_HIGHLIGHT].overlay[loc * 4 + 3] = 255; // alpha channel
+                        }
                     }
-                    db->rgba[RGBA_HIGHLIGHT].overlay[loc * 4 + 3] = 255; // alpha channel
                 }
 
                 xtemp += qx;

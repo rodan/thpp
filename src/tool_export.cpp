@@ -105,6 +105,7 @@ void tool_export(bool *p_open, th_db_t *db)
     }
 
     static int h_type = 0;
+    static int line_color = 0;
     value_changed = ImGui::Combo("profile type", &h_type,
                  "none\0punctiform\0line profile\0level slice\0\0");
     //if (value_changed) {
@@ -170,9 +171,23 @@ void tool_export(bool *p_open, th_db_t *db)
 
             break;
         case PROFILE_TYPE_LINE:
+            value_changed = ImGui::Combo("highlight color", &line_color,
+                 "temperature\0solid color\0\0");
+            if (value_changed) {
+                if (line_color) {
+                    db->pr.highlight_color = 0xff0000ff;
+                } else {
+                    db->pr.highlight_color = 0;
+                }
+            }
+
             if (ImGui::Button("pick line")) {
                 db->pr.type = PROFILE_TYPE_LINE;
                 db->pr.flags |= PROFILE_REQ_VIEWPORT_INT;
+            }
+
+            if (db->pr.flags & PROFILE_REQ_VIEWPORT_RDY) {
+                auto_refresh = 1;
             }
             break;
     }
