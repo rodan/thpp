@@ -92,6 +92,9 @@ void cleanup(th_db_t *db)
 
     db->flags = 0;
 
+    if (db->pr.data != NULL) {
+        free(db->pr.data);
+    }
     memset(&db->pr, 0, sizeof(profile_t));
 
     //memset(db, 0, sizeof(th_db_t));

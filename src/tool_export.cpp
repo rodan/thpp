@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <linux/limits.h>
 #include "imgui.h"
+#include "tlpi_hdr.h"
 #include "proj.h"
 #include "lodepng.h"
 #include "imgui_wrapper.h"
@@ -15,6 +16,7 @@
 static char buf_dst_dir[PATH_MAX] = "/tmp";
 static char buf_prefix[PREFIX_MAX] = {};
 static char buf_output[PATH_MAX] = {};
+static char buf_highlight[PREFIX_MAX] = {};
 
 style_t tool_export_style = {};
 
@@ -32,6 +34,8 @@ void tool_export(bool *p_open, th_db_t *db)
     static int prox_pix = 24;
     static uint16_t prev_x = 0;
     static uint16_t prev_y = 0;
+    uint32_t i;
+    FILE *fp;
 
     if (!ImGui::Begin("export", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
@@ -57,6 +61,8 @@ void tool_export(bool *p_open, th_db_t *db)
                 buf_prefix[buf_prefix_len - 4] = 0;
             }
         }
+        snprintf(buf_highlight, PREFIX_MAX, "%s_hl", buf_prefix);
+        // flag to be disabled after 
         db->fe.flags |= TOOL_EXPORT_GOT_BASENAME;
     }
 
@@ -87,7 +93,7 @@ void tool_export(bool *p_open, th_db_t *db)
     ImGui::Unindent();
 
     ImGui::Separator();
-    ImGui::Text("highlight");
+    ImGui::Text("overlay");
 
     ImGui::Indent();
     if (ImGui::CheckboxFlags("enable highlight layer", &db->fe.flags, HIGHLIGHT_LAYER_EN)) {
@@ -151,7 +157,7 @@ void tool_export(bool *p_open, th_db_t *db)
             }
             if (ImGui::Button("pick position")) {
                 db->pr.type = PROFILE_TYPE_POINT;
-                db->pr.flags |= PROFILE_REQ_VIEWPORT_INT;
+                db->pr.flags = PROFILE_REQ_VIEWPORT_INT;
             }
             break;
         case PROFILE_TYPE_LEVEL_SLICE:
@@ -179,14 +185,19 @@ void tool_export(bool *p_open, th_db_t *db)
                 } else {
                     db->pr.highlight_color = 0;
                 }
+                auto_refresh = 1;
             }
 
             if (ImGui::Button("pick line")) {
                 db->pr.type = PROFILE_TYPE_LINE;
-                db->pr.flags |= PROFILE_REQ_VIEWPORT_INT;
+                db->pr.flags = PROFILE_REQ_VIEWPORT_INT;
             }
 
-            if (db->pr.flags & PROFILE_REQ_VIEWPORT_RDY) {
+            if ((db->pr.flags & PROFILE_REQ_VIEWPORT_RDY) && !(db->pr.flags & PROFILE_REQ_VIEWPORT_REFRESHED)) {
+                auto_refresh = 1;
+            }
+
+            if (db->pr.flags & PROFILE_REQ_DATA_PREPARE) {
                 auto_refresh = 1;
             }
             break;
@@ -200,6 +211,55 @@ void tool_export(bool *p_open, th_db_t *db)
         set_zoom(db, ZOOM_FORCE_REFRESH);
         viewport_refresh_vp(db);
     }
+
+    ImGui::InputText("highlight fname", buf_highlight, PREFIX_MAX);
+
+    if (ImGui::Button("export highlight image")) {
+        snprintf(buf_output, PATH_MAX, "%s/%s.png", buf_dst_dir, buf_highlight);
+        printf("saving highlight overlay image to %s\n", buf_output);
+        if (pref->zoom_level == 1) {
+            err = lodepng_encode32_file(buf_output, db->rgba[RGBA_HIGHLIGHT].data, db->rgba[RGBA_HIGHLIGHT].width, db->rgba[RGBA_HIGHLIGHT].height);
+        } else {
+            err = lodepng_encode32_file(buf_output, db->rgba[RGBA_HIGHLIGHT_ZOOMED].data, db->rgba[RGBA_HIGHLIGHT_ZOOMED].width, db->rgba[RGBA_HIGHLIGHT_ZOOMED].height);
+        }
+        if (err) {
+            fprintf(stderr, "encoder error %u: %s\n", err, lodepng_error_text(err));
+        }
+    }
+
+    if ((db->pr.type == PROFILE_TYPE_LINE) && (db->pr.flags & PROFILE_REQ_DATA_RDY)) {
+        if (ImGui::Button("export highlight data")) {
+            snprintf(buf_output, PATH_MAX, "%s/%s.csv", buf_dst_dir, buf_highlight);
+            printf("saving highlight overlay data to %s\n", buf_output);
+
+            fp = fopen(buf_output, "w+");
+            if (fp == NULL) {
+                errMsg("during open");
+            } else {
+                for (i = 0; i<db->pr.data_len; i++) {
+                    fprintf(fp, "%f\n", db->pr.data[i]);
+                }
+                fclose(fp);
+            }
+            snprintf(buf_output, PATH_MAX, "%s/%s.gnuplot", buf_dst_dir, buf_highlight);
+            printf("saving highlight overlay gnuplot to %s\n", buf_output);
+
+            fp = fopen(buf_output, "w+");
+            if (fp == NULL) {
+                errMsg("during open");
+            } else {
+                fprintf(fp, "#!/usr/bin/env gnuplot\n\n");
+                fprintf(fp, "plot '%s.csv' with lines\n\n", buf_highlight);
+                fprintf(fp, "set ylabel '°C' rotate by 0\n");
+                fprintf(fp, "set terminal png size 1024,300\n");
+                fprintf(fp, "set output '%s_gnuplot.png'\n", buf_highlight);
+                fprintf(fp, "set style data lines\n");
+                fprintf(fp, "replot\n");
+                fclose(fp);
+            }
+        }
+    }
+
 
     if ( !(db->fe.flags & HIGHLIGHT_LAYER_EN) ) {
         ImGui::EndDisabled();

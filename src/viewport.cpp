@@ -33,6 +33,7 @@ uint8_t viewport_refresh_vp(th_db_t * db)
 
     if (db->fe.vp_width && db->fe.vp_height) {
         load_texture_from_mem(db->rgba_vp->data, &db->fe.vp_texture, db->fe.vp_width, db->fe.vp_height);
+        db->pr.flags |= PROFILE_REQ_VIEWPORT_REFRESHED;
         return EXIT_SUCCESS;
     }
 
@@ -97,6 +98,9 @@ void viewport_render(th_db_t * db)
     }
 
     if (db->fe.return_state != RET_OK) {
+        if (db->pr.data != NULL) {
+            free(db->pr.data);
+        }
         memset(&db->pr, 0, sizeof(profile_t));
         return;
     }
@@ -129,6 +133,9 @@ void viewport_render(th_db_t * db)
                         db->pr.x2 = img_pos_x;
                         db->pr.y2 = img_pos_y;
                         db->pr.active = 1;
+                        // render line during mouse drag
+                        db->pr.flags |= PROFILE_REQ_VIEWPORT_RDY;
+                        db->pr.flags &= ~PROFILE_REQ_VIEWPORT_REFRESHED;
                     }
                 }
             break;
@@ -137,7 +144,8 @@ void viewport_render(th_db_t * db)
 
     if (pointer_inside_image && ImGui::IsMouseReleased(0) && pointer_over_viewport && (db->pr.flags & PROFILE_REQ_VIEWPORT_INT)) {
         if (db->pr.type == PROFILE_TYPE_LINE) {
-            db->pr.flags = PROFILE_REQ_VIEWPORT_RDY;
+            db->pr.flags |= PROFILE_REQ_VIEWPORT_RDY;
+            db->pr.flags |= PROFILE_REQ_DATA_PREPARE;
             db->pr.flags &= ~PROFILE_REQ_VIEWPORT_INT;
         }
     }

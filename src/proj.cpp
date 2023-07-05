@@ -522,7 +522,7 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_
     uint16_t xmark, ymark;
     double slope, offset;
     double len, qx;
-    uint16_t points_remaining;
+    uint16_t points_remaining, data_cnt = 0;
     int16_t lwx, lwy;
 
     width = db->rgba[RGBA_HIGHLIGHT].width;
@@ -593,12 +593,32 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_
             offset = y2 - (x2 * slope);
          
             xtemp = x1;
+
+            if (db->pr.flags & PROFILE_REQ_DATA_PREPARE) {
+                db->pr.data_len = points_remaining;
+                if (db->pr.data) {
+                    free(db->pr.data);
+                }
+                db->pr.data = (double *) calloc(db->pr.data_len, sizeof(double));
+                if (db->pr.data == NULL) {
+                    errExit("allocating buffer");
+                }
+            }
+
+            data_cnt = 0;
             while (points_remaining) {
 
-                ytemp = slope * xtemp + offset;
+                if (db->pr.flags & PROFILE_REQ_DATA_PREPARE) {
+                    ytemp = slope * xtemp + offset;
+                    ymark = ytemp;
+                    xmark = xtemp;
+                    db->pr.data[data_cnt] = db->temp_arr[width * ymark + xmark];
+                    data_cnt++;
+                }
 
                 for (lwx = -LINE_WIDTH; lwx<LINE_WIDTH; lwx++) {
                     for (lwy = -LINE_WIDTH; lwy<LINE_WIDTH; lwy++) {
+                        ytemp = slope * xtemp + offset;
                         ymark = ytemp + lwy;
                         xmark = xtemp + lwx;
                         loc = width * ymark + xmark;
@@ -624,6 +644,10 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_
                 points_remaining--;
             }
 
+            if (db->pr.flags & PROFILE_REQ_DATA_PREPARE) {
+                db->pr.flags &= ~PROFILE_REQ_DATA_PREPARE;
+                db->pr.flags |= PROFILE_REQ_DATA_RDY;
+            }
             break;
     }
 

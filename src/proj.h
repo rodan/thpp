@@ -39,8 +39,11 @@
 #define          PROFILE_TYPE_LINE  0x2
 #define   PROFILE_TYPE_LEVEL_SLICE  0x3
 
-#define   PROFILE_REQ_VIEWPORT_INT  0x1
-#define   PROFILE_REQ_VIEWPORT_RDY  0x2
+#define   PROFILE_REQ_VIEWPORT_INT  0x01
+#define   PROFILE_REQ_VIEWPORT_RDY  0x02
+#define   PROFILE_REQ_VIEWPORT_REFRESHED  0x04
+#define   PROFILE_REQ_DATA_PREPARE  0x08
+#define       PROFILE_REQ_DATA_RDY  0x10
 
 // rgba index types
 #define                  RGBA_ORIG  0x0
@@ -134,6 +137,8 @@ struct profile {
     uint16_t prox_pix;
     double res_t_mean;
     uint32_t highlight_color;
+    uint32_t data_len;
+    double *data;
 };
 typedef profile profile_t;
 
