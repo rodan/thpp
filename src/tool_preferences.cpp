@@ -96,7 +96,10 @@ void tool_preferences(bool *p_open, th_db_t * db)
         }
         db->p.zoom_interpolation = s_zoom_int;
         pref->zoom_interpolation = s_zoom_int;
-        image_zoom(&db->rgba[1], &db->rgba[0], pref->zoom_level, pref->zoom_interpolation);
+        image_zoom(&db->rgba[RGBA_ORIG_ZOOMED], &db->rgba[RGBA_ORIG], pref->zoom_level, pref->zoom_interpolation);
+        if (db->fe.flags & HIGHLIGHT_LAYER_EN) {
+            image_zoom(&db->rgba[RGBA_HIGHLIGHT_ZOOMED], &db->rgba[RGBA_HIGHLIGHT], pref->zoom_level, pref->zoom_interpolation);
+        }
         viewport_refresh_vp(db);
     }
 

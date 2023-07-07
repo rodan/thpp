@@ -114,6 +114,7 @@ void tool_processing(bool *p_open, th_db_t * db)
     ImGui::Text("input parameters");
     ImGui::Separator();
 
+    ImGui::Indent();
     // palette picker
     static int s_pal = db->p.pal;
     if (reset_changes) {
@@ -143,6 +144,7 @@ void tool_processing(bool *p_open, th_db_t * db)
         show_apply_button = 1;
     }
 
+    ImGui::Unindent();
     ImGui::Separator();
 
     if (db->in_th->type == TH_FLIR_RJPG) {
@@ -151,6 +153,8 @@ void tool_processing(bool *p_open, th_db_t * db)
 
         // temperature compensation
         ImGui::Text("temperature compensation");
+
+        ImGui::Indent();
         ImGui::Separator();
 
         ImGui::Text("  object");
@@ -189,7 +193,6 @@ void tool_processing(bool *p_open, th_db_t * db)
 
         ImGui::Separator();
         ImGui::Text("  atmosphere");
-        ImGui::Separator();
 
         static float s_atm_temp = h->atm_temp;
         if (reset_changes) {
@@ -215,7 +218,6 @@ void tool_processing(bool *p_open, th_db_t * db)
 
         ImGui::Separator();
         ImGui::Text("  optics");
-        ImGui::Separator();
 
         static float s_iwt = h->iwt;
         if (reset_changes) {
@@ -250,7 +252,7 @@ void tool_processing(bool *p_open, th_db_t * db)
             show_apply_button = 1;
         }
 
-
+        ImGui::Unindent();
     }
 
     ImGui::Separator();

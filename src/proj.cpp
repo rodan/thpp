@@ -501,9 +501,7 @@ uint8_t combine_highlight(th_db_t *db)
     return EXIT_SUCCESS;
 }
 
-#define LINE_WIDTH 2
-
-uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_t pal_id)
+uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal_id)
 {
     uint8_t ret = EXIT_SUCCESS;
     uint16_t i, j;
@@ -616,8 +614,8 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_
                     data_cnt++;
                 }
 
-                for (lwx = -LINE_WIDTH; lwx<LINE_WIDTH; lwx++) {
-                    for (lwy = -LINE_WIDTH; lwy<LINE_WIDTH; lwy++) {
+                for (lwx = -db->pr.line_halfwidth; lwx<db->pr.line_halfwidth; lwx++) {
+                    for (lwy = -db->pr.line_halfwidth; lwy<db->pr.line_halfwidth; lwy++) {
                         ytemp = slope * xtemp + offset;
                         ymark = ytemp + lwy;
                         xmark = xtemp + lwx;

@@ -5,6 +5,9 @@
 extern "C" {
 #endif
 
+#define   FILE_PROPERTIES_OUT_GUI  0x1
+#define  FILE_PROPERTIES_OUT_FILE  0x2
+
 struct fp_visibility {
     bool emissivity;
     bool distance;
@@ -39,7 +42,9 @@ struct fp_visibility {
 };
 typedef struct fp_visibility fp_visibility_t;
 
-void file_properties(bool *p_open, th_db_t * db);
+void file_properties_panel(bool *p_open, th_db_t * db);
+void file_properties(th_db_t * db, FILE *report_table_file, const uint16_t flags);
+
 fp_visibility_t *file_properties_get_ptr(void);
 
 #ifdef __cplusplus

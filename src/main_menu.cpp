@@ -119,7 +119,7 @@ uint8_t main_menu(th_db_t * db)
     }
 
     if (wo.bfile_properties) {
-        file_properties(&wo.bfile_properties, db);
+        file_properties_panel(&wo.bfile_properties, db);
     }
 
     if (wo.btool_processing) {

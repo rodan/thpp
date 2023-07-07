@@ -137,6 +137,7 @@ struct profile {
     uint16_t prox_pix;
     double res_t_mean;
     uint32_t highlight_color;
+    uint8_t line_halfwidth;
     uint32_t data_len;
     double *data;
 };

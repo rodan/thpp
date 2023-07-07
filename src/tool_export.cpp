@@ -9,6 +9,7 @@
 #include "lodepng.h"
 #include "imgui_wrapper.h"
 #include "viewport.h"
+#include "file_properties.h"
 #include "tool_export.h"
 
 #define    PREFIX_MAX  64
@@ -112,11 +113,14 @@ void tool_export(bool *p_open, th_db_t *db)
 
     static int h_type = 0;
     static int line_color = 0;
+    static int line_width = 3;
     value_changed = ImGui::Combo("profile type", &h_type,
                  "none\0punctiform\0line profile\0level slice\0\0");
     //if (value_changed) {
     //    db->pr.type = h_type;
     //}
+
+    ImGui::Indent();
 
     switch (h_type) {
         case PROFILE_TYPE_POINT:
@@ -177,6 +181,7 @@ void tool_export(bool *p_open, th_db_t *db)
 
             break;
         case PROFILE_TYPE_LINE:
+
             value_changed = ImGui::Combo("highlight color", &line_color,
                  "temperature\0solid color\0\0");
             if (value_changed) {
@@ -185,6 +190,16 @@ void tool_export(bool *p_open, th_db_t *db)
                 } else {
                     db->pr.highlight_color = 0;
                 }
+                auto_refresh = 1;
+            }
+
+            if (db->pr.line_halfwidth < 1) {
+                db->pr.line_halfwidth = 1;
+            }
+
+            value_changed = ImGui::DragInt("line width [pixels]", &line_width, 2, 1, 9, "%d", ImGuiSliderFlags_AlwaysClamp);
+            if (value_changed) {
+                db->pr.line_halfwidth = (line_width + 1) / 2;
                 auto_refresh = 1;
             }
 
@@ -200,8 +215,11 @@ void tool_export(bool *p_open, th_db_t *db)
             if (db->pr.flags & PROFILE_REQ_DATA_PREPARE) {
                 auto_refresh = 1;
             }
+
             break;
     }
+            
+    ImGui::Unindent();
 
     //ImGui::SameLine();
     if (ImGui::Button("refresh") || auto_refresh) {
@@ -277,6 +295,18 @@ void tool_export(bool *p_open, th_db_t *db)
 
     ImGui::Unindent();
     if (ImGui::Button("generate latex report")) {
+        snprintf(buf_output, PATH_MAX, "%s/%s.tex", buf_dst_dir, buf_highlight);
+        printf("saving latex report to %s\n", buf_output);
+
+        fp = fopen(buf_output, "w+");
+        if (fp == NULL) {
+            errMsg("during open");
+        } else {
+            if (table_en) {
+                file_properties(db, fp, FILE_PROPERTIES_OUT_FILE);
+            }
+            fclose(fp);
+        }
     }
 
     ImGui::End();
