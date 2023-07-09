@@ -10,6 +10,7 @@
 *.~h
 *.~dfm
 .*
+src/imgui.ini
 lodepng/benchmark
 lodepng/pngdetail
 lodepng/showpng
