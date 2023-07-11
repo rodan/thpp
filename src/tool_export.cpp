@@ -31,7 +31,7 @@ void tool_export(bool *p_open, th_db_t *db)
     double t_min, t_max;
     double spot_temp = 0;
     global_preferences_t *pref = gp_get_ptr();
-    static int prox_temp = 4;
+    static float prox_temp = 4.0;
     static int prox_pix = 24;
     static uint16_t prev_x = 0;
     static uint16_t prev_y = 0;
@@ -145,7 +145,7 @@ void tool_export(bool *p_open, th_db_t *db)
                     auto_refresh = 1;
                 }
 
-                value_changed = ImGui::DragInt("proximity [C]", &prox_temp, 1, 1, 200, "%d", ImGuiSliderFlags_AlwaysClamp);
+                value_changed = ImGui::DragFloat("proximity [C]", &prox_temp, 1, 1, 200, "%.02f", 0);
                 if (value_changed) {
                     auto_refresh = 1;
                 }
@@ -267,7 +267,10 @@ void tool_export(bool *p_open, th_db_t *db)
                 errMsg("during open");
             } else {
                 fprintf(fp, "#!/usr/bin/env gnuplot\n\n");
-                fprintf(fp, "plot '%s.csv' with lines\n\n", buf_highlight);
+                fprintf(fp, "plot '%s.csv' title \"\" with lines lw 2\n\n", buf_highlight);
+                fprintf(fp, "set grid y\n");
+                fprintf(fp, "set grid lc rgb \"#dddddd\" lt 1\n");
+                fprintf(fp, "unset xtics\n");
                 fprintf(fp, "set ylabel '°C' rotate by 0\n");
                 fprintf(fp, "set terminal png size 1024,300\n");
                 fprintf(fp, "set output '%s_gnuplot.png'\n", buf_highlight);

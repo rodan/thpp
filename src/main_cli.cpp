@@ -97,6 +97,8 @@ void cleanup(th_db_t *db)
     }
     memset(&db->pr, 0, sizeof(profile_t));
 
+    db->fe.flags &= ~TOOL_EXPORT_GOT_BASENAME;
+
     //memset(db, 0, sizeof(th_db_t));
 }
 
