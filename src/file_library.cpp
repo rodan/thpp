@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <algorithm>
 #include <string>
+#include <map>
 #include <omp.h>
 #include <unistd.h>
 #include "tlpi_hdr.h"
@@ -15,14 +16,18 @@
 #include "version.h"
 #include "file_library.h"
 
-#define         CONFIG_OMP
-#define CONFIG_OMP_THREADS  12
-#define          FNAME_MAX  1024
+#define           CONFIG_OMP
+#define   CONFIG_OMP_THREADS  12
+#define            FNAME_MAX  1024
 //possible flags
-#define      FL_FILE_READY  0x1
-#define    FL_FILE_INVALID  0x2
-#define    FL_FILE_PREPARE  0x4
-#define   FL_FILE_NEED_TEX  0x8
+#define        FL_FILE_READY  0x1
+#define      FL_FILE_INVALID  0x2
+#define      FL_FILE_PREPARE  0x4
+#define     FL_FILE_NEED_TEX  0x8
+
+#define  FL_REFRESH_INTERVAL  10  //// < number of seconds between consecutive filesystem refreshes
+
+using namespace std;
 
 #ifndef __has_include
   static_assert(false, "__has_include not supported");
@@ -288,6 +293,13 @@ uint8_t thumbnail_prepare(fs::path file)
     return EXIT_FAILURE;
 }
 
+template <typename TP>
+time_t to_time_t(TP tp) {
+    using namespace chrono;
+    auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now() + system_clock::now());
+    return system_clock::to_time_t(sctp);
+}
+
 void file_library(bool *p_open, th_db_t * db)
 {
     uint32_t texture = 0;
@@ -299,13 +311,14 @@ void file_library(bool *p_open, th_db_t * db)
     fs::path abs_path;
     uint16_t path_size = 0;
     uint8_t worthy_file = 0;
-    //time_t current_time;
-    //static time_t last_discovery = 0;
+    time_t current_time;
+    static time_t last_discovery = 0;
     node_t *search = NULL;
     uint32_t u;
     uint8_t entry_is_dir = 0;
     double runtime;
     node_t *node;
+    static map<fs::directory_entry, time_t> sorted_entries;
 
     if (!ImGui::Begin("image library", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::End();
@@ -333,25 +346,37 @@ void file_library(bool *p_open, th_db_t * db)
                        1, 1}, bg_col, tint_col);
     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
         m_current_directory = m_current_directory.parent_path();
+        last_discovery = 0;
     }
     ImGui::Text("../");
     ImGui::NextColumn();
     ImGui::PopID();
 
-#if 0
     current_time = time(NULL);
 
-    if ((current_time - last_discovery) > 1) {
+    if ((current_time - last_discovery) > FL_REFRESH_INTERVAL) {
+        // cleanup map
+        for (auto it = sorted_entries.begin(); it != sorted_entries.end(); ) {
+            sorted_entries.erase(it++);
+        }
+
+        // repopulate map
+        for (auto &entry:fs::directory_iterator(m_current_directory)) {
+            auto time = to_time_t(entry.last_write_time());
+            sorted_entries[entry] = time;
+        }
+
         //file_library_discovery(m_current_directory);
         last_discovery = current_time;
     }
-#endif
 
     // add directories directly into the library
     // files are added only after they are deemed ready by file_library_discovery()
     // by that time their texture thumbnail has been generated
- for (auto & directory_entry:fs::directory_iterator(m_current_directory)) {
-        const auto & path = directory_entry.path();
+    //for (auto & entry:fs::directory_iterator(m_current_directory)) {
+    for (auto const &[entry, time] : sorted_entries) {
+
+        const auto & path = entry.path();
         std::string filename_string = path.filename().string();
         std::string filename_ext = path.extension().string();
 
@@ -359,7 +384,7 @@ void file_library(bool *p_open, th_db_t * db)
         worthy_file = 0;
         thumbnail_size_y = pref->thumbnail_size;
 
-        if (directory_entry.is_directory()) {
+        if (entry.is_directory()) {
             texture = dir_tx;
             entry_is_dir = 1;
         } else {
@@ -408,6 +433,7 @@ void file_library(bool *p_open, th_db_t * db)
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
             if (entry_is_dir) {
                 m_current_directory /= path.filename();
+                last_discovery = 0; // force cleanup of the sorted_entries map
                 break;
             } else {
                 if (search && (search->flags & FL_FILE_READY)) {
