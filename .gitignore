@@ -10,6 +10,15 @@
 *.~h
 *.~dfm
 .*
+*.aux
+*.fdb_latexmk
+*.fls
+*.glo
+*.ist
+*.log
+*.out
+*.pdf
+*.toc
 src/imgui.ini
 lodepng/benchmark
 lodepng/pngdetail
