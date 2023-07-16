@@ -320,7 +320,8 @@ void file_library(bool *p_open, th_db_t * db)
     node_t *node;
     static map<fs::directory_entry, time_t> sorted_entries;
 
-    if (!ImGui::Begin("image library", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+    //if (!ImGui::Begin("image library", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (!ImGui::Begin("image library", p_open, 0)) {
         ImGui::End();
         return;
     }
