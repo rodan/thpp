@@ -483,6 +483,7 @@ th_db_t *db_get_ptr(void)
     return &db;
 }
 
+// combines .base and .overlay to create .data
 uint8_t combine_highlight(th_db_t *db)
 {
     uint32_t i;
@@ -501,6 +502,7 @@ uint8_t combine_highlight(th_db_t *db)
     return EXIT_SUCCESS;
 }
 
+// populates .overlay
 uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal_id)
 {
     uint8_t ret = EXIT_SUCCESS;
@@ -652,9 +654,10 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal
     return ret;
 }
 
+// allocate mem for .data, .base, .overlay, populates .base with PAL_GREY
 uint8_t generate_highlight(th_db_t *db)
 {
-    global_preferences_t *pref = gp_get_ptr();
+    //global_preferences_t *pref = gp_get_ptr();
     uint8_t ret = EXIT_FAILURE;
 
     if ((db->in_th == NULL) || (db->out_th == NULL)) {
@@ -692,7 +695,7 @@ uint8_t generate_highlight(th_db_t *db)
         ret = rjpg_transfer(db->out_th, db->rgba[RGBA_HIGHLIGHT].base, PAL_GREY);
     }
 
-    combine_highlight(db);
+//    combine_highlight(db);
 
     if (ret != EXIT_SUCCESS) {
         return ret;
@@ -700,14 +703,36 @@ uint8_t generate_highlight(th_db_t *db)
 
     db->flags |= HIGHLIGHT_LAYER_GENERATED;
 
+#if 0
     if (pref->zoom_level > 1) {
         ret = image_zoom(&db->rgba[RGBA_HIGHLIGHT_ZOOMED], &db->rgba[RGBA_HIGHLIGHT], db->p.zoom_level, db->p.zoom_interpolation);
         if (ret != EXIT_SUCCESS) {
             return ret;
         }
     }
+#endif
 
     return EXIT_SUCCESS;
+}
+
+// completely rebuild .base, .overlay and .data
+void refresh_highlight_vp(th_db_t *db)
+{
+    if (db->fe.flags & HIGHLIGHT_LAYER_PREVIEW_EN) {
+        memset(db->rgba[RGBA_HIGHLIGHT].overlay, 0, db->rgba[RGBA_HIGHLIGHT].width * db->rgba[RGBA_HIGHLIGHT].height * 4);
+
+        // allocate mem for .data, .base, .overlay, populates .base with PAL_GREY
+        generate_highlight(db);
+
+        // populate .overlay
+        refresh_highlight_overlay(db, 0, db->p.pal);
+
+        // combines .base and .overlay to create .data
+        combine_highlight(db);
+
+        // create zoomed-in versions of .data
+        set_zoom(db, ZOOM_FORCE_REFRESH);
+    }
 }
 
 void select_vp(th_db_t *db)
@@ -803,6 +828,35 @@ uint8_t set_zoom(th_db_t * db, const uint8_t flags)
     }
 
     return 0;
+}
+
+void cleanup_profile(th_db_t * db, const uint16_t flags)
+{
+    profile_t bkp;
+
+    if (flags & PROFILE_KEEP_INIT) {
+        memcpy(&bkp, &db->pr, sizeof(profile_t));
+    }
+
+    if (db->pr.data != NULL) {
+        free(db->pr.data);
+    }
+    memset(&db->pr, 0, sizeof(profile_t));
+
+    if (flags & PROFILE_KEEP_INIT) {
+        db->pr.type = bkp.type;
+        db->pr.x1 = bkp.x1;
+        db->pr.y1 = bkp.y1;
+        db->pr.x2 = bkp.x2;
+        db->pr.y2 = bkp.y2;
+        db->pr.line_halfwidth = bkp.line_halfwidth;
+        db->pr.t_min = bkp.t_min;
+        db->pr.t_max = bkp.t_max;
+
+        if (bkp.flags & PROFILE_REQ_VIEWPORT_RDY) {
+            db->pr.flags = PROFILE_REQ_VIEWPORT_RDY;
+        }
+    }
 }
 
 void print_buf(uint8_t * data, const uint16_t size)

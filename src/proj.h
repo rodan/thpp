@@ -27,8 +27,8 @@
 #define                 RET_EXIT  0x8
 
 #define                   RJPG_K  273.15
-#define             WINDOW_WIDTH  1300
-#define            WINDOW_HEIGHT  1200
+#define             WINDOW_WIDTH  657
+#define            WINDOW_HEIGHT  533
 
 #define              SCALE_WIDTH  128
 #define             SCALE_HEIGHT  1024
@@ -39,11 +39,14 @@
 #define          PROFILE_TYPE_LINE  0x2
 #define   PROFILE_TYPE_LEVEL_SLICE  0x3
 
-#define   PROFILE_REQ_VIEWPORT_INT  0x01
-#define   PROFILE_REQ_VIEWPORT_RDY  0x02
-#define   PROFILE_REQ_VIEWPORT_REFRESHED  0x04
-#define   PROFILE_REQ_DATA_PREPARE  0x08
-#define       PROFILE_REQ_DATA_RDY  0x10
+#define   PROFILE_REQ_VIEWPORT_INT  0x01 ////< request viewport interaction (set coordinates)
+#define   PROFILE_REQ_VIEWPORT_RDY  0x02 ////< coordinates have been set in viewport
+#define   PROFILE_REQ_VIEWPORT_REFRESHED  0x04 ////< set after viewport has been refreshed
+#define   PROFILE_REQ_DATA_PREPARE  0x08 ////< request processing of profile struct
+#define       PROFILE_REQ_DATA_RDY  0x10 ////< processing is done
+
+#define           PROFILE_FULL_RST  0x0
+#define          PROFILE_KEEP_INIT  0x1
 
 // rgba index types
 #define                  RGBA_ORIG  0x0
@@ -89,11 +92,11 @@ struct th_getopt {
 typedef struct th_getopt th_getopt_t;
 
 struct th_rgba {
-    uint16_t width;
-    uint16_t height;
-    uint8_t *data;
-    uint8_t *overlay;
-    uint8_t *base;
+    uint16_t width;         ///< image dimension
+    uint16_t height;        ///< image dimension
+    uint8_t *data;          ///< base image with the overlay mask applied on top
+    uint8_t *overlay;       ///< overlay containing a mask of highlighted pixels
+    uint8_t *base;          ///< full thermal image rendered in PAL_GREY
 };
 typedef th_rgba th_rgba_t;
 
@@ -219,6 +222,8 @@ uint8_t set_zoom(th_db_t * db, const uint8_t flags);
 uint8_t generate_highlight(th_db_t *db);
 uint8_t combine_highlight(th_db_t *db);
 uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t index, const uint8_t pal_id);
+void refresh_highlight_vp(th_db_t *db);
+void cleanup_profile(th_db_t * db, const uint16_t flags);
 
 #ifdef __cplusplus
 }

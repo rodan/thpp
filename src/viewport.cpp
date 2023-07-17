@@ -98,10 +98,7 @@ void viewport_render(th_db_t * db)
     }
 
     if (db->fe.return_state != RET_OK) {
-        if (db->pr.data != NULL) {
-            free(db->pr.data);
-        }
-        memset(&db->pr, 0, sizeof(profile_t));
+        cleanup_profile(db, PROFILE_KEEP_INIT);
         return;
     }
 

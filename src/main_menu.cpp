@@ -130,7 +130,7 @@ uint8_t main_menu(th_db_t * db)
         // the 'apply changes' button was pressed
         // temperatures inside the image are bound to change
         // so invalidate the line plot
-        memset(&db->pr, 0, sizeof(profile_t));
+        cleanup_profile(db, PROFILE_KEEP_INIT);
     }
 
     if (wo.btool_histogram && db->fe.return_state == RET_OK) {

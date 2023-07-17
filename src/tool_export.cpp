@@ -99,7 +99,11 @@ void tool_export(bool *p_open, th_db_t *db)
     ImGui::Indent();
     if (ImGui::CheckboxFlags("enable highlight layer", &db->fe.flags, HIGHLIGHT_LAYER_EN)) {
         if (db->fe.flags & HIGHLIGHT_LAYER_EN) {
-            generate_highlight(db);
+            //generate_highlight(db);
+            refresh_highlight_vp(db);
+        } else {
+            db->fe.flags &= ~HIGHLIGHT_LAYER_PREVIEW_EN;
+            viewport_refresh_vp(db);
         }
     }
 
@@ -108,6 +112,7 @@ void tool_export(bool *p_open, th_db_t *db)
     }
 
     if (ImGui::CheckboxFlags("preview", &db->fe.flags, HIGHLIGHT_LAYER_PREVIEW_EN)) {
+        refresh_highlight_vp(db);
         viewport_refresh_vp(db);
     }
 
@@ -116,9 +121,11 @@ void tool_export(bool *p_open, th_db_t *db)
     static int line_width = 3;
     value_changed = ImGui::Combo("profile type", &h_type,
                  "none\0punctiform\0line profile\0level slice\0\0");
-    //if (value_changed) {
-    //    db->pr.type = h_type;
-    //}
+    if (value_changed) {
+        cleanup_profile(db, PROFILE_FULL_RST);
+        auto_refresh = 1;
+        db->pr.type = h_type;
+    }
 
     ImGui::Indent();
 
@@ -169,6 +176,12 @@ void tool_export(bool *p_open, th_db_t *db)
 
             static float s_begin_temp = t_min;
             static float s_end_temp = t_max;
+
+            if ((db->pr.t_min == 0) && (db->pr.t_max == 0)) {
+                db->pr.t_min = s_begin_temp;
+                db->pr.t_max = s_end_temp;
+                auto_refresh = 1;
+            }
 
             value_changed = ImGui::DragFloatRange2("temp slice [C]", &s_begin_temp, &s_end_temp, 0.5f, -20.0f, 300.0f, "min: %.1fC",
                                    "max: %.1fC", ImGuiSliderFlags_AlwaysClamp);
@@ -223,10 +236,7 @@ void tool_export(bool *p_open, th_db_t *db)
 
     //ImGui::SameLine();
     if (ImGui::Button("refresh") || auto_refresh) {
-        memset(db->rgba[RGBA_HIGHLIGHT].overlay, 0, db->rgba[RGBA_HIGHLIGHT].width * db->rgba[RGBA_HIGHLIGHT].height * 4);
-        refresh_highlight_overlay(db, 0, db->p.pal);
-        combine_highlight(db);
-        set_zoom(db, ZOOM_FORCE_REFRESH);
+        refresh_highlight_vp(db);
         viewport_refresh_vp(db);
     }
 

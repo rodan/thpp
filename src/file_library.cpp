@@ -437,6 +437,7 @@ void file_library(bool *p_open, th_db_t * db)
                 last_discovery = 0; // force cleanup of the sorted_entries map
                 break;
             } else {
+                // an infrared image file is double-clicked
                 if (search && (search->flags & FL_FILE_READY)) {
                     cleanup(db);
                     if (db->p.in_file) {
@@ -452,7 +453,8 @@ void file_library(bool *p_open, th_db_t * db)
                         //db->p.zoom_level = 1;
                         main_cli(db, 0);
                         if (db->fe.flags & HIGHLIGHT_LAYER_EN) {
-                            generate_highlight(db);
+                            //generate_highlight(db);
+                            refresh_highlight_vp(db);
                         }
                         viewport_refresh_vp(db);
                     } else {
