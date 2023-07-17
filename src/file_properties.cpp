@@ -9,7 +9,7 @@
 
 fp_visibility_t v;
 
-#define  TEXT_LEN  32
+#define  TEXT_LEN  64
 
 char label[TEXT_LEN] = {};
 char value[TEXT_LEN] = {};
@@ -103,20 +103,35 @@ void file_properties(th_db_t * db, FILE *report_table_file, const uint16_t flags
 
 
         if (v.emissivity) {
-            strncpy(label, "emissivity", TEXT_LEN);
-            snprintf(value, TEXT_LEN, "%.02lf", hf->emissivity);
+            if (db->p.flags & OPT_SET_NEW_EMISSIVITY) {
+                strncpy(label, "emissivity (*)", TEXT_LEN);
+                snprintf(value, TEXT_LEN, "%.02lf", db->p.emissivity);
+            } else {
+                strncpy(label, "emissivity", TEXT_LEN);
+                snprintf(value, TEXT_LEN, "%.02lf", hf->emissivity);
+            }
             file_properties_add_row(label, value, report_table_file, flags);
         }
 
         if (v.distance) {
-            strncpy(label, "distance", TEXT_LEN);
-            snprintf(value, TEXT_LEN, "%.02lf", hf->distance);
+            if (db->p.flags & OPT_SET_NEW_DISTANCE) {
+                strncpy(label, "distance (*)", TEXT_LEN);
+                snprintf(value, TEXT_LEN, "%.02lf", db->p.distance);
+            } else {
+                strncpy(label, "distance", TEXT_LEN);
+                snprintf(value, TEXT_LEN, "%.02lf", hf->distance);
+            }
             file_properties_add_row(label, value, report_table_file, flags);
         }
 
         if (v.rh) {
-            strncpy(label, "relative humidity", TEXT_LEN);
-            snprintf(value, TEXT_LEN, "%.02lf", hf->rh);
+            if (db->p.flags & OPT_SET_NEW_RH) {
+                strncpy(label, "relative humidity (*)", TEXT_LEN);
+                snprintf(value, TEXT_LEN, "%.02lf", db->p.rh);
+            } else {
+                strncpy(label, "relative humidity", TEXT_LEN);
+                snprintf(value, TEXT_LEN, "%.02lf", hf->rh);
+            }
             file_properties_add_row(label, value, report_table_file, flags);
         }
 
@@ -181,14 +196,24 @@ void file_properties(th_db_t * db, FILE *report_table_file, const uint16_t flags
         }
 
         if (v.atm_temp) {
-            strncpy(label, "atmospheric temperature", TEXT_LEN);
-            snprintf(value, TEXT_LEN, "%.02lf", hf->atm_temp);
+            if (db->p.flags & OPT_SET_NEW_AT) {
+                strncpy(label, "atmospheric temperature (*)", TEXT_LEN);
+                snprintf(value, TEXT_LEN, "%.02lf", db->p.atm_temp);
+            } else {
+                strncpy(label, "atmospheric temperature", TEXT_LEN);
+                snprintf(value, TEXT_LEN, "%.02lf", hf->atm_temp);
+            }
             file_properties_add_row(label, value, report_table_file, flags);
         }
 
         if (v.refl_temp) {
-            strncpy(label, "reflected apparent temperature", TEXT_LEN);
-            snprintf(value, TEXT_LEN, "%.02lf", hf->refl_temp);
+            if (db->p.flags & OPT_SET_NEW_RT) {
+                strncpy(label, "reflected apparent temperature (*)", TEXT_LEN);
+                snprintf(value, TEXT_LEN, "%.02lf", db->p.refl_temp);
+            } else {
+                strncpy(label, "reflected apparent temperature", TEXT_LEN);
+                snprintf(value, TEXT_LEN, "%.02lf", hf->refl_temp);
+            }
             file_properties_add_row(label, value, report_table_file, flags);
         }
 
