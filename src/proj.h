@@ -41,9 +41,10 @@
 
 #define   PROFILE_REQ_VIEWPORT_INT  0x01 ////< request viewport interaction (set coordinates)
 #define   PROFILE_REQ_VIEWPORT_RDY  0x02 ////< coordinates have been set in viewport
-#define   PROFILE_REQ_VIEWPORT_REFRESHED  0x04 ////< set after viewport has been refreshed
-#define   PROFILE_REQ_DATA_PREPARE  0x08 ////< request processing of profile struct
-#define       PROFILE_REQ_DATA_RDY  0x10 ////< processing is done
+#define PROFILE_REQ_VIEWPORT_START  0x04 ////< viewport during a mouse drag
+#define   PROFILE_REQ_VIEWPORT_REFRESHED  0x08 ////< set after viewport has been refreshed
+#define   PROFILE_REQ_DATA_PREPARE  0x10 ////< request processing of profile struct
+#define       PROFILE_REQ_DATA_RDY  0x20 ////< processing is done
 
 #define           PROFILE_FULL_RST  0x0
 #define          PROFILE_KEEP_INIT  0x1
@@ -126,8 +127,7 @@ struct frontend {
 typedef struct frontend frontend_t;
 
 struct profile {
-    uint8_t do_refresh;
-    uint8_t active;
+    //uint8_t do_refresh;
     uint8_t type;
     uint32_t flags;
     uint16_t x1;

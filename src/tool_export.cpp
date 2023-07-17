@@ -168,7 +168,7 @@ void tool_export(bool *p_open, th_db_t *db)
             }
             if (ImGui::Button("pick position")) {
                 db->pr.type = PROFILE_TYPE_POINT;
-                db->pr.flags = PROFILE_REQ_VIEWPORT_INT;
+                db->pr.flags = PROFILE_REQ_VIEWPORT_INT | PROFILE_REQ_VIEWPORT_START;
             }
             break;
         case PROFILE_TYPE_LEVEL_SLICE:
@@ -218,7 +218,7 @@ void tool_export(bool *p_open, th_db_t *db)
 
             if (ImGui::Button("pick line")) {
                 db->pr.type = PROFILE_TYPE_LINE;
-                db->pr.flags = PROFILE_REQ_VIEWPORT_INT;
+                db->pr.flags = PROFILE_REQ_VIEWPORT_INT | PROFILE_REQ_VIEWPORT_START;
             }
 
             if ((db->pr.flags & PROFILE_REQ_VIEWPORT_RDY) && !(db->pr.flags & PROFILE_REQ_VIEWPORT_REFRESHED)) {

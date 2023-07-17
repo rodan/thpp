@@ -102,11 +102,11 @@ void viewport_render(th_db_t * db)
         return;
     }
 
-    if (pointer_inside_image && ImGui::IsMouseDown(0) && (db->pr.do_refresh == 0) && pointer_over_viewport) {
+    if (pointer_inside_image && ImGui::IsMouseDown(0) && (db->pr.flags & PROFILE_REQ_VIEWPORT_START) && pointer_over_viewport) {
+        // initial click, used as first (start) coordinate
         prev_img_pos_x = img_pos_x;
         prev_img_pos_y = img_pos_y;
-        db->pr.do_refresh = 1;
-        //printf("do refresh\n");
+        db->pr.flags &= ~PROFILE_REQ_VIEWPORT_START;
     }
 
     if (pointer_inside_image && ImGui::IsMouseDown(0) && pointer_over_viewport) {
@@ -123,13 +123,12 @@ void viewport_render(th_db_t * db)
                 if (db->pr.flags & PROFILE_REQ_VIEWPORT_INT) {
                     if ((prev_img_pos_x == img_pos_x) && (prev_img_pos_y == img_pos_y)) {
                         // do not activate the line plot after a doubleclick on the viewport
-                        db->pr.active = 0;
+                        db->pr.flags &= ~PROFILE_REQ_VIEWPORT_RDY;
                     } else {
                         db->pr.x1 = prev_img_pos_x;
                         db->pr.y1 = prev_img_pos_y;
                         db->pr.x2 = img_pos_x;
                         db->pr.y2 = img_pos_y;
-                        db->pr.active = 1;
                         // render line during mouse drag
                         db->pr.flags |= PROFILE_REQ_VIEWPORT_RDY;
                         db->pr.flags &= ~PROFILE_REQ_VIEWPORT_REFRESHED;
@@ -173,8 +172,11 @@ void viewport_render(th_db_t * db)
     }
     ImGui::End();
 
+#if 0
     if (ImGui::IsMouseDown(0) == 0) {
-        db->pr.do_refresh = 0;
+        db->pr.flags &= ~PROFILE_REQ_DATA_PREPARE;
+        //db->pr.do_refresh = 0;
     }
+#endif
 }
 

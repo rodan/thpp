@@ -65,7 +65,7 @@ void line_plot(th_db_t * db)
     double ymin = 0.0;
     double ymax = 0.0;
 
-    if (db->pr.do_refresh || !xdata || !ydata) {
+    if ((db->pr.flags & PROFILE_REQ_VIEWPORT_RDY) || !xdata || !ydata) {
 
         if (xdata != NULL) {
             free(xdata);
@@ -113,10 +113,13 @@ void line_plot(th_db_t * db)
         }
 
         line_plot_calc(db, ydata, data_len);
+
+        db->pr.flags &= ~PROFILE_REQ_DATA_PREPARE;
+        db->pr.flags |= PROFILE_REQ_DATA_RDY;
     }
 
     if ((xdata == NULL) || (ydata == NULL)) {
-        printf("saved %s, %p %p %d %d\n", db->p.in_file, (void *) xdata, (void *) ydata, data_len, db->pr.active);
+        printf("saved %s, %p %p %d %u\n", db->p.in_file, (void *) xdata, (void *) ydata, data_len, db->pr.flags);
         return;
     }
 
@@ -157,13 +160,13 @@ void tool_profile(bool *p_open, th_db_t * db)
         return;
     }
 
-    if ((db->in_th == NULL) || (db->out_th == NULL) || (!db->pr.active))  {
+    if ((db->in_th == NULL) || (db->out_th == NULL) || !(db->pr.flags & PROFILE_REQ_VIEWPORT_RDY))  {
         ImGui::Text("profile not active or file not opened");
         ImGui::End();
         return;
     }
 
-    if (db->pr.active && (db->fe.return_state == RET_OK)) {
+    if ((db->pr.flags & PROFILE_REQ_VIEWPORT_RDY) && (db->fe.return_state == RET_OK)) {
         ImGui::SetNextItemOpen(1, 0);
         if (ImGui::TreeNodeEx("line plot")) {
             line_plot(db);
