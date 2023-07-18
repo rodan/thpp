@@ -138,7 +138,9 @@ struct profile {
     double t_max;
     double prox_temp;
     uint16_t prox_pix;
-    double res_t_mean;
+    double hl_avg;
+    double hl_min;
+    double hl_max;
     uint32_t highlight_color;
     uint8_t line_halfwidth;
     uint32_t data_len;

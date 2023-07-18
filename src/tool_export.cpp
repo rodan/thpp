@@ -21,6 +21,11 @@ static char buf_highlight[PREFIX_MAX] = {};
 
 style_t tool_export_style = {};
 
+char *tool_export_get_buf_highlight(void)
+{
+    return buf_highlight;
+}
+
 void tool_export(bool *p_open, th_db_t *db)
 {
     unsigned err = 0;

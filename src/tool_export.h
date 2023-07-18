@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 void tool_export(bool *p_open, th_db_t * db);
+char *tool_export_get_buf_highlight(void);
 
 #ifdef __cplusplus
 }

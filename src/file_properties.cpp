@@ -5,6 +5,7 @@
 #include <time.h>
 #include "imgui.h"
 #include "proj.h"
+#include "tool_export.h"
 #include "file_properties.h"
 
 fp_visibility_t v;
@@ -70,6 +71,27 @@ void file_properties(th_db_t * db, FILE *report_table_file, const uint16_t flags
     if (v.ir_avg) {
         strncpy(label, "IR: Avg", TEXT_LEN);
         snprintf(value, TEXT_LEN, "%.02f C", t_avg);
+        file_properties_add_row(label, value, report_table_file, flags);
+    }
+
+    if (v.hl_min) {
+        //strncpy(label, "highlight: Min", TEXT_LEN);
+        snprintf(label, TEXT_LEN, "%s: Min", tool_export_get_buf_highlight());
+        snprintf(value, TEXT_LEN, "%.02f C", db->pr.hl_min);
+        file_properties_add_row(label, value, report_table_file, flags);
+    }
+
+    if (v.hl_max) {
+        //strncpy(label, "highlight: Max", TEXT_LEN);
+        snprintf(label, TEXT_LEN, "%s: Max", tool_export_get_buf_highlight());
+        snprintf(value, TEXT_LEN, "%.02f C", db->pr.hl_max);
+        file_properties_add_row(label, value, report_table_file, flags);
+    }
+
+    if (v.hl_avg) {
+        //strncpy(label, "highlight: Avg", TEXT_LEN);
+        snprintf(label, TEXT_LEN, "%s: Avg", tool_export_get_buf_highlight());
+        snprintf(value, TEXT_LEN, "%.02f C", db->pr.hl_avg);
         file_properties_add_row(label, value, report_table_file, flags);
     }
 

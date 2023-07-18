@@ -33,9 +33,9 @@ struct fp_visibility {
     bool ir_min;
     bool ir_max;
     bool ir_avg;
-    bool line_min;
-    bool line_max;
-    bool line_avg;
+    bool hl_min;
+    bool hl_max;
+    bool hl_avg;
     bool camera_make;
     bool camera_model;
     bool byte_order;

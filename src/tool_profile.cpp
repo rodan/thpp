@@ -114,8 +114,8 @@ void line_plot(th_db_t * db)
 
         line_plot_calc(db, ydata, data_len);
 
-        db->pr.flags &= ~PROFILE_REQ_DATA_PREPARE;
-        db->pr.flags |= PROFILE_REQ_DATA_RDY;
+        //db->pr.flags &= ~PROFILE_REQ_DATA_PREPARE;
+        //db->pr.flags |= PROFILE_REQ_DATA_RDY;
     }
 
     if ((xdata == NULL) || (ydata == NULL)) {

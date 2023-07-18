@@ -136,9 +136,9 @@ void tool_preferences(bool *p_open, th_db_t * db)
         ImGui::Checkbox("image min", &v->ir_min);
         ImGui::Checkbox("image max", &v->ir_max);
         ImGui::Checkbox("image avg", &v->ir_avg);
-        ImGui::Checkbox("line min", &v->line_min);
-        ImGui::Checkbox("line max", &v->line_max);
-        ImGui::Checkbox("line avg", &v->line_avg);
+        ImGui::Checkbox("hl min", &v->hl_min);
+        ImGui::Checkbox("hl max", &v->hl_max);
+        ImGui::Checkbox("hl avg", &v->hl_avg);
         ImGui::Checkbox("emissivity", &v->emissivity);
         ImGui::Checkbox("object distance", &v->distance);
         ImGui::Checkbox("relative humidity", &v->rh);

@@ -542,6 +542,8 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal
 
     switch (db->pr.type) {
         case PROFILE_TYPE_POINT:
+            db->pr.hl_min = 32768;
+            db->pr.hl_max = -32768;
             for (i=0; i<width; i++ ) {
                 for (j=0; j<height; j++) {
                     loc = width*j + i;
@@ -557,10 +559,16 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal
                         db->rgba[RGBA_HIGHLIGHT].overlay[loc * 4 + 3] = 255; // alpha channel
                         pixel_cnt++;
                         accu += cur_temp;
+                        if (cur_temp > db->pr.hl_max) {
+                            db->pr.hl_max = cur_temp;
+                        }
+                        if (cur_temp < db->pr.hl_min) {
+                            db->pr.hl_min = cur_temp;
+                        }
                     }
                 }
             }
-            db->pr.res_t_mean = accu / (double) pixel_cnt;
+            db->pr.hl_avg = accu / (double) pixel_cnt;
             break;
         case PROFILE_TYPE_LEVEL_SLICE:
             for (loc=0; loc<height*width; loc++) {
@@ -605,6 +613,9 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal
                 }
             }
 
+            db->pr.hl_min = 32768;
+            db->pr.hl_max = -32768;
+            accu = 0;
             data_cnt = 0;
             while (points_remaining) {
 
@@ -612,7 +623,15 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal
                     ytemp = slope * xtemp + offset;
                     ymark = ytemp;
                     xmark = xtemp;
-                    db->pr.data[data_cnt] = db->temp_arr[width * ymark + xmark];
+                    cur_temp = db->temp_arr[width * ymark + xmark];
+                    db->pr.data[data_cnt] = cur_temp;
+                    accu += cur_temp;
+                    if (cur_temp > db->pr.hl_max) {
+                        db->pr.hl_max = cur_temp;
+                    }
+                    if (cur_temp < db->pr.hl_min) {
+                        db->pr.hl_min = cur_temp;
+                    }
                     data_cnt++;
                 }
 
@@ -643,6 +662,8 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal
                 xtemp += qx;
                 points_remaining--;
             }
+
+            db->pr.hl_avg = accu / (double) db->pr.data_len;
 
             if (db->pr.flags & PROFILE_REQ_DATA_PREPARE) {
                 db->pr.flags &= ~PROFILE_REQ_DATA_PREPARE;
@@ -832,7 +853,7 @@ uint8_t set_zoom(th_db_t * db, const uint8_t flags)
 
 void cleanup_profile(th_db_t * db, const uint16_t flags)
 {
-    profile_t bkp;
+    profile_t bkp = {};
 
     if (flags & PROFILE_KEEP_INIT) {
         memcpy(&bkp, &db->pr, sizeof(profile_t));
