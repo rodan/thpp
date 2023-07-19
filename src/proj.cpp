@@ -740,7 +740,10 @@ uint8_t generate_highlight(th_db_t *db)
 void refresh_highlight_vp(th_db_t *db)
 {
     if (db->fe.flags & HIGHLIGHT_LAYER_PREVIEW_EN) {
-        memset(db->rgba[RGBA_HIGHLIGHT].overlay, 0, db->rgba[RGBA_HIGHLIGHT].width * db->rgba[RGBA_HIGHLIGHT].height * 4);
+
+        if (db->rgba[RGBA_HIGHLIGHT].overlay != NULL) {
+            memset(db->rgba[RGBA_HIGHLIGHT].overlay, 0, db->rgba[RGBA_HIGHLIGHT].width * db->rgba[RGBA_HIGHLIGHT].height * 4);
+        }
 
         // allocate mem for .data, .base, .overlay, populates .base with PAL_GREY
         generate_highlight(db);

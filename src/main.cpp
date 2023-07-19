@@ -43,7 +43,7 @@
 #endif
 
 volatile unsigned int FrameCountSinceLastInput = 0;
-double MaxWaitBeforeNextFrame = 3;
+double MaxWaitBeforeNextFrame = 1;
 
 static void glfw_error_callback(int error, const char *description)
 {

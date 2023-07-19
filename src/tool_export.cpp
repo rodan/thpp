@@ -203,12 +203,13 @@ void tool_export(bool *p_open, th_db_t *db)
             value_changed = ImGui::Combo("highlight color", &line_color,
                  "temperature\0solid color\0\0");
             if (value_changed) {
-                if (line_color) {
-                    db->pr.highlight_color = 0xff0000ff;
-                } else {
-                    db->pr.highlight_color = 0;
-                }
                 auto_refresh = 1;
+            }
+
+            if (line_color) {
+                db->pr.highlight_color = 0xff0000ff;
+            } else {
+                db->pr.highlight_color = 0;
             }
 
             if (db->pr.line_halfwidth < 1) {
@@ -217,9 +218,10 @@ void tool_export(bool *p_open, th_db_t *db)
 
             value_changed = ImGui::DragInt("line width [pixels]", &line_width, 2, 1, 9, "%d", ImGuiSliderFlags_AlwaysClamp);
             if (value_changed) {
-                db->pr.line_halfwidth = (line_width + 1) / 2;
                 auto_refresh = 1;
             }
+
+            db->pr.line_halfwidth = (line_width + 1) / 2;
 
             if (ImGui::Button("pick line")) {
                 db->pr.type = PROFILE_TYPE_LINE;
