@@ -1,6 +1,15 @@
 
-%\documentclass[a4paper,twoside]{refart}
-\documentclass[a4paper,twoside]{report}
+\documentclass[a4paper,twoside,notitlepage]{article}
+
+\setlength{\oddsidemargin}{2mm}
+\setlength{\evensidemargin}{2mm}
+\setlength{\textwidth}{154mm}
+\setlength{\textheight}{220mm}
+\setlength{\topmargin}{0mm}
+\setlength{\parskip}{1mm}
+\renewcommand{\floatpagefraction} {0.99}
+\renewcommand{\textfraction} {0.0}
+\renewcommand{\topfraction} {0.99}
 
 \hfuzz=10pt
 
@@ -35,6 +44,9 @@
 %\renewcommand*{\familydefault}{\ttdefault}
 %\renewcommand*{\familydefault}{\rmdefault{ppl}}
 
+\makeatletter
+\newcommand*{\toccontents}{\@starttoc{toc}}
+\makeatother
 
 \begin{document}
 
@@ -53,7 +65,8 @@
 %\end{tabular}
 %\end{figure}
 
-\tableofcontents
+%\tableofcontents
+\toccontents
 
 \section{problem overview} \label{sec:problem-overview}
 
@@ -66,8 +79,7 @@ power amp rail voltages are ±50V with no load (instead of ±46.6V).
 
 a \SI{1}{\kilo\hertz} \SI{500}{\milli\volt} pkpk signal is from now on fed into 'Point A' of both channels. dummy loads (9.4\si{\ohm} ea.) are present on both speaker outputs.
 
-\newpage
-
+\clearpage
 \section{main pcb. waveform measurements} \label{sec:waveform-measurements}
 
 a number of testpoints have beed selected on the main board in order to compare the signals between the working (right) channel and the distorted (left) one. the scope signals are presented below.
@@ -175,8 +187,7 @@ a number of testpoints have beed selected on the main board in order to compare 
  \label{fig:output}
 \end{figure}
 
-\newpage
-
+\clearpage
 \section{main pcb. DC measurements} \label{sec:dc-measurements}
 
 \begin{figure}[hptb!]
@@ -211,8 +222,7 @@ a number of testpoints have beed selected on the main board in order to compare 
  \label{tab:dc-testpoints-meas}
 \end{table}
 
-\newpage
-
+\clearpage
 \section{main pcb. thermal measurements} \label{sec:thermal-measurements}
 
 % right channel
@@ -266,7 +276,7 @@ a number of testpoints have beed selected on the main board in order to compare 
  \caption{photo of the Q6021 and Q6019 transistors}
 \end{figure}
 
-
+\clearpage
 \section{power amp pcb. thermal measurements} \label{sec:pwr-thermal-measurements}
 
 % right channel
@@ -285,7 +295,7 @@ a number of testpoints have beed selected on the main board in order to compare 
   emissivity & 0.95 \\
   img create date & 2021:12:15 15:35:01 \\
  \end{tabular}
- \caption{power amp pcb right channel - pilot transistors have similar temperatures on this channel (53\si{\celsius})}
+ \caption{power amp pcb right channel - driver transistors have similar temperatures on this channel (53\si{\celsius})}
 \end{figure}
 
 \begin{figure}[hptb!]
@@ -327,7 +337,7 @@ a number of testpoints have beed selected on the main board in order to compare 
  \caption{photo of the Q6021 and Q6019 transistors}
 \end{figure}
 
-despite the large temperature difference between the two pilot transistors of the left channel, all PN junctions measured correctly.
+despite the large temperature difference between the two driver transistors of the left channel, all PN junctions measured correctly.
 
 since no actual fault has been detected up until now on the main pcb, the presumption is made that the detected distorsion is caused by the negative feedback signal and probably the fault lies in the power amp pcb, which needs to be completely extracted from the amplifier and thus cannot be probed while under load.
 
