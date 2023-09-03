@@ -70,14 +70,15 @@
 
 \section{problem overview} \label{sec:problem-overview}
 
-distorsion is not present immediately after the mixer/selector/tone control stages, but there is a negative feedback (NFB) link between the power amp and the main pcbs via pin 5 of the B6001 connector (see schematic in Fig \ref{fig:waveform-testpoints}). so both these pcbs have to be analyzed to understand where the source of the distortion is located.
+distorsion is heard on the left channel of the amplifier whenever sound is played, and it dissapears if there is no audio signal present.
 
+the distorsion is not present immediately after the mixer/selector/tone control stages, so the problem is clearly further down the audio path. there is a negative feedback (NFB) link between the power amp and the main pcbs via pin 5 of the B6001 connector (see schematic in Fig \ref{fig:waveform-testpoints}), so both these pcbs have to be analyzed to understand where the source of the problem is located.
 
 one very hot (90+\si{\celsius}) transistor (Q7009) is located on power amplifier board. due to assembly constraints, the power pcb is reachable only after taking the amplifier apart. so testing will start with the main pcb, while the amp can be kept powered on and all pcbs in-situ.
 
-power amp rail voltages are ±50V with no load (instead of ±46.6V).
+power amp rail voltages are ±50V with no load (documentation specifies ±46.6V).
 
-a \SI{1}{\kilo\hertz} \SI{500}{\milli\volt} pkpk signal is from now on fed into 'Point A' of both channels. dummy loads (9.4\si{\ohm} ea.) are present on both speaker outputs.
+as a test signal, a \SI{1}{\kilo\hertz} \SI{500}{\milli\volt} pkpk signal is fed into 'Point A' of both channels. dummy loads (9.4\si{\ohm} ea.) are present on both speaker outputs.
 
 \clearpage
 \section{main pcb. waveform measurements} \label{sec:waveform-measurements}
