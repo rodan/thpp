@@ -269,10 +269,6 @@ int main(int argc, char **argv)
             break;
         }
 
-        // ImGui::ShowDemoWindow(NULL);
-
-        ImGui::End();
-
         // Rendering
         ImGui::Render();
         int display_w, display_h;

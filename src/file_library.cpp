@@ -324,7 +324,6 @@ void file_library(bool *p_open, th_db_t * db)
     node_t *node;
     static map<fs::directory_entry, time_t> sorted_entries;
 
-    //if (!ImGui::Begin("image library", p_open, ImGuiWindowFlags_AlwaysAutoResize)) {
     if (!ImGui::Begin("image library", p_open, 0)) {
         ImGui::End();
         return;
@@ -344,7 +343,7 @@ void file_library(bool *p_open, th_db_t * db)
     ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);   // No tint
 
     ImGui::PushID("../");
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+//    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     ImGui::ImageButton("", (void *)(intptr_t) dir_tx, {
                        thumbnail_size_x, thumbnail_size_y}, {
                        0, 0}, {
@@ -428,17 +427,17 @@ void file_library(bool *p_open, th_db_t * db)
         }
 
         ImGui::PushID(filename_string.c_str());
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+//        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         ImGui::ImageButton("", (void *)(intptr_t) texture, {
                            thumbnail_size_x, thumbnail_size_y}, {
                            0, 0}, {
                            1, 1}, bg_col, tint_col);
-
-        ImGui::PopStyleColor();
+//        ImGui::PopStyleColor();
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
             if (entry_is_dir) {
                 m_current_directory /= path.filename();
                 last_discovery = 0; // force cleanup of the sorted_entries map
+                ImGui::PopID();
                 break;
             } else {
                 // an infrared image file is double-clicked
@@ -464,6 +463,10 @@ void file_library(bool *p_open, th_db_t * db)
                     } else {
                         errMsg("calloc error");
                     }
+                    ImGui::TextWrapped(filename_string.c_str());
+                    ImGui::NextColumn();
+                    ImGui::PopID();
+                    break;
                 } else {
                     fprintf(stderr, "warning: unable to open %s\n", abs_path.c_str());
                 }
@@ -529,7 +532,7 @@ void file_library(bool *p_open, th_db_t * db)
                 load_texture_from_mem(node->thumb->rgba[0].data, &node->texture, node->thumb->rgba[0].width,
                               node->thumb->rgba[0].height);
 
-                //printf("tex %u sz %dx%d for %s, node %p\n", node->texture, node->thumb->rgba[0].width, 
+                //printf("tex %u sz %dx%d for %s, node %p\n", node->texture, node->thumb->rgba[0].width,
                 //              node->thumb->rgba[0].height, node->fname, (void *) node);
 
                 if (node->texture) {
@@ -551,5 +554,4 @@ void file_library(bool *p_open, th_db_t * db)
     }
 
     ImGui::End();
-
 }

@@ -99,6 +99,7 @@ void viewport_render(th_db_t * db)
 
     if (db->fe.return_state != RET_OK) {
         cleanup_profile(db, PROFILE_KEEP_INIT);
+        ImGui::End();
         return;
     }
 

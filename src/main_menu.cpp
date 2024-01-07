@@ -160,6 +160,9 @@ uint8_t main_menu(th_db_t * db)
         return RET_EXIT;
     }
 
+    // ImGui::ShowDemoWindow(NULL);
+    ImGui::End();
+
     return ret;
 }
 
