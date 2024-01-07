@@ -463,10 +463,6 @@ void file_library(bool *p_open, th_db_t * db)
                     } else {
                         errMsg("calloc error");
                     }
-                    ImGui::TextWrapped(filename_string.c_str());
-                    ImGui::NextColumn();
-                    ImGui::PopID();
-                    break;
                 } else {
                     fprintf(stderr, "warning: unable to open %s\n", abs_path.c_str());
                 }
