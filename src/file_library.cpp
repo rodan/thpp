@@ -186,10 +186,14 @@ void file_library_init(void)
     dir_tx = 0;
 
     if (load_texture_from_file("res/file_icon.png", &file_tx, &w, &h) != EXIT_SUCCESS) {
-        fprintf(stderr, "error loading file icon\n");
+        if (load_texture_from_file("/usr/share/thpp/file_icon.png", &file_tx, &w, &h) != EXIT_SUCCESS) {
+            fprintf(stderr, "error loading file icon\n");
+        }
     }
     if (load_texture_from_file("res/dir_icon.png", &dir_tx, &w, &h) != EXIT_SUCCESS) {
-        fprintf(stderr, "error loading directory icon\n");
+        if (load_texture_from_file("/usr/share/thpp/dir_icon.png", &dir_tx, &w, &h) != EXIT_SUCCESS) {
+            fprintf(stderr, "error loading directory icon\n");
+        }
     }
 }
 

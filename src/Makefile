@@ -67,7 +67,7 @@ TARGET_CFLAGS	+= $(MANDATORY_CFLAGS) $(CFLAGS_DBG)
 TARGET_LDFLAGS	+= $(MANDATORY_LDFLAGS) $(LDFLAGS_DBG)
 endif
 
-COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN)
+COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN 2>/dev/null)
 
 .PHONY: all
 .PHONY: clean
@@ -85,7 +85,7 @@ build/lib/tlpi/%.o: ${TLPI_DIR}/%.cpp
 	@bash ../lib/tlpi-lib/Build_ename.sh > ../lib/tlpi-lib/ename.c.inc
 	@mkdir -p build/lib/tlpi
 	@echo -e " * $(@F)"
-	@$(CXX) $(INCLUDES) $(TARGET_CFLAGS) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) $(INCLUDES) $(TARGET_CFLAGS) $(CXXFLAGS) -Wno-write-strings -c $< -o $@
 
 build/lib/imgui/%.o: ${IMGUI_DIR}/%.cpp
 	@mkdir -p build/lib/imgui
@@ -110,12 +110,12 @@ build/lib/lodepng/%.o: ${LODEPNG_DIR}/%.cpp
 build/lib/TinyTIFF/%.o: ${TINYTIFF_DIR}/%.c
 	@mkdir -p build/lib/TinyTIFF
 	@echo -e " * $(@F)"
-	@$(CC) $(INCLUDES) $(TARGET_CFLAGS) -c $< -o $@
+	@$(CC) $(INCLUDES) $(TARGET_CFLAGS) -Wno-unused-parameter -Wno-unused-function -c $< -o $@
 
 build/lib/cpp_exiftool/%.o: ${EXIFTOOL_DIR}/src/%.cpp
 	@mkdir -p build/lib/cpp_exiftool
 	@echo -e " * $(@F)"
-	@$(CXX) $(INCLUDES) $(TARGET_CFLAGS) $(CXXFLAGS) -c $< -o $@
+	@$(CXX) $(INCLUDES) $(TARGET_CFLAGS) $(CXXFLAGS) -Wno-unused-parameter -Wno-unused-result -c $< -o $@
 
 build/%.o: %.cpp
 	@mkdir -p build
