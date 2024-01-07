@@ -10,6 +10,7 @@
 #include "implot.h"
 #include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <math.h>
 #include <algorithm>
 #define GL_SILENCE_DEPRECATION
@@ -82,6 +83,8 @@ double GetEventWaitingTime()
 int main(int argc, char **argv)
 {
     char wtitle[40];
+    const char imgui_ini_default[]="/usr/share/thpp/imgui.ini";
+    const char imgui_ini[]="imgui.ini";
     th_db_t *db = db_get_ptr();
     global_preferences_t *pref;
 
@@ -158,6 +161,18 @@ int main(int argc, char **argv)
     //io.ConfigViewportsNoAutoMerge = true;
     //io.ConfigViewportsNoTaskBarIcon = true;
     io.FontGlobalScale = DEF_FONT_SCALE;
+
+    io.IniFilename = NULL;
+    if (access(imgui_ini, F_OK) == 0) {
+        ImGui::LoadIniSettingsFromDisk(imgui_ini);
+    } else {
+        // file doesn't exist in pwd, check the default path
+        if (access(imgui_ini_default, F_OK) == 0) {
+            ImGui::LoadIniSettingsFromDisk(imgui_ini_default);
+        } else {
+            printf("warning: default %s not found\n", imgui_ini_default);
+        }
+    }
 
     // Setup Dear ImGui style
     //ImGui::StyleColorsDark();
@@ -286,6 +301,8 @@ int main(int argc, char **argv)
 
     cleanup(db);
     file_library_free();
+
+    ImGui::SaveIniSettingsToDisk(imgui_ini);
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
