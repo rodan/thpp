@@ -213,6 +213,7 @@ uint8_t node_populate(node_t * node)
 {
     uint8_t ret = EXIT_FAILURE;
     global_preferences_t *pref = gp_get_ptr();
+    size_t fname_sz;
 
     //printf("node_populate %p %d %s\n", (void *) node, node->flags, node->fname);
     if (stat(node->fname, &node->st) < 0) {
@@ -227,13 +228,14 @@ uint8_t node_populate(node_t * node)
         goto cleanup;
     }
 
-    node->thumb->p.in_file = (char *)calloc(strlen(node->fname) + 1, sizeof(char));
+    fname_sz = strlen(node->fname);
+    node->thumb->p.in_file = (char *)calloc(fname_sz + 1, sizeof(char));
     if (node->thumb->p.in_file == NULL) {
         errMsg("calloc() error");
         goto cleanup;
     }
 
-    strncpy(node->thumb->p.in_file, node->fname, strlen(node->fname));
+    strcpy(node->thumb->p.in_file, node->fname);
     node->thumb->p.pal = pref->palette_default;
     node->thumb->p.zoom_level = 1;
 

@@ -550,7 +550,7 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal
                     dist = (db->pr.x1 - i) * (db->pr.x1 - i) + (db->pr.y1 - j) * (db->pr.y1 - j);
                     cur_temp = db->temp_arr[loc];
                     if ((cur_temp > db->pr.t_min) && (cur_temp < db->pr.t_max) && (dist < dist_lim) ) {
-                        if ((db->in_th->type == TH_FLIR_RJPG) || 
+                        if ((db->in_th->type == TH_FLIR_RJPG) ||
                              ( (db->in_th->type == TH_IRTIS_DTV) && (db->in_th->subtype == TH_DTV_VER3))) {
                             memcpy(db->rgba[RGBA_HIGHLIGHT].overlay + (loc * 4), &(pal_rgb[db->out_th->framew[loc] * 3]), 3);
                         } else {
@@ -568,13 +568,17 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal
                     }
                 }
             }
-            db->pr.hl_avg = accu / (double) pixel_cnt;
+            if (!pixel_cnt) {
+                db->pr.hl_avg = accu / (double) pixel_cnt;
+            } else {
+                db->pr.hl_avg = 0;
+            }
             break;
         case PROFILE_TYPE_LEVEL_SLICE:
             for (loc=0; loc<height*width; loc++) {
                 cur_temp = db->temp_arr[loc];
                 if ((cur_temp > db->pr.t_min) && (cur_temp < db->pr.t_max)) {
-                        if ((db->in_th->type == TH_FLIR_RJPG) || 
+                        if ((db->in_th->type == TH_FLIR_RJPG) ||
                              ( (db->in_th->type == TH_IRTIS_DTV) && (db->in_th->subtype == TH_DTV_VER3))) {
                             memcpy(db->rgba[RGBA_HIGHLIGHT].overlay + (loc * 4), &(pal_rgb[db->out_th->framew[loc] * 3]), 3);
                         } else {
@@ -599,7 +603,6 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal
             qx = (x2 - x1) / len;
             slope = (y2 - y1)/(x2 - x1);
             offset = y2 - (x2 * slope);
-         
             xtemp = x1;
 
             if (db->pr.flags & PROFILE_REQ_DATA_PREPARE) {

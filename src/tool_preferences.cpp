@@ -70,8 +70,8 @@ void tool_preferences(bool *p_open, th_db_t * db)
         pref->thumbnail_size = s_thumbnail_size;
     }
 
-    static uint8_t s_pal = DEF_PALETTE;
-    value_changed = ImGui::Combo("palette", (int *) &s_pal,
+    static int s_pal = DEF_PALETTE;
+    value_changed = ImGui::Combo("palette", &s_pal,
                  "256\0color\0grey\0hmetal0\0hmetal1\0hmetal2\0hotblue1\0hotblue2\0iron\0per_true\0pericolor\0rainbow\0rainbow0\0\0");
     if (value_changed) {
         pref->palette_default = s_pal;

@@ -238,11 +238,11 @@ void tool_export(bool *p_open, th_db_t *db)
 
             break;
     }
-            
+
     ImGui::Unindent();
 
     //ImGui::SameLine();
-    if (ImGui::Button("refresh") || auto_refresh) {
+    if ((ImGui::Button("refresh") || auto_refresh) && (db->temp_arr != NULL)) {
         refresh_highlight_vp(db);
         viewport_refresh_vp(db);
     }

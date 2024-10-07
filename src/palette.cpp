@@ -371,6 +371,9 @@ void pal_transfer(uint8_t *image, const uint8_t pal_id, const uint16_t width, co
     bpp = f;
     pal_rgba = pal_init_lut(pal_id, bpp);
 
+    if (!pal_rgba)
+        return; // FIXME maybe return an error to the calling function
+
     for (y = height; y > 0; y--) {
         memcpy(color, &(pal_rgba[(height - y - 1) * 3]), 3);
         color[3] = 255; // alpha channel

@@ -6,7 +6,7 @@ LODEPNG_SRC = ${LODEPNG_DIR}/lodepng.cpp
 LODEPNG_OBJ = $(patsubst ${LODEPNG_DIR}/%.cpp,build/lib/lodepng/%.o,${LODEPNG_SRC})
 
 TINYTIFF_DIR = ../lib/TinyTIFF/src
-TINYTIFF_SRC = ${TINYTIFF_DIR}/tinytiffreader.c
+TINYTIFF_SRC = ${TINYTIFF_DIR}/tinytiffreader.c ${TINYTIFF_DIR}/tinytiff_ctools_internal.c
 TINYTIFF_OBJ = $(patsubst ${TINYTIFF_DIR}/%.c,build/lib/TinyTIFF/%.o,${TINYTIFF_SRC})
 
 TLPI_DIR  = ../lib/tlpi-lib

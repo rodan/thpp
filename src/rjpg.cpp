@@ -239,6 +239,7 @@ uint8_t rjpg_open(tgram_t * th, char *in_file)
                     if ((tiff_width != h->raw_th_img_width) || (tiff_height != h->raw_th_img_height)) {
                         fprintf(stderr, "unexpected image size %u != %u or %u ! %u\n", tiff_width,
                                 h->raw_th_img_width, tiff_height, h->raw_th_img_height);
+                        TinyTIFFReader_close(tiffr);
                         goto cleanup;
                     }
 
