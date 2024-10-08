@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
@@ -38,20 +38,20 @@ majminbuild()
     echo "${maj}.${min}b${build}"
 }
 
-while (( "$#" )); do
+while [ $(( "$#" )) -gt 0 ]; do
     if [ "$1" = "-t" ]; then
         type="${2}"
         shift; shift;
     elif [ "$1" = "-i" ]; then
         input="${2}"
         shift; shift;
-    else 
+    else
         shift;
         usage
     fi
 done
 
-case $type in 
+case $type in
 
     'MAJ.MINbBUILD')
         majminbuild

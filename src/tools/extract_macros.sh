@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/bin/sh
 
 extract_defs()
 {
     grep '^#define' "${1}" | tr -s '[:space:]' | sed 's|\(.*\)\s//.*|\1|;s|\s*$||;s|#define |-D|g;s| |=|g' | grep -Ev '(_H_)|(=.*=)' | xargs
 }
 
-while (( "$#" )); do
+while [ $(( "$#" )) -gt 0 ]; do
     if [ "$1" = "-t" ]; then
         target="${2}"
         shift; shift;
