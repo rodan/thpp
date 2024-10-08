@@ -1,11 +1,11 @@
 #ifndef __VERSION_H__
 #define __VERSION_H__
 
-// compiled on Mon Oct  7 21:01:20 UTC 2024
+// compiled on Tue Oct  8 13:13:53 UTC 2024
 
 #define VER_MAJOR   1
 #define VER_MINOR   0
-#define BUILD 3264
-#define COMMIT 134
+#define BUILD 3270
+#define COMMIT 136
 
 #endif

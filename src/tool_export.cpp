@@ -2,7 +2,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <linux/limits.h>
+
+#if defined(__linux__)
+    #include <linux/limits.h>
+#elif defined(__FreeBSD__)
+    #include <limits.h>
+    #include <libgen.h>
+#endif
+
 #include "imgui.h"
 #include "tlpi_hdr.h"
 #include "proj.h"

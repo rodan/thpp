@@ -1,6 +1,6 @@
 #!/bin/sh
 
-build=$(($(grep BUILD version.h | sed 's|.*BUILD\s\([0-9]\{1,9\}\).*|\1|')+1))
+build=$(($(grep BUILD version.h | gsed 's|.*BUILD\s\([0-9]\{1,9\}\).*|\1|')+1))
 sed  -i~ "s|^.*BUILD.*$|#define BUILD ${build}|" version.h
 
 commit=$(git log | grep -c '^commit')

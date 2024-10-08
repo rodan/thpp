@@ -3,6 +3,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <time.h>
+
+#if defined(__FreeBSD__)
+    #include <libgen.h>
+#endif
+
 #include "imgui.h"
 #include "proj.h"
 #include "tool_export.h"

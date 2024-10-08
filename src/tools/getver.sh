@@ -21,7 +21,7 @@ err_unknown()
 get_from_header()
 {
     ITEM=''
-    ITEM=$(grep "${1}" "${input}" | sed "s|.*${1}\s*\([0-9]\{1,9\}\).*|\1|")
+    ITEM=$(grep "${1}" "${input}" | gsed "s|.*${1}\s*\([0-9]\{1,9\}\).*|\1|")
     [ -z "${ITEM}" ] && {
         echo 'unknown version'
         exit 1
@@ -51,14 +51,10 @@ while [ $(( "$#" )) -gt 0 ]; do
     fi
 done
 
-case $type in
-
-    'MAJ.MINbBUILD')
-        majminbuild
-        ;;
-    *)
-        echo "unknown type, exiting"
-        exit 1;
-        ;;
-esac
+if [ "$type" = 'MAJ.MINbBUILD' ]; then
+    majminbuild
+else
+    echo "unknown type, exiting"
+    exit 1;
+fi
 

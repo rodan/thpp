@@ -83,7 +83,11 @@ double GetEventWaitingTime()
 int main(int argc, char **argv)
 {
     char wtitle[40];
+#if defined(__linux__)
     const char imgui_ini_default[]="/usr/share/thpp/imgui.ini";
+#elif defined(__FreeBSD__)
+    const char imgui_ini_default[]="/usr/local/share/thpp/imgui.ini";
+#endif
     const char imgui_ini[]="imgui.ini";
     th_db_t *db = db_get_ptr();
     global_preferences_t *pref;
