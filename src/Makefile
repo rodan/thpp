@@ -74,15 +74,17 @@ COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN 2>/dev/null)
 .PHONY: tags
 .PHONY: lib
 
-all : libs version.h $(EXOUTPUT)
+all : tlpi-prep libs version.h $(EXOUTPUT)
 libs : $(LIBS_OBJ)
 $(EXOUTPUT) : libs version.h
 
 version.h: $(SRC)
 	@./tools/setver.sh
 
-build/lib/tlpi/%.o: ${TLPI_DIR}/%.cpp
+tlpi-prep: $(SRC)
 	@bash ../lib/tlpi-lib/Build_ename.sh > ../lib/tlpi-lib/ename.c.inc
+
+build/lib/tlpi/%.o: ${TLPI_DIR}/%.cpp
 	@mkdir -p build/lib/tlpi
 	@echo -e " * $(@F)"
 	@$(CXX) $(INCLUDES) $(TARGET_CFLAGS) $(CXXFLAGS) -Wno-write-strings -c $< -o $@
@@ -132,7 +134,7 @@ build/%.o: %.cpp
 
 $(EXOUTPUT): $(LOCAL_OBJECTS) $(TLPI_OBJ) $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ)
 	@echo -e "\n>> Building $@ as target $(TARGET)"
-	$(CXX) $(TARGET_LDFLAGS) $(LOCAL_OBJECTS) $(TLPI_OBJ) $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_LIB) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ) -o $@ && size $@
+	@$(CXX) $(TARGET_LDFLAGS) $(LOCAL_OBJECTS) $(TLPI_OBJ) $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_LIB) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ) -o $@ && size $@
 
 clean :
 	@${RM} build/*.o build/*.s ${PROJ}
