@@ -325,6 +325,7 @@ uint8_t image_zoom(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom_level, con
             ret = image_zoom_realsr(dst, src, zoom_level);
             break;
         default:
+            return EXIT_FAILURE;
             break;
     }
     return ret;

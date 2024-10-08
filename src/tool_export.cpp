@@ -67,7 +67,7 @@ void tool_export(bool *p_open, th_db_t *db)
 
     // populate filename prefix if new thermogram was loaded
     if ( !(db->fe.flags & TOOL_EXPORT_GOT_BASENAME) ) {
-        snprintf(buf_prefix, PREFIX_MAX, basename(db->p.in_file));
+        snprintf(buf_prefix, PREFIX_MAX, "%s", basename(db->p.in_file));
         buf_prefix_len = strlen(buf_prefix);
         if (buf_prefix_len > 6) {
             if (buf_prefix[buf_prefix_len - 4] == '.') {

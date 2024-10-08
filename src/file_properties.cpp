@@ -25,9 +25,9 @@ void file_properties_add_row(char *label, char *value, FILE *report_table_file, 
     if (flags & FILE_PROPERTIES_OUT_GUI) {
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
-        ImGui::Text(label);
+        ImGui::Text("%s", label);
         ImGui::TableSetColumnIndex(1);
-        ImGui::Text(value);
+        ImGui::Text("%s", value);
     }
 
     if (flags & FILE_PROPERTIES_OUT_FILE) {

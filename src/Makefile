@@ -33,7 +33,7 @@ IMPLOT_OBJ = $(patsubst ${IMPLOT_DIR}/%.cpp,build/lib/implot/%.o,${IMPLOT_SRC})
 
 LIBS_OBJ = $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_OBJ) $(EXIFTOOL_OBJ) $(IMGUI_OBJ) $(IMPLOT_OBJ)
 
-INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TINYTIFF_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I $(IMPLOT_DIR) -I $(EXIFTOOL_DIR)/inc/
+INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TINYTIFF_DIR) -I $(TLPI_DIR) -I $(IMGUI_DIR) -I $(IMGUI_BK_DIR) -I $(IMPLOT_DIR) -I $(EXIFTOOL_DIR)/inc/ -I /usr/local/include/
 LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp dtv.cpp rjpg.cpp graphics.cpp main_menu.cpp viewport.cpp tool_processing.cpp tool_histogram.cpp tool_profile.cpp tool_scale.cpp tool_export.cpp tool_preferences.cpp help_about.cpp file_library.cpp file_properties.cpp # $(wildcard *.cpp)
 LOCAL_SRC_C := # $(wildcard *.c)
 SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC) $(TINYTIFF_SRC) $(TLPI_SRC)
@@ -49,7 +49,7 @@ LDFLAGS_REL	 += -Wl,-s
 CFLAGS_DBG	 += -O1 -ggdb -DNDEBUG # -pg
 LDFLAGS_DBG	 += # -pg
 
-MANDATORY_CFLAGS=-fPIC -pedantic -Wall -Wextra -Wno-format-truncation -Wa,-ahl=$(@:.o=.s) -fopenmp
+MANDATORY_CFLAGS=-fPIC -pedantic -Wall -Wextra -Wno-format-truncation -fopenmp # -Wa,-ahl=$(@:.o=.s)
 MANDATORY_LDFLAGS=-lm -lGL `pkg-config --static --libs glfw3` -fopenmp
 
 CXXFLAGS+=-std=c++17
@@ -128,7 +128,7 @@ build/%.o: %.cpp
 
 %.o: %.c
 	@echo -e " * $(@F)"
-	@$(CC) $(INCLUDES) $(TARGET_CFLAGS) -c $< -o $@
+	@$(CXX) $(INCLUDES) $(TARGET_CFLAGS) -c $< -o $@
 
 $(EXOUTPUT): $(LOCAL_OBJECTS) $(TLPI_OBJ) $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ)
 	@echo -e "\n>> Building $@ as target $(TARGET)"
