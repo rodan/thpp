@@ -381,8 +381,11 @@ void file_library(bool *p_open, th_db_t * db)
 
         // repopulate map
         for (auto &entry:fs::directory_iterator(m_current_directory)) {
-            auto time = to_time_t(entry.last_write_time());
-            sorted_entries[entry] = time;
+            fs::file_status s = entry.symlink_status();
+            if (fs::is_regular_file(s) || fs::is_directory(s)) {
+                auto time = to_time_t(entry.last_write_time());
+                sorted_entries[entry] = time;
+            }
         }
 
         //file_library_discovery(m_current_directory);
