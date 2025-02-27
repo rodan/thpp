@@ -17,7 +17,7 @@ void help_about(bool *p_open)
     ImGui::Text("Thermal processing panel v%d.%d build %d commit #%d", VER_MAJOR, VER_MINOR, BUILD,
                 COMMIT);
     ImGui::Separator();
-    ImGui::Text("copyright Petre Rodan, 2023");
+    ImGui::Text("copyright Petre Rodan, 2023-2025");
     ImGui::Text("ThPP is licensed under the GPLv3 License, see LICENSE for more information.");
     ImGui::End();
 }

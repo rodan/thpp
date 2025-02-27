@@ -29,7 +29,7 @@ void tool_scale(bool *p_open, th_db_t * db)
         generate_scale(db, &pref->style);
         load_texture_from_mem(db->scale.combo, &db->fe.si_texture, db->fe.si_width, db->fe.si_height);
     } else {
-        ImGui::Image((void *)(intptr_t) db->fe.si_texture, ImVec2(db->fe.si_width, db->fe.si_height));
+        ImGui::Image((ImTextureID)(intptr_t) db->fe.si_texture, ImVec2(db->fe.si_width, db->fe.si_height));
     }
 
     ImGui::End();

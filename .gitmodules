@@ -1,10 +1,6 @@
 [submodule "lib/lodepng"]
 	path = lib/lodepng
 	url = https://github.com/lvandeve/lodepng.git
-[submodule "lib/imgui"]
-	path = lib/imgui
-	url = https://github.com/ocornut/imgui.git
-	docking = docking
 [submodule "lib/implot"]
 	path = lib/implot
 	url = https://github.com/epezent/implot.git
@@ -12,3 +8,7 @@
 [submodule "lib/TinyTIFF"]
 	path = lib/TinyTIFF
 	url = https://github.com/jkriege2/TinyTIFF.git
+[submodule "lib/imgui"]
+	path = lib/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking

@@ -359,7 +359,7 @@ void file_library(bool *p_open, th_db_t * db)
 
     ImGui::PushID("../");
 //    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    ImGui::ImageButton("", (void *)(intptr_t) dir_tx, {
+    ImGui::ImageButton("", (ImTextureID)(intptr_t) dir_tx, {
                        thumbnail_size_x, thumbnail_size_y}, {
                        0, 0}, {
                        1, 1}, bg_col, tint_col);
@@ -446,7 +446,7 @@ void file_library(bool *p_open, th_db_t * db)
 
         ImGui::PushID(filename_string.c_str());
 //        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-        ImGui::ImageButton("", (void *)(intptr_t) texture, {
+        ImGui::ImageButton("", (ImTextureID)(intptr_t) texture, {
                            thumbnail_size_x, thumbnail_size_y}, {
                            0, 0}, {
                            1, 1}, bg_col, tint_col);

@@ -159,7 +159,7 @@ void viewport_render(th_db_t * db)
         }
     }
 
-    ImGui::Image((void *)(intptr_t) db->fe.vp_texture, ImVec2(db->fe.vp_width, db->fe.vp_height));
+    ImGui::Image((ImTextureID)(intptr_t) db->fe.vp_texture, ImVec2(db->fe.vp_width, db->fe.vp_height));
 
     if (prev_texture) {
         free_textures(1, &prev_texture);
