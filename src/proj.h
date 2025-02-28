@@ -175,7 +175,7 @@ typedef struct th_db th_db_t;
 #define          STYLE_LIGHT  1
 #define        STYLE_CLASSIC  2
 #define            DEF_STYLE  2
-#define       DEF_FONT_SCALE  1
+#define       DEF_FONT_SCALE  2
 #define   DEF_THUMBNAIL_SIZE  128
 #define          DEF_PALETTE  6
 #define             DEF_ZOOM  1

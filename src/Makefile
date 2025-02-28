@@ -37,10 +37,7 @@ INCLUDES  := -I ./ -I $(LODEPNG_DIR) -I $(TINYTIFF_DIR) -I $(TLPI_DIR) -I $(IMGU
 LOCAL_SRC_CPP := main.cpp main_cli.cpp imgui_wrapper.cpp opengl_helper.cpp proj.cpp palette.cpp dtv.cpp rjpg.cpp graphics.cpp main_menu.cpp viewport.cpp tool_processing.cpp tool_histogram.cpp tool_profile.cpp tool_scale.cpp tool_export.cpp tool_preferences.cpp help_about.cpp file_library.cpp file_properties.cpp # $(wildcard *.cpp)
 LOCAL_SRC_C := # $(wildcard *.c)
 SRC        = $(LOCAL_SRC_C) $(LOCAL_SRC_CPP) $(LODEPNG_SRC) $(TINYTIFF_SRC) $(TLPI_SRC)
-#EXOBJECT   = $(PROJ).o
-EXOUTPUT   = $(PROJ)
 
-#LOCAL_OBJECTS     = $(LOCAL_SRC_CPP:%.cpp=%.o) $(LOCAL_SRC_C:%.c=%.o)
 LOCAL_OBJECTS     = $(patsubst %.cpp,build/%.o,${LOCAL_SRC_CPP})
 
 # Append specific CFLAGS/LDFLAGS
@@ -67,16 +64,23 @@ TARGET_CFLAGS	+= $(MANDATORY_CFLAGS) $(CFLAGS_DBG)
 TARGET_LDFLAGS	+= $(MANDATORY_LDFLAGS) $(LDFLAGS_DBG)
 endif
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	CTAGS       := exuberant-ctags
+endif
+ifeq ($(UNAME_S),FreeBSD)
+	CTAGS		:= exctags
+endif
+
 COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN 2>/dev/null)
 
 .PHONY: all
 .PHONY: clean
-.PHONY: tags
 .PHONY: lib
 
-all : tlpi-prep libs version.h $(EXOUTPUT)
+all : tlpi-prep libs version.h tags $(PROJ)
 libs : $(LIBS_OBJ)
-$(EXOUTPUT) : libs version.h
+#$(PROJ) : libs version.h
 
 version.h: $(SRC)
 	@./tools/setver.sh
@@ -132,20 +136,20 @@ build/%.o: %.cpp
 	@echo -e " * $(@F)"
 	@$(CXX) $(INCLUDES) $(TARGET_CFLAGS) -c $< -o $@
 
-$(EXOUTPUT): $(LOCAL_OBJECTS) $(TLPI_OBJ) $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_LIB) $(EXOBJECT) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ)
+$(PROJ): $(LOCAL_OBJECTS) $(LIBS_OBJ)
 	@echo -e "\n>> Building $@ as target $(TARGET)"
-	@$(CXX) $(TARGET_LDFLAGS) $(LOCAL_OBJECTS) $(TLPI_OBJ) $(LODEPNG_OBJ) $(TINYTIFF_OBJ) $(TLPI_LIB) $(IMGUI_OBJ) $(EXIFTOOL_OBJ) $(IMPLOT_OBJ) -o $@ && size $@
+	@$(CXX) $(TARGET_LDFLAGS) $(LOCAL_OBJECTS) $(LIBS_OBJ) -o $@ && size $@
 
-clean :
+clean:
 	@${RM} build/*.o build/*.s ${PROJ}
 	@${RM} -rf cov-int
 
 clean-lib:
 	@${RM} -rf build/lib
 
-tags: $(SRCS)
+tags: $(SRC)
 	@echo "Generating tags .."
-	@exuberant-ctags -R
+	@$(CTAGS) -R
 
 cppcheck: $(PROJ)
 	@cppcheck --quiet --force --enable=warning --enable=performance --enable=information --enable=performance --enable=portability -I ./ ./

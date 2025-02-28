@@ -228,7 +228,16 @@ uint8_t image_zoom_realsr(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom)
         errExit("fork");
 
     case 0:
-        execlp("realesrgan-ncnn-vulkan", "realesrgan-ncnn-vulkan", "-i", tmp_src, "-o", tmp_dst_ext, "-s", "4", "-f", "png", (char *)NULL);
+        // Gentoo
+        err = execlp("realesrgan-ncnn-vulkan", "realesrgan-ncnn-vulkan", "-i", tmp_src, "-o", tmp_dst_ext, "-s", "4", "-f", "png", (char *)NULL);
+        if (err == -1) {
+            // FreeBSD
+            err = execlp("realsr-ncnn-vulkan", "realsr-ncnn-vulkan", "-i", tmp_src, "-o", tmp_dst_ext, "-s", "4", "-f", "png", (char *)NULL);
+            if (err == -1) {
+                fprintf(stderr, "cannot execute realsr-ncnn-vulkan\n");
+                exit(EXIT_FAILURE);
+            }
+        }
         exit(EXIT_SUCCESS);
     default:
         for (;;) {
@@ -238,7 +247,7 @@ uint8_t image_zoom_realsr(th_rgba_t *dst, th_rgba_t *src, const uint8_t zoom)
             }
 
             if (status != 0) {
-                fprintf(stderr, "realesrgan-ncnn-vulkan exited in error\n");
+                fprintf(stderr, "realsr-ncnn-vulkan exited in error\n");
                 free(tmp_dst_ext);
                 return EXIT_FAILURE;
             }
