@@ -177,7 +177,9 @@ build scripts are also provided as part of a Gentoo [overlay](https://github.com
 
  optional package used for the image restoration algorithm after a 4x rescale:
 
- * media-gfx/realesrgan-ncnn-vulkan
+ * media-gfx/realesrgan-ncnn-vulkan (Gentoo)
+
+ * graphics/realsr-ncnn-vulkan (FreeBSD)
 
 comparison between 4x zoom with nearest interpolation (left) vs realsr (on the right):
 

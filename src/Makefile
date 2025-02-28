@@ -67,9 +67,11 @@ endif
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
 	CTAGS       := exuberant-ctags
+	MAKE		:= make
 endif
 ifeq ($(UNAME_S),FreeBSD)
 	CTAGS		:= exctags
+	MAKE		:= gmake
 endif
 
 COVERITY_SCAN_TOKEN := $(shell cat ../.secrets.COVERITY_SCAN_TOKEN 2>/dev/null)
@@ -158,7 +160,7 @@ scan-build: clean
 	@scan-build make
 
 coverity: clean clean-lib
-	@cov-build --dir cov-int make
+	@cov-build --dir cov-int $(MAKE)
 	@tar czvf /tmp/$(PROJ).tgz cov-int
 	@curl --form token=$(COVERITY_SCAN_TOKEN) \
 	  --form email=2b4eda@subdimension.ro \
