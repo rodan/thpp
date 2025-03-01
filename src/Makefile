@@ -144,7 +144,7 @@ $(PROJ): $(LOCAL_OBJECTS) $(LIBS_OBJ)
 
 clean:
 	@${RM} build/*.o build/*.s ${PROJ}
-	@${RM} -rf cov-int
+	@${RM} -r build
 
 clean-lib:
 	@${RM} -rf build/lib
@@ -160,11 +160,11 @@ scan-build: clean
 	@scan-build make
 
 coverity: clean clean-lib
-	@cov-build --dir cov-int $(MAKE)
-	@tar czvf /tmp/$(PROJ).tgz cov-int
+	@cov-build --dir build/cov-int $(MAKE)
+	@tar --create --directory build cov-int | gzip -9 > build/cov-$(PROJ).tgz
 	@curl --form token=$(COVERITY_SCAN_TOKEN) \
 	  --form email=2b4eda@subdimension.ro \
-	  --form file=@/tmp/$(PROJ).tgz \
+	  --form file=@build/cov-$(PROJ).tgz \
 	  --form version="$(shell ./tools/getver.sh -i ./version.h -t MAJ.MINbBUILD)" \
 	  --form description="Description" \
 	  https://scan.coverity.com/builds?project=rodan%2Fthpp

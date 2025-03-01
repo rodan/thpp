@@ -568,7 +568,7 @@ uint8_t refresh_highlight_overlay(th_db_t *db, const uint8_t , const uint8_t pal
                     }
                 }
             }
-            if (!pixel_cnt) {
+            if (pixel_cnt) {
                 db->pr.hl_avg = accu / (double) pixel_cnt;
             } else {
                 db->pr.hl_avg = 0;
